@@ -1,6 +1,6 @@
 # MRI スピン3Dシミュレーター
 
-### ▶ **[https://itosky79-web.github.io/MRI/](https://itosky79-web.github.io/MRI/)**
+### ▶ **[https://itosky79.github.io/MRI/](https://itosky79.github.io/MRI/)**
 
 ブラウザで開くだけで使えます。インストールもログインも要りません。スマートフォンでも動きます。
 
