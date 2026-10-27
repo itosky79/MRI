@@ -801,6 +801,8 @@ function events(p) {
     e.push({ t:0, k:'rf', a:90, ax:'x' });
     e.push({ t:p.TE / 2, k:'rf', a:180, ax:'y' });
     e.push({ t:p.TE, k:'echo' });
+    e.push({ t:Math.max(p.TE + 2, p.TR - 5), k:'crush' });   // 実際の装置のクラッシャーにあたる。T2 が長い組織（脳脊髄液など）で、
+                                                            // 前の TR の横磁化が次のエコーに混ざらないようにする
   } else if (p.seq === 'GRE') {
     e.push({ t:0, k:'rf', a:p.FA, ax:'x' });
     e.push({ t:p.TE, k:'echo' });
@@ -810,6 +812,7 @@ function events(p) {
     e.push({ t:p.TI, k:'rf', a:90, ax:'x' });
     e.push({ t:p.TI + p.TE / 2, k:'rf', a:180, ax:'y' });
     e.push({ t:p.TI + p.TE, k:'echo' });
+    e.push({ t:Math.max(p.TI + p.TE + 2, p.TR - 5), k:'crush' });
   }
   return e.filter(x => x.t < p.TR).sort((a, b) => a.t - b.t);
 }
@@ -873,6 +876,9 @@ function spoil() {   // 傾斜磁場で位相をばらす（大きさは変え�
     mx[i] = x * c - y * s; my[i] = x * s + y * c;
   }
 }
+/* クラッシャー（SE・IR の TR の終わり）：残った横磁化を 0 にする。spoil() のように毎回同じ位相のばらし方にすると、
+   180°パルスで位相が折り返されたあと次の周期の spoil() で打ち消され、前の横磁化がエコーに戻ってくるため */
+function crush() { for (let i = 0; i < NISO; i++) { mx[i] = 0; my[i] = 0; } }
 function netM() {
   let sx = 0, sy = 0, sz = 0;
   for (let i = 0; i < NISO; i++) { sx += mx[i]; sy += my[i]; sz += mz[i]; }
@@ -959,10 +965,12 @@ function autoPhase() {
   if (R.ei >= R.evs.length) R.phase = '次の TR まで待つ（T1 で縦磁化がもどる）';
   else if (R.evs[R.ei].k === 'echo') R.phase = '位相がそろってきた（エコーに向かっている）';
   else if (R.evs[R.ei].k === 'spoil') R.phase = '自由歳差：T2* で減っていく（180°がないので戻せない）';
+  else if (R.evs[R.ei].k === 'crush') R.phase = 'エコーのあと：横磁化が T2* で減っていく';
   else R.phase = '自由歳差：位相がばらけて信号が減っていく';
 }
 function fire(e) {
   if (e.k === 'spoil') { spoil(); R.phase = 'スポイラ：位相をばらして横磁化を消す'; return; }
+  if (e.k === 'crush') { crush(); R.phase = 'クラッシャー：残った横磁化を消す'; return; }
   if (e.k === 'echo') {
     const m = netM(); R.echoPeak = Math.hypot(m[0], m[1]);
     echoFlash = 0.55;
