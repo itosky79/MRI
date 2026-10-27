@@ -422,7 +422,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
   .bar{top:7px; left:7px; right:7px; gap:7px}
   .seg button{padding:6px 9px}
   .expose{padding:6px 12px}
-  .hud{bottom:24px; left:7px; max-width:76%}
+  .hud{bottom:24px; left:7px; max-width:calc(100% - 190px)}
   .hud .now{font-size:11.5px}
   .playbar{bottom:24px; right:7px}
 }
@@ -1441,7 +1441,7 @@ function updateScene(dt) {
   const near3d = !P.showBody || ctrl.dist < 45;
   const on = P.showLab && near3d;
   const rot = P.frame === 'rot';
-  place('z', 1.5, 0, AX + 0.55, 'z ＝ B₀ の向き', on);
+  place('z', 1.7, 0, AX - 0.2, 'z ＝ B₀ の向き', on);
   place('b0', 0, 0, 0, '', false);
   place('x', AX + 0.5, 0, 0, rot ? "x'" : 'x', on && !P.showBody);
   place('y', 0, AX + 0.5, 0, rot ? "y'" : 'y', on && !P.showBody);
@@ -1557,7 +1557,8 @@ function drawSeq() {
     rfRow = (x - lastRFx < 52) ? 1 - rfRow : 0;     // 近すぎるときは上下にずらす
     lastRFx = x;
     cx.fillStyle = '#9A7A44'; cx.textAlign = 'center';
-    cx.fillText(word, x, rows[0].y + 11 + rfRow * 12);
+    const ww = cx.measureText(word).width;      // 行頭の「RF」に重ならないところまで寄せる
+    cx.fillText(word, Math.max(x, L + 3 + ww / 2), rows[0].y + 11 + rfRow * 12);
   });
   /* 傾斜磁場（スライス選択・位相・読み出し）を模式的に */
   const gy = rows[1].y;
