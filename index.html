@@ -30,23 +30,28 @@ body{
   font-family:var(--gothic); font-size:14px; line-height:1.75;
   -webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:1380px; margin:0 auto; padding-inline:20px; padding-block:0 56px}
+.wrap{max-width:1500px; margin:0 auto; padding-inline:20px; padding-block:0 48px}
 
 /* ---------- header ---------- */
-header{padding-block:18px 12px; border-bottom:1px solid var(--line); margin-bottom:16px;
+header{padding-block:14px 9px; border-bottom:1px solid var(--line); margin-bottom:11px;
   display:flex; align-items:center; gap:12px; flex-wrap:wrap}
 .hbtn{flex:none; padding:5px 13px; background:var(--panel2); border:1px solid var(--line2);
   border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:11.5px; cursor:pointer}
 .hbtn:hover{color:var(--text); border-color:var(--teal)}
 h1{
-  font-family:var(--mincho); font-weight:700; font-size:clamp(18px,2.2vw,24px);
+  font-family:var(--mincho); font-weight:700; font-size:clamp(17px,2vw,22px);
   letter-spacing:.03em; margin:0; line-height:1.3;
 }
 h1 small{font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--dim); display:block; font-weight:400}
 
 /* ---------- workspace ---------- */
-.work{display:grid; grid-template-columns:minmax(0,1fr) 7px var(--railw,336px); gap:10px; align-items:start}
-.split{align-self:stretch; height:clamp(430px,64vh,700px); cursor:col-resize; position:relative}
+.work{
+  display:grid; grid-template-columns:minmax(0,1fr) 7px var(--railw,336px); gap:10px; align-items:stretch;
+  height:calc(100vh - 96px); height:calc(100dvh - 96px); min-height:560px;
+}
+/* 左列は 3D（上）とグラフ2枚（下）の2段。3つを1画面に収めるための骨格 */
+.left{display:grid; grid-template-rows:minmax(0,1.16fr) minmax(0,1fr); gap:10px; min-height:0; min-width:0}
+.split{align-self:stretch; height:auto; cursor:col-resize; position:relative}
 .split::after{content:""; position:absolute; top:0; bottom:0; left:2px; right:2px; border-radius:2px; background:var(--line); transition:background .15s}
 .split:hover::after,.split:focus-visible::after{background:var(--teal)}
 .split:focus-visible{outline:none}
@@ -64,7 +69,7 @@ body.detached .rail{
 }
 body.detached .railbar{display:flex; cursor:move; touch-action:none}
 .stage{
-  position:relative; height:clamp(430px,64vh,700px); border:1px solid var(--line);
+  position:relative; height:100%; min-height:0; border:1px solid var(--line);
   border-radius:var(--r); overflow:hidden;
   background:radial-gradient(120% 100% at 50% 0%,#16222D 0%,#0A0F14 62%);
 }
@@ -125,14 +130,22 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 }
 .expose:hover{background:#4A2B10; color:#FFD79A}
 .hud{
-  position:absolute; left:10px; bottom:10px; padding:6px 9px; border-radius:3px;
-  background:rgba(10,15,20,.8); border:1px solid var(--line); pointer-events:none;
-  font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; color:var(--dim); line-height:1.9;
+  position:absolute; left:10px; bottom:26px; max-width:min(430px,62%); padding:6px 10px 7px; border-radius:3px;
+  background:rgba(10,15,20,.84); border:1px solid var(--line); pointer-events:none;
 }
-.hud b{color:var(--teal); font-weight:400; margin-left:5px}
-.hud .k{display:inline-block; min-width:26px}
-.hud .ph{color:var(--amber)}
-.playbar{position:absolute; right:10px; bottom:10px; display:flex; gap:6px; align-items:center; pointer-events:auto}
+.hud .now{margin:0; font-size:12px; line-height:1.55; color:#FFD79A; letter-spacing:.02em}
+.hud .sub{margin:3px 0 0; font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; color:var(--dim); line-height:1.7}
+.hud .sub span{margin-right:4px}
+.hud .sub b{color:var(--teal); font-weight:400; margin-right:9px}
+.hud .sub .tis{color:var(--text); margin:0}
+.key{
+  position:absolute; left:0; right:0; bottom:0; height:20px; margin:0; padding:0 8px;
+  display:flex; gap:13px; align-items:center; justify-content:center; flex-wrap:nowrap; overflow:hidden;
+  background:linear-gradient(0deg,rgba(10,15,20,.9),rgba(10,15,20,0));
+  font-size:9.5px; color:var(--dim); pointer-events:none; white-space:nowrap;
+}
+.key i{display:inline-block; width:13px; height:3px; border-radius:1px; vertical-align:1px; margin-right:4px}
+.playbar{position:absolute; right:10px; bottom:26px; display:flex; gap:6px; align-items:center; pointer-events:auto}
 .playbar button{
   padding:4px 11px; background:rgba(10,15,20,.86); border:1px solid var(--line2); border-radius:3px;
   color:var(--muted); font-family:var(--mono); font-size:10px; letter-spacing:.08em; cursor:pointer;
@@ -143,7 +156,7 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 /* ---------- rail ---------- */
 .rail{
   display:flex; flex-direction:column; gap:12px;
-  height:clamp(430px,64vh,700px); overflow-y:auto; overscroll-behavior:contain;
+  height:100%; min-height:0; overflow-y:auto; overscroll-behavior:contain;
   padding-right:6px; scrollbar-width:thin; scrollbar-color:var(--line2) transparent;
 }
 .rail::-webkit-scrollbar{width:7px}
@@ -154,7 +167,7 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
   font-family:var(--mono); font-size:10px; letter-spacing:.2em; color:var(--dim);
   text-transform:uppercase; margin:0 0 9px; display:flex; justify-content:space-between; align-items:baseline;
 }
-.grp-h b{font-family:var(--gothic); font-weight:500; font-size:11px; letter-spacing:.02em; color:var(--muted)}
+.grp-h b{font-family:var(--gothic); font-weight:500; font-size:11px; letter-spacing:.02em; color:var(--muted); text-transform:none}
 
 /* ---------- tabs ---------- */
 .tabs{display:grid; grid-template-columns:repeat(4,1fr); gap:0; border:1px solid var(--line2); border-radius:3px; overflow:hidden; margin-bottom:12px}
@@ -262,7 +275,23 @@ input[type=checkbox]:checked::after{
 }
 input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
 
-/* ---------- 組織テーブル ---------- */
+/* ---------- 組織チップ ---------- */
+.chips{display:flex; flex-wrap:wrap; gap:5px}
+.chip{
+  display:flex; align-items:center; gap:6px; padding:4px 9px 4px 5px; background:var(--panel2);
+  border:1px solid var(--line); border-radius:3px; color:var(--muted);
+  font-family:var(--gothic); font-size:11.5px; cursor:pointer; transition:.15s;
+}
+.chip i{width:14px; height:14px; border-radius:2px; border:1px solid rgba(255,255,255,.22); flex:none}
+.chip:hover{color:var(--text); border-color:var(--line2)}
+.chip[aria-pressed="true"]{background:#1D3040; border-color:var(--teal); color:#EAF6FA}
+.tiny{margin:7px 0 0; font-size:10.5px; line-height:1.75; color:var(--dim)}
+.tiny b{color:var(--muted); font-weight:500}
+.lede{
+  margin:0 0 9px; padding:6px 10px; background:#0B141B; border-left:2px solid var(--amber);
+  border-radius:0 2px 2px 0; font-size:12px; line-height:1.7; color:#F3C173;
+}
+/* ---------- 組織テーブル（いまは未使用） ---------- */
 table.tis{width:100%; border-collapse:collapse; font-size:11.5px}
 table.tis th{
   font-family:var(--mono); font-size:9px; letter-spacing:.1em; color:var(--dim);
@@ -282,14 +311,14 @@ td.barc{width:52px; padding-left:8px}
 .sigbar i{display:block; height:100%; background:linear-gradient(90deg,#2E5C6B,#9FD9E8)}
 
 /* ---------- 下段パネル ---------- */
-.panels{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px}
-.pan{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:12px 14px 13px; min-width:0}
-.pan .ph2{display:flex; justify-content:space-between; align-items:baseline; margin:0 0 9px; gap:10px; flex-wrap:wrap}
-.pan h2{font-family:var(--mincho); font-weight:700; font-size:13.5px; margin:0; color:#E9F2F8}
-.pan .hint{font-family:var(--mono); font-size:9px; letter-spacing:.1em; color:var(--dim)}
-.pan canvas{display:block; width:100%; height:auto}
-.legend{display:flex; gap:10px; flex-wrap:wrap; margin:8px 0 0; font-size:10.5px; color:var(--dim)}
-.legend i{display:inline-block; width:16px; height:2px; vertical-align:3px; margin-right:4px}
+.panels{display:grid; grid-template-columns:1fr 1fr; gap:10px; min-height:0}
+.pan{background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
+  padding:9px 12px 10px; min-width:0; min-height:0; display:flex; flex-direction:column}
+.pan .ph2{display:flex; justify-content:space-between; align-items:baseline; margin:0; gap:10px; flex-wrap:wrap}
+.pan h2{font-family:var(--mincho); font-weight:700; font-size:13px; margin:0; color:#E9F2F8}
+.pan .hint{font-size:10px; color:var(--dim)}
+.pan .cvwrap{position:relative; flex:1; min-height:0; margin-top:5px}
+.pan canvas{position:absolute; inset:0; display:block; width:100%; height:100%}
 
 /* ---------- filmstrip ---------- */
 .films{margin-top:10px; border:1px solid var(--line); border-radius:var(--r); background:var(--panel); padding:12px 14px 14px}
@@ -374,30 +403,40 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 
 /* ---------- スマートフォン・タブレット ---------- */
 @media (max-width:900px){
-  .work{display:block}
+  /* 1画面に収めるのはあきらめて、3Dだけ上に貼りつけたまま縦に積む */
+  .work{display:flex; flex-direction:column; height:auto; min-height:0}
+  .left{display:contents}
   .split{display:none}
   .railbar{display:none !important}
   .stage{
-    position:sticky; top:0; z-index:6;
-    height:clamp(230px,42vh,430px);
+    order:1; position:sticky; top:0; z-index:6;
+    height:clamp(230px,40vh,400px);
     box-shadow:0 12px 20px -14px rgba(0,0,0,.95);
   }
-  .rail{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); align-items:start;
+  .rail{order:2; display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); align-items:start;
     gap:10px; height:auto; overflow:visible; padding-right:0; margin-top:10px}
+  .panels{order:3; grid-template-columns:1fr; margin-top:10px}
+  .pan{height:270px}
   body.quiz .stage{position:relative; box-shadow:none}
-  header{padding-block:14px 10px; margin-bottom:12px}
+  header{padding-block:12px 9px; margin-bottom:10px}
   .bar{top:7px; left:7px; right:7px; gap:7px}
   .seg button{padding:6px 9px}
   .expose{padding:6px 12px}
-  .hud{font-size:9px; padding:5px 7px; bottom:7px; left:7px}
-  .playbar{bottom:7px; right:7px}
-  .panels{grid-template-columns:1fr; margin-top:12px}
+  .hud{bottom:24px; left:7px; max-width:76%}
+  .hud .now{font-size:11.5px}
+  .playbar{bottom:24px; right:7px}
 }
 @media (max-width:900px) and (min-width:660px) and (orientation:landscape){
-  .work{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:10px; align-items:start}
-  .stage{position:relative; height:clamp(240px,76vh,460px); box-shadow:none}
-  .rail{display:flex; flex-direction:column; height:clamp(240px,76vh,460px);
+  .work{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:10px; align-items:start; height:auto}
+  .left{display:grid; grid-template-rows:auto auto; gap:10px}
+  .stage{position:relative; height:clamp(240px,58vh,400px); box-shadow:none}
+  .rail{display:flex; flex-direction:column; height:clamp(240px,80vh,520px);
     overflow-y:auto; margin-top:0; padding-right:6px}
+  .panels{grid-template-columns:1fr 1fr; margin-top:0}
+  .pan{height:190px}
+}
+@media (max-width:700px){
+  .key{display:none}
 }
 @media (max-width:560px){
   .seg button{padding:5px 6px; font-size:9px; letter-spacing:.06em}
@@ -406,8 +445,9 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
     padding-left:max(14px,env(safe-area-inset-left)); padding-right:max(14px,env(safe-area-inset-right));
     padding-bottom:max(40px,env(safe-area-inset-bottom))}
   h1{font-size:17px}
-  .stage{height:clamp(230px,44vh,400px)}
-  .tabs button{font-size:11.5px; padding:9px 1px}
+  .stage{height:clamp(230px,42vh,380px)}
+  .tabs button{font-size:11px; padding:9px 1px}
+  .pan{height:240px}
   .choices button{padding:8px 9px; font-size:12.5px}
   .seqnav .act,.acts .act{padding:9px 4px}
   #imgbox .if{display:none}
@@ -425,42 +465,61 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 </header>
 
 <div class="work">
-  <div class="stage" id="stage">
-    <canvas id="gl"></canvas>
-    <div id="labels"></div>
+  <div class="left">
+    <div class="stage" id="stage">
+      <canvas id="gl"></canvas>
+      <div id="labels"></div>
 
-    <div id="imgbox">
-      <div class="ih"><span id="imgSeq">T1強調</span><span id="imgPar">TR 500 / TE 15</span></div>
-      <canvas id="mri" width="176" height="208"></canvas>
-      <div class="xh" id="xhair"></div>
-      <div class="if">クリックでその組織のスピンを見る</div>
-    </div>
+      <div id="imgbox">
+        <div class="ih"><span id="imgSeq">T1強調</span><span id="imgPar">TR 500 / TE 15</span></div>
+        <canvas id="mri" width="176" height="208"></canvas>
+        <div class="xh" id="xhair"></div>
+      </div>
 
-    <div class="bar">
-      <div class="barL">
-        <div class="seg" id="viewSeg">
-          <button type="button" data-v="0">3D</button>
-          <button type="button" data-v="1" aria-pressed="true">3D + 画像</button>
-          <button type="button" data-v="2">画像</button>
+      <div class="bar">
+        <div class="barL">
+          <div class="seg" id="viewSeg">
+            <button type="button" data-v="0">3Dだけ</button>
+            <button type="button" data-v="1" aria-pressed="true">3D + 画像</button>
+            <button type="button" data-v="2">画像だけ</button>
+          </div>
+          <div class="seg" id="frameSeg">
+            <button type="button" data-f="rot" aria-pressed="true">回転座標系</button>
+            <button type="button" data-f="lab">静止座標系</button>
+          </div>
         </div>
-        <div class="seg" id="frameSeg">
-          <button type="button" data-f="rot" aria-pressed="true">回転座標系</button>
-          <button type="button" data-f="lab">静止座標系</button>
+        <div class="barR">
+          <button class="expose" id="bShot" type="button">撮影</button>
         </div>
       </div>
-      <div class="barR">
-        <button class="expose" id="bShot" type="button">撮影</button>
+
+      <div class="hud" id="hud">
+        <p class="now" id="hudNow">まだ何もしていない（縦磁化だけ）</p>
+        <p class="sub"><span>t</span><b id="hudT">0</b>ms<span>縦 Mz</span><b id="hudMz">1.00</b><span>横 Mxy</span><b id="hudMxy">0.00</b><span class="tis" id="hudTis">白質</span></p>
+      </div>
+
+      <p class="key" id="key3d">
+        <span><i style="background:linear-gradient(90deg,#7ED9A7,#E8C77A,#C4A6E8)"></i>細い矢印＝スピン1本ずつ（色＝位相）</span>
+        <span><i style="background:#52B8CE"></i>太い矢印＝合計の磁化 M</span>
+        <span><i style="background:#7ED9A7"></i>Mz（縦・信号にならない）</span>
+        <span><i style="background:#E0645C"></i>Mxy（横・これが信号）</span>
+      </p>
+
+      <div class="playbar">
+        <button type="button" id="bStep">最初から</button>
+        <button type="button" id="bPause">一時停止</button>
       </div>
     </div>
 
-    <div class="hud" id="hud">
-      <div><span class="k">t</span><b id="hudT">0 ms</b> <span class="k">状態</span><b class="ph" id="hudPh">熱平衡</b></div>
-      <div><span class="k">Mz</span><b id="hudMz">1.00</b> <span class="k">Mxy</span><b id="hudMxy">0.00</b> <span class="k">組織</span><b id="hudTis">白質</b></div>
-    </div>
-
-    <div class="playbar">
-      <button type="button" id="bStep">最初から</button>
-      <button type="button" id="bPause">一時停止</button>
+    <div class="panels">
+      <div class="pan">
+        <div class="ph2"><h2>パルスシーケンス</h2><span class="hint">いつ、どんな力をかけているか</span></div>
+        <div class="cvwrap"><canvas id="seqCv"></canvas></div>
+      </div>
+      <div class="pan">
+        <div class="ph2"><h2>緩和曲線とコントラスト</h2><span class="hint">組織の差がどこで開くか</span></div>
+        <div class="cvwrap"><canvas id="relCv"></canvas></div>
+      </div>
     </div>
   </div>
 
@@ -474,14 +533,42 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 
     <div class="grp">
       <div class="tabs" id="modeTabs">
-        <button type="button" data-m="0" aria-pressed="true">学習</button>
-        <button type="button" data-m="1">シーケンス</button>
-        <button type="button" data-m="2">フリー</button>
+        <button type="button" data-m="0" aria-pressed="true">シーケンス</button>
+        <button type="button" data-m="1">学習</button>
+        <button type="button" data-m="2">詳細</button>
         <button type="button" data-m="3">問題</button>
       </div>
 
-      <!-- ===== 学習 ===== -->
+      <!-- ===== シーケンス（メイン） ===== -->
       <div class="pane" id="pane0">
+        <div class="readout"><span class="big" id="preName">T1強調 SE</span><span class="sm" id="prePar"></span></div>
+        <p class="lede" id="preLede"></p>
+        <div class="pre-grid" id="preGrid"></div>
+        <div class="note" id="preNote"></div>
+        <p class="grp-h" style="margin:13px 0 6px">つまみを動かす <b>すぐ反映されます</b></p>
+        <div class="sld">
+          <div class="sld-h"><span>TR　くり返す間隔</span><b id="vTR">500 ms</b></div>
+          <input type="range" id="sTR" min="0" max="10" value="0">
+          <div class="detent" id="dTR"></div>
+        </div>
+        <div class="sld">
+          <div class="sld-h"><span>TE　信号を読むまで</span><b id="vTE">15 ms</b></div>
+          <input type="range" id="sTE" min="0" max="10" value="0">
+          <div class="detent" id="dTE"></div>
+        </div>
+        <div class="sld" id="wTI">
+          <div class="sld-h"><span>TI　反転してから倒すまで</span><b id="vTI">—</b></div>
+          <input type="range" id="sTI" min="0" max="10" value="0">
+          <div class="detent" id="dTI"></div>
+        </div>
+        <div class="sld" id="wFA">
+          <div class="sld-h"><span>α　どれだけ倒すか</span><b id="vFA">90°</b></div>
+          <input type="range" id="sFA" min="2" max="180" value="90">
+        </div>
+      </div>
+
+      <!-- ===== 学習 ===== -->
+      <div class="pane" id="pane1" hidden>
         <div class="readout"><span class="big" id="stepName">静磁場の中のプロトン</span><span class="sm" id="stepNo">1 / 10</span></div>
         <div class="note" id="stepNote" style="margin-top:0"></div>
         <div class="seqnav">
@@ -493,66 +580,40 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <ol class="seq" id="stepList"></ol>
       </div>
 
-      <!-- ===== シーケンス ===== -->
-      <div class="pane" id="pane1" hidden>
-        <div class="readout"><span class="big" id="preName">T1強調 SE</span><span class="sm" id="prePar"></span></div>
-        <div class="pre-grid" id="preGrid"></div>
-        <div class="note" id="preNote"></div>
-      </div>
-
-      <!-- ===== フリー ===== -->
+      <!-- ===== 詳細 ===== -->
       <div class="pane" id="pane2" hidden>
-        <div class="readout"><span class="big" id="freeName">スピンエコー</span><span class="sm" id="freePar"></span></div>
-        <p class="grp-h">シーケンス</p>
-        <div class="seg" id="seqSeg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2); margin-bottom:11px">
+        <p class="grp-h">シーケンスの種類</p>
+        <div class="seg" id="seqSeg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2); margin-bottom:4px">
           <button type="button" data-q="SE" aria-pressed="true">SE</button>
           <button type="button" data-q="GRE">GRE</button>
           <button type="button" data-q="IR">IR</button>
         </div>
+        <p class="tiny">SE＝スピンエコー（180°で位相をもどす）／GRE＝グラジエントエコー（180°なし＝T2*で減る）／IR＝反転回復（先に180°で反転させる）</p>
 
-        <div class="sld">
-          <div class="sld-h"><span>TR（繰り返し時間）</span><b id="vTR">500 ms</b></div>
-          <input type="range" id="sTR" min="0" max="1000" value="0">
-          <div class="detent" id="dTR"></div>
-        </div>
-        <div class="sld">
-          <div class="sld-h"><span>TE（エコー時間）</span><b id="vTE">15 ms</b></div>
-          <input type="range" id="sTE" min="0" max="1000" value="0">
-          <div class="detent" id="dTE"></div>
-        </div>
-        <div class="sld" id="wTI">
-          <div class="sld-h"><span>TI（反転時間）</span><b id="vTI">—</b></div>
-          <input type="range" id="sTI" min="0" max="1000" value="0">
-          <div class="detent" id="dTI"></div>
-        </div>
-        <div class="sld" id="wFA">
-          <div class="sld-h"><span>フリップ角 α</span><b id="vFA">90°</b></div>
-          <input type="range" id="sFA" min="2" max="180" value="90">
-        </div>
-        <div class="sld">
-          <div class="sld-h"><span>静磁場の不均一さ（T2′）</span><b id="vT2p">40 ms</b></div>
-          <input type="range" id="sT2p" min="0" max="1000" value="500">
-        </div>
-
-        <p class="grp-h" style="margin-top:12px">静磁場 B₀</p>
+        <p class="grp-h" style="margin-top:13px">静磁場 B₀</p>
         <div class="seg" id="b0Seg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2)">
           <button type="button" data-b="0.5">0.5 T</button>
           <button type="button" data-b="1.5" aria-pressed="true">1.5 T</button>
           <button type="button" data-b="3">3.0 T</button>
         </div>
+        <p class="tiny">強いほど T1 が長くなります（共鳴周波数も比例して上がります）。</p>
 
-        <details class="fold" id="manFold" style="margin-top:12px">
-          <summary>手で パルスをかける</summary>
-          <label class="tg" style="margin-top:8px"><input type="checkbox" id="tManual">シーケンスを止めて手動にする</label>
-          <div class="acts" style="margin-top:8px">
-            <button class="act rf" id="bP90" type="button">90°パルス</button>
-            <button class="act rf" id="bP180" type="button">180°パルス</button>
-            <button class="act rf" id="bPa" type="button">α°パルス</button>
-            <button class="act" id="bSpoil" type="button">スポイラ</button>
-            <button class="act wide" id="bReset" type="button">熱平衡に戻す</button>
-          </div>
-          <p>手動にすると自由歳差だけが進みます。90°→（待つ）→180° と押すと、自分の手でスピンエコーを作れます。</p>
-        </details>
+        <div class="sld" style="margin-top:13px">
+          <div class="sld-h"><span>静磁場のムラ（T2′）</span><b id="vT2p">40 ms</b></div>
+          <input type="range" id="sT2p" min="0" max="11" value="5">
+        </div>
+        <p class="tiny">小さいほど磁場がムラだらけ＝扇が速く開きます。SE では 180° で取り戻せますが、GRE では取り戻せません。</p>
+
+        <p class="grp-h" style="margin-top:13px">手でパルスをかける</p>
+        <label class="tg"><input type="checkbox" id="tManual">シーケンスを止めて手動にする</label>
+        <div class="acts" style="margin-top:7px">
+          <button class="act rf" id="bP90" type="button">90°パルス</button>
+          <button class="act rf" id="bP180" type="button">180°パルス</button>
+          <button class="act rf" id="bPa" type="button">α°パルス</button>
+          <button class="act" id="bSpoil" type="button">スポイラ</button>
+          <button class="act wide" id="bReset" type="button">熱平衡に戻す</button>
+        </div>
+        <p class="tiny">手動にすると自由歳差だけが進みます。<b>90° → 少し待つ → 180°</b> と押すと、自分の手でスピンエコーを作れます。</p>
       </div>
 
       <!-- ===== 問題 ===== -->
@@ -597,12 +658,9 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 
     <!-- ===== 組織 ===== -->
     <div class="grp">
-      <p class="grp-h">組織 <b id="tisHint">クリックで3Dのスピンを切り替え</b></p>
-      <table class="tis" id="tisTable">
-        <thead><tr><th>組織</th><th>T1</th><th>T2</th><th>PD</th><th>信号</th></tr></thead>
-        <tbody id="tisBody"></tbody>
-      </table>
-      <p class="glinfo" id="tisEq"></p>
+      <p class="grp-h">3D で見ている組織 <b id="tisSub"></b></p>
+      <div class="chips" id="tisChips"></div>
+      <p class="tiny" id="tisEq"></p>
     </div>
 
     <!-- ===== 表示と操作 ===== -->
@@ -629,30 +687,12 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <label class="tg"><input type="checkbox" id="tNoise" checked>画像にノイズを乗せる</label>
       </div>
       <div class="acts" style="margin-top:10px">
-        <button class="act" id="bClear" type="button">画像を消去</button>
+        <button class="act" id="bClear" type="button">撮った画像を消す</button>
         <button class="act" id="bHome" type="button">視点を戻す</button>
       </div>
       <p class="glinfo" id="glInfo"></p>
       </details>
     </div>
-  </div>
-</div>
-
-<div class="panels">
-  <div class="pan">
-    <div class="ph2"><h2>パルスシーケンス</h2><span class="hint" id="seqHint">RF / 傾斜磁場 / 信号</span></div>
-    <canvas id="seqCv" width="720" height="300"></canvas>
-    <p class="legend">
-      <span style="color:var(--rf)"><i style="background:var(--rf)"></i>RFパルス</span>
-      <span style="color:var(--sig)"><i style="background:var(--sig)"></i>受信信号</span>
-      <span><i style="background:#6E8598"></i>傾斜磁場</span>
-      <span style="color:var(--alert)"><i style="background:var(--alert)"></i>いまの時刻</span>
-    </p>
-  </div>
-  <div class="pan">
-    <div class="ph2"><h2>緩和曲線とコントラスト</h2><span class="hint">MZ RECOVERY / MXY DECAY</span></div>
-    <canvas id="relCv" width="720" height="300"></canvas>
-    <p class="legend" id="relLeg"></p>
   </div>
 </div>
 
@@ -708,9 +748,7 @@ const TIS = [
   { id:'csf',  nm:'脳脊髄液',   col:'#6FA8C9', T1:4000, T2:2000, PD:1.00, e1:0.05 },
   { id:'mus',  nm:'筋肉',       col:'#B07A7A', T1:870,  T2:45,   PD:0.75, e1:0.70 },
   { id:'les',  nm:'病変（浮腫）',col:'#C4A6E8', T1:1200, T2:180,  PD:0.85, e1:0.45 },
-  { id:'bone', nm:'皮質骨',     col:'#46545F', T1:250,  T2:1,    PD:0.05, e1:0.30 },
-  { id:'liv',  nm:'肝臓',       col:'#8E6B5A', T1:500,  T2:43,   PD:0.85, e1:0.70 },
-  { id:'blo',  nm:'血液',       col:'#C05F5F', T1:1200, T2:250,  PD:0.87, e1:0.40 }
+  { id:'bone', nm:'皮質骨',     col:'#46545F', T1:250,  T2:1,    PD:0.05, e1:0.30 }
 ];
 const TIX = {}; TIS.forEach((t, i) => TIX[t.id] = i);
 /* 画像の中にある組織（十字カーソルを置けるもの） */
@@ -843,7 +881,7 @@ function netM() {
 
 /* ================= 走行状態 ================= */
 const R = {
-  t:0, evs:[], ei:0, phase:'熱平衡',
+  t:0, evs:[], ei:0, phase:'熱平衡：まだ何もしていない（縦磁化だけ）',
   nut:null,                 // パルスをゆっくり見せている最中の状態
   trace:[],                 // いまの周期の |Mxy| の記録
   cycles:0, echoPeak:0
@@ -851,7 +889,7 @@ const R = {
 function rebuildSeq(keep) {
   clampTimes();
   R.evs = events(P);
-  if (!keep) { R.t = 0; R.ei = 0; R.trace.length = 0; equilibrium(); R.phase = '熱平衡'; R.cycles = 0; }
+  if (!keep) { R.t = 0; R.ei = 0; R.trace.length = 0; equilibrium(); R.phase = '熱平衡：まだ何もしていない（縦磁化だけ）'; R.cycles = 0; }
   else { R.ei = 0; while (R.ei < R.evs.length && R.evs[R.ei].t <= R.t) R.ei++; }
 }
 function curT1() { return T1of(TIS[TIX[P.tissue]], P.B0); }
@@ -913,25 +951,34 @@ function advance(wall) {
 function autoPhase() {
   if (R.nut || echoFlash > 0) return;
   const m = netM(), t = Math.hypot(m[0], m[1]);
-  if (P.manual) { R.phase = t > 0.02 ? '自由歳差' : (m[2] > 0.98 ? '熱平衡' : 'T1で回復中'); return; }
-  if (R.ei >= R.evs.length) R.phase = 'TRまで待つ（T1が回復）';
-  else if (R.evs[R.ei].k === 'echo') R.phase = '位相がもどっていく';
-  else if (R.evs[R.ei].k === 'spoil') R.phase = '自由歳差（T2*で減る）';
-  else R.phase = '自由歳差（位相がばらける）';
+  if (P.manual) {
+    R.phase = t > 0.02 ? '自由歳差：横磁化が回りながら減っていく'
+      : (m[2] > 0.98 ? '熱平衡：まだ何もしていない（縦磁化だけ）' : 'T1 で縦磁化がもどっている途中');
+    return;
+  }
+  if (R.ei >= R.evs.length) R.phase = '次の TR まで待つ（T1 で縦磁化がもどる）';
+  else if (R.evs[R.ei].k === 'echo') R.phase = '位相がそろってきた（エコーに向かっている）';
+  else if (R.evs[R.ei].k === 'spoil') R.phase = '自由歳差：T2* で減っていく（180°がないので戻せない）';
+  else R.phase = '自由歳差：位相がばらけて信号が減っていく';
 }
 function fire(e) {
-  if (e.k === 'spoil') { spoil(); R.phase = 'スポイラ'; return; }
+  if (e.k === 'spoil') { spoil(); R.phase = 'スポイラ：位相をばらして横磁化を消す'; return; }
   if (e.k === 'echo') {
     const m = netM(); R.echoPeak = Math.hypot(m[0], m[1]);
     echoFlash = 0.55;
-    R.phase = 'エコー（信号を読む）'; return;
+    R.phase = 'エコー：ここで信号を読む'; return;
   }
-  R.phase = Math.round(e.a) + '°パルス';
+  R.phase = pulseSay(e.a);
   if (P.slowPulse) R.nut = { total:e.a, left:e.a, ax:e.ax, sign:1, dur:0.45 / Math.max(0.5, P.spd) };
   else pulse(e.a, e.ax);
 }
+function pulseSay(a) {
+  a = Math.round(a);
+  if (a === 180) return '180°パルス：位相を折り返す（または縦磁化を反転）';
+  return a + '°パルス：RF（B₁）で磁化を倒している';
+}
 function manualPulse(a, ax) {
-  R.phase = a + '°パルス';
+  R.phase = pulseSay(a);
   if (P.slowPulse) R.nut = { total:a, left:a, ax:ax, sign:1, dur:0.45 / Math.max(0.5, P.spd) };
   else pulse(a, ax);
 }
@@ -1133,7 +1180,7 @@ function dashCircle(r, n, col, op) {
 }
 
 /* ---- 座標軸と静磁場 ---- */
-const AX = 6.6;
+const AX = 6.0;
 const axGrp = new THREE.Group(); scene.add(axGrp);
 axGrp.add(line([new THREE.Vector3(-AX, 0, 0), new THREE.Vector3(AX, 0, 0)], 0x3d566b, .9));
 axGrp.add(line([new THREE.Vector3(0, -AX, 0), new THREE.Vector3(0, AX, 0)], 0x3d566b, .9));
@@ -1261,13 +1308,13 @@ function placeHead() {
 }
 
 /* ---- カメラ操作 ---- */
-const ctrl = { th:-1.05, phi:1.15, dist:20, want:20 };
+const ctrl = { th:-1.05, phi:1.15, dist:23, want:23 };
 function applyCam() {
   const sp = Math.sin(ctrl.phi), cp = Math.cos(ctrl.phi);
   camera.position.set(ctrl.dist * sp * Math.cos(ctrl.th), ctrl.dist * sp * Math.sin(ctrl.th), ctrl.dist * cp);
   camera.lookAt(0, 0, 0);
 }
-function homeCam() { ctrl.th = -1.05; ctrl.phi = 1.15; ctrl.want = P.showBody ? 96 : 20; applyCam(); }
+function homeCam() { ctrl.th = -1.05; ctrl.phi = 1.15; ctrl.want = P.showBody ? 96 : 23; applyCam(); }
 let drag = null, pinch = 0;
 canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); drag = { x:e.clientX, y:e.clientY }; });
 canvas.addEventListener('pointermove', e => {
@@ -1394,8 +1441,8 @@ function updateScene(dt) {
   const near3d = !P.showBody || ctrl.dist < 45;
   const on = P.showLab && near3d;
   const rot = P.frame === 'rot';
-  place('z', 0, 0, AX + 1.9, 'z', on);
-  place('b0', 0.9, 0, AX + 1.1, 'B₀', on);
+  place('z', 1.5, 0, AX + 0.55, 'z ＝ B₀ の向き', on);
+  place('b0', 0, 0, 0, '', false);
   place('x', AX + 0.5, 0, 0, rot ? "x'" : 'x', on && !P.showBody);
   place('y', 0, AX + 0.5, 0, rot ? "y'" : 'y', on && !P.showBody);
   {
@@ -1416,10 +1463,10 @@ function updateScene(dt) {
 /* ================= グラフ ================= */
 function fitCv(cv) {
   const dpr = Math.min(devicePixelRatio || 1, 2);
-  const w = cv.clientWidth || 700, h = Math.round(w * 0.42);
+  const w = Math.max(220, cv.clientWidth || 620);
+  const h = Math.max(130, cv.clientHeight || 250);
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-    cv.style.height = h + 'px';
   }
   const cx = cv.getContext('2d');
   cx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1431,6 +1478,14 @@ const C = {
   rf:'#F0B24B', sig:'#52B8CE', grad:'#6E8598', alert:'#E0645C', grid:'#1A2733'
 };
 const MONO = '10px "IBM Plex Mono",monospace';
+/* 曲線に重なっても読めるよう、背景を敷いて書く */
+function tagBg(cx, x, y, txt, align, col) {
+  const w = cx.measureText(txt).width + 7;
+  cx.fillStyle = 'rgba(10,15,20,.85)';
+  cx.fillRect(align === 'right' ? x - w : x, y - 7, w, 14);
+  cx.fillStyle = col; cx.textAlign = align;
+  cx.fillText(txt, align === 'right' ? x - 4 : x + 4, y);
+}
 
 /* ---- パルスシーケンス図 ---- */
 function drawSeq() {
@@ -1438,9 +1493,9 @@ function drawSeq() {
   const { cx, w, h } = fitCv(cv);
   const L = 64, Rr = w - 16;
   const rows = [
-    { y:h * 0.16, nm:'RF' },
+    { y:h * 0.15, nm:'RF' },
     { y:h * 0.42, nm:'傾斜磁場' },
-    { y:h * 0.74, nm:'信号' }
+    { y:h * 0.72, nm:'信号' }
   ];
   /* TR をそのまま等間隔にすると、パルスとエコーが左端に固まって読めない。
      前半（パルスとエコーのあたり）だけ拡大し、残りは折れ目を入れて縮める */
@@ -1483,6 +1538,7 @@ function drawSeq() {
 
   const evs = R.evs;
   /* RF */
+  let lastRFx = -1e9, rfRow = 0;
   evs.forEach(e => {
     if (e.k !== 'rf') return;
     const x = X(e.t), hh = (e.a / 180) * (h * 0.11) + h * 0.028;
@@ -1495,6 +1551,13 @@ function drawSeq() {
     cx.stroke();
     cx.fillStyle = C.rf; cx.textAlign = 'center'; cx.font = MONO;
     cx.fillText(Math.round(e.a) + '°', x, rows[0].y - hh - 8);
+    /* 何のためのパルスかを、ことばでも添える */
+    const word = Math.round(e.a) === 180
+      ? (P.seq === 'IR' && e.t === 0 ? '縦磁化を反転' : '位相をもどす') : '倒す';
+    rfRow = (x - lastRFx < 52) ? 1 - rfRow : 0;     // 近すぎるときは上下にずらす
+    lastRFx = x;
+    cx.fillStyle = '#9A7A44'; cx.textAlign = 'center';
+    cx.fillText(word, x, rows[0].y + 11 + rfRow * 12);
   });
   /* 傾斜磁場（スライス選択・位相・読み出し）を模式的に */
   const gy = rows[1].y;
@@ -1507,7 +1570,7 @@ function drawSeq() {
     for (let k = 0; k < 4; k++) { const x = X(te.t) - 34 + k * 1.5; box(x, x + 1, h * 0.018 + k * h * 0.006); }
   }
   /* 信号：実際に計算している |Mxy| の記録 */
-  const sy = rows[2].y, sh = h * 0.20;
+  const sy = rows[2].y, sh = h * 0.18;
   if (R.trace.length > 1) {
     cx.strokeStyle = C.sig; cx.lineWidth = 1.5; cx.beginPath();
     let first = true;
@@ -1533,8 +1596,13 @@ function drawSeq() {
       k === 0 ? cx.moveTo(X(t), y) : cx.lineTo(X(t), y);
     }
     cx.stroke(); cx.setLineDash([]);
-    cx.fillStyle = 'rgba(224,100,92,.9)'; cx.textAlign = 'left';
-    cx.fillText('T2 の包絡線', X(t0) + 6, sy - a0 * sh - 8);
+    cx.fillStyle = 'rgba(224,100,92,.9)'; cx.textAlign = 'right';
+    cx.fillText('T2 の包絡線', L + wDet - 4, sy - a0 * Math.exp(-(Td - t0) / T2) * sh - 8);
+  }
+  /* エコーの位置に「ここで読む」と書く */
+  if (te) {
+    cx.fillStyle = C.sig; cx.textAlign = 'center';
+    cx.fillText('↓ ここで信号を読む', X(te.t), sy - sh - 7);
   }
   /* TE・TI・TR の寸法線 */
   const dim = (t0, t1, y, nm) => {
@@ -1577,7 +1645,7 @@ function drawRel() {
   const cv = document.getElementById('relCv');
   const { cx, w, h } = fitCv(cv);
   const L = 40, Rr = w - 62;
-  const top = { y0:h * 0.08, y1:h * 0.42 }, bot = { y0:h * 0.58, y1:h * 0.92 };
+  const top = { y0:h * 0.145, y1:h * 0.44 }, bot = { y0:h * 0.635, y1:h * 0.92 };
   cx.font = MONO; cx.textBaseline = 'middle';
   const isIR = P.seq === 'IR';
   const sampT = isIR ? P.TI : P.TR;
@@ -1593,17 +1661,18 @@ function drawRel() {
       cx.beginPath(); cx.moveTo(L, y); cx.lineTo(Rr, y); cx.stroke(); cx.setLineDash([]);
       cx.fillStyle = C.dim; cx.textAlign = 'right'; cx.fillText('0', L - 3, y);
     }
-    cx.fillStyle = C.dim; cx.textAlign = 'left'; cx.fillText(ttl, L + 2, r.y0 - 1);
+    cx.fillStyle = C.dim; cx.textAlign = 'left'; cx.fillText(ttl, L - 26, r.y0 - 9);
   };
-  frame(top, isIR ? -1 : 0, 1, isIR ? '縦磁化 Mz（180°で反転させたあと）' : '縦磁化 Mz の回復');
-  frame(bot, 0, 1, '横磁化 Mxy の減衰' + (P.seq === 'GRE' ? '（T2*）' : '（T2）'));
+  frame(top, isIR ? -1 : 0, 1,
+    isIR ? '① 反転させた縦磁化が TI までにどこまで戻るか' : '① TR のあいだに縦磁化 Mz がどこまで戻るか');
+  frame(bot, 0, 1, '② TE までに横磁化 Mxy がどれだけ残るか' + (P.seq === 'GRE' ? '（T2*）' : '（T2）'));
 
   const Y1 = v => { const lo = isIR ? -1 : 0; return top.y1 - (v - lo) / (1 - lo) * (top.y1 - top.y0); };
   const Y2 = v => bot.y1 - v * (bot.y1 - bot.y0);
   const X1 = t => L + (Rr - L) * t / tmax1;
   const X2 = t => L + (Rr - L) * t / tmax2;
 
-  const tags = [];
+  const tags = [], ys1 = [], ys2 = [];
   CURVE.forEach(id => {
     const t = TIS[TIX[id]], T1 = T1of(t, P.B0);
     let T2 = T2of(t);
@@ -1623,8 +1692,20 @@ function drawRel() {
     cx.fillStyle = t.col; cx.beginPath(); cx.arc(xs, ys, sel ? 3.4 : 2.4, 0, 7); cx.fill();
     const xe = Math.min(X2(P.TE), Rr), ye = Y2(a0 * Math.exp(-P.TE / T2));
     cx.beginPath(); cx.arc(xe, ye, sel ? 3.4 : 2.4, 0, 7); cx.fill();
+    ys1.push(ys); ys2.push(ye);
     tags.push({ y:ye, nm:t.nm, col:t.col });
   });
+  /* 読み取る瞬間の、いちばん上といちばん下の差。ここが画像の明暗になる */
+  const gap = (xg, arr, nm, right) => {
+    if (arr.length < 2) return;
+    const y0 = Math.min.apply(null, arr), y1 = Math.max.apply(null, arr);
+    if (y1 - y0 < 4) return;
+    cx.strokeStyle = '#9FD9E8'; cx.lineWidth = 1; cx.beginPath();
+    cx.moveTo(xg, y0); cx.lineTo(xg, y1);
+    cx.moveTo(xg - 3, y0); cx.lineTo(xg + 3, y0);
+    cx.moveTo(xg - 3, y1); cx.lineTo(xg + 3, y1); cx.stroke();
+    tagBg(cx, right ? xg - 4 : xg + 4, (y0 + y1) / 2, nm, right ? 'right' : 'left', '#9FD9E8');
+  };
   /* 右端の名前が重ならないようにずらす */
   tags.sort((a, b) => a.y - b.y);
   for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 11) tags[i].y = tags[i - 1].y + 11;
@@ -1640,6 +1721,8 @@ function drawRel() {
   };
   vline(Math.min(X1(sampT), Rr), top.y0, top.y1, isIR ? 'TI' : 'TR');
   vline(Math.min(X2(P.TE), Rr), bot.y0, bot.y1, 'TE');
+  gap(Math.min(X1(sampT), Rr) - 8, ys1, 'ここの差', true);
+  gap(Math.min(X2(P.TE), Rr) + 8, ys2, 'この差が画像の明暗', false);
   cx.fillStyle = C.dim; cx.textAlign = 'right';
   cx.fillText(Math.round(tmax1) + 'ms', Rr, top.y1 + 9);
   cx.fillText(Math.round(tmax2) + 'ms', Rr, bot.y1 + 9);
@@ -1732,28 +1815,29 @@ const STEPS = [
 /* ================= シーケンスのプリセット ================= */
 const PRE = [
 { k:'t1',  nm:'T1強調 SE',   ruby:'T1W SE',  s:{ seq:'SE', TR:500, TE:15 },
-  note:`短い TR で T1 の差を出し、短い TE で T2 の差を消します。<b>脂肪が白く、水（CSF）が黒い</b>のが目印。
-  解剖の形を見るのに向いています。` },
+  lede:'短い TR で T1 の差を出し、短い TE で T2 の差を消す → 脂肪が白・水が黒',
+  note:`脂肪が白く、水（CSF）が黒い。解剖の形を見るのに向いています。<b>右のグラフ①</b>で、TR の線のところに組織の差が大きく開いているのを確かめてください。` },
 { k:'t2',  nm:'T2強調 SE',   ruby:'T2W SE',  s:{ seq:'SE', TR:4000, TE:100 },
-  note:`長い TR で T1 の差を消し、長い TE で T2 の差を出します。<b>水が白い</b>のが目印。
-  浮腫をともなう病変が白く光るので、病変さがしの基本になります。` },
+  lede:'長い TR で T1 の差を消し、長い TE で T2 の差を出す → 水と病変が白',
+  note:`水が白いのが目印。浮腫をともなう病変が白く光るので、病変さがしの基本になります。<b>グラフ②</b>で、TE の線のところに差が開きます。` },
 { k:'pd',  nm:'プロトン密度', ruby:'PD SE',   s:{ seq:'SE', TR:2500, TE:15 },
-  note:`長い TR・短い TE。T1 も T2 もほとんど効かないので、<b>水素の量そのもの</b>の差だけが残ります。
-  全体にのっぺりと明るく、灰白質が白質よりわずかに明るくなります。` },
+  lede:'長い TR・短い TE で T1 も T2 も効かせない → 水素の量そのもの',
+  note:`全体にのっぺりと明るく、灰白質が白質よりわずかに明るくなります。グラフ①でも②でも、線がほとんど重なっているのが分かります。` },
 { k:'t2s', nm:'T2*強調 GRE', ruby:'GRE',     s:{ seq:'GRE', TR:500, TE:25, FA:20 },
-  note:`180°パルスを使わないので、静磁場の不均一による位相のずれが戻りません。減り方は T2 ではなく <b>T2*</b>。
-  出血（ヘモジデリン）や石灰化のまわりが黒く抜けます。「静磁場の不均一さ」を動かすと画像が大きく変わります。` },
+  lede:'180° を使わないので T2 ではなく T2* で減る → 出血や石灰化が黒く抜ける',
+  note:`傾斜磁場の反転でエコーを作るため、磁場のムラによる位相のずれが戻りません。「詳細」タブの<b>静磁場のムラ</b>を動かすと、画像が大きく変わります。` },
 { k:'t1g', nm:'T1強調 GRE',  ruby:'GRE',     s:{ seq:'GRE', TR:150, TE:4, FA:70 },
-  note:`TR をとても短くしても、フリップ角を大きくすれば T1 の差が出ます。息止めで撮る腹部などに使います。` },
+  lede:'TR がとても短くても、大きく倒せば T1 の差が出る',
+  note:`息止めで撮る腹部などに使います。α（どれだけ倒すか）を動かすと信号の大きさが変わります。` },
 { k:'stir',nm:'STIR（脂肪抑制）', ruby:'IR', s:{ seq:'IR', TR:4000, TE:60, TI:180 },
-  note:`脂肪の T1（≈270ms）に合わせて TI ≈ 0.69×T1 ≈ 180ms。<b>脂肪だけが黒く</b>なり、
-  脂肪に埋もれていた病変が見えるようになります。` },
+  lede:'TI ≒ 0.69 × T1（脂肪）→ 脂肪だけ黒くする',
+  note:`脂肪だけが黒くなり、脂肪に埋もれていた病変が見えるようになります。グラフ①で、脂肪の線がちょうど 0 を横切るところに TI があります。` },
 { k:'flair',nm:'FLAIR（水抑制）', ruby:'IR', s:{ seq:'IR', TR:9000, TE:100, TI:2400 },
-  note:`脳脊髄液の T1（≈4000ms）に合わせた TI。<b>脳室の水が黒く</b>なり、そのすぐ脇の白質病変が見やすくなります。
-  T2強調では水と病変がどちらも白くて紛れてしまうところを分けられます。` },
+  lede:'TI ≒ 0.69 × T1（水）→ 脳室の水を黒くして、そのふちの病変を見せる',
+  note:`脳室の水が黒くなり、そのすぐ脇の白質病変が見やすくなります。T2強調では水と病変がどちらも白くて紛れるところを、分けられます。` },
 { k:'t2h',  nm:'強いT2強調', ruby:'HEAVY T2', s:{ seq:'SE', TR:6000, TE:200 },
-  note:`TE をさらに長くすると、T2 の長い水以外はほとんど消えます。MRCP や内耳の撮影の考え方です。
-  信号そのものは小さくなるので、実際にはノイズとの兼ね合いになります。` }
+  lede:'TE をさらに伸ばす → T2 の長い水以外はほとんど消える',
+  note:`MRCP や内耳の撮影の考え方です。信号そのものは小さくなるので、実際にはノイズとの兼ね合いになります。` }
 ];
 
 /* ================= 練習問題 =================
@@ -1845,31 +1929,34 @@ function weightName() {
   return '混ざった重みづけ';
 }
 
-/* ---- 組織の表 ---- */
-const tisBody = $('tisBody');
-TIS.forEach((t, i) => {
-  const tr = document.createElement('tr');
-  tr.innerHTML = '<td><span class="sw" style="background:' + t.col + '"></span><span class="nm">' + t.nm + '</span></td>' +
-    '<td class="num" data-k="t1"></td><td class="num" data-k="t2"></td><td class="num">' + t.PD.toFixed(2) + '</td>' +
-    '<td class="barc"><span class="sigbar"><i style="width:0%"></i></span></td>';
-  tr.addEventListener('click', () => { setTissue(t.id); });
-  tisBody.appendChild(tr);
+/* ---- 組織チップ：四角の明るさが、いまの条件での画像上の明るさ ---- */
+const CHIPS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'bone'];
+const tisChips = $('tisChips');
+CHIPS.forEach(id => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'chip'; b.dataset.t = id;
+  b.innerHTML = '<i></i>' + TIS[TIX[id]].nm;
+  b.addEventListener('click', () => setTissue(id));
+  tisChips.appendChild(b);
 });
-function updateTis() {
-  let mxs = 1e-6;
-  const sg = TIS.map(t => sigTis(t, P));
-  TIS.forEach((t, i) => { if (INIMG[t.id] && sg[i] > mxs) mxs = sg[i]; });
-  [...tisBody.children].forEach((tr, i) => {
-    const t = TIS[i];
-    tr.setAttribute('aria-selected', t.id === P.tissue);
-    tr.querySelector('[data-k=t1]').textContent = Math.round(T1of(t, P.B0));
-    tr.querySelector('[data-k=t2]').textContent = Math.round(T2of(t)) || '<1';
-    tr.querySelector('.sigbar i').style.width = Math.min(100, sg[i] / mxs * 100).toFixed(1) + '%';
-  });
-  const eq = P.seq === 'IR' ? 'S = ρ|1 − 2e^(−TI/T1) + e^(−TR/T1)|·e^(−TE/T2)'
+function eqText() {
+  return P.seq === 'IR' ? 'S = ρ|1 − 2e^(−TI/T1) + e^(−TR/T1)|·e^(−TE/T2)'
     : P.seq === 'GRE' ? 'S = ρ·sinα·(1−E1)/(1−cosα·E1)·e^(−TE/T2*)'
       : 'S = ρ·(1 − e^(−TR/T1))·e^(−TE/T2)';
-  $('tisEq').textContent = eq + '　（T1 は ' + P.B0 + 'T での値）';
+}
+function updateTis() {
+  const sg = {};
+  let mxs = 1e-6;
+  CHIPS.forEach(id => { const v = sigTis(TIS[TIX[id]], P); sg[id] = v; if (v > mxs) mxs = v; });
+  [...tisChips.children].forEach(b => {
+    const id = b.dataset.t;
+    const g = Math.round(255 * Math.pow(Math.min(1, sg[id] / (mxs * 1.04)), 0.92));
+    b.querySelector('i').style.background = 'rgb(' + g + ',' + g + ',' + g + ')';
+    b.setAttribute('aria-pressed', id === P.tissue);
+  });
+  const t = TIS[TIX[P.tissue]];
+  $('tisSub').textContent = 'T1 ' + Math.round(T1of(t, P.B0)) + ' / T2 ' + Math.round(T2of(t)) + ' ms';
+  $('tisEq').innerHTML = '四角の明るさ＝いまの条件でその組織が画像に出る明るさです。画像をクリックしても選べます。<br>' + eqText();
 }
 function setTissue(id) {
   P.tissue = id;
@@ -1887,11 +1974,12 @@ function layoutImg() {
   imgbox.style.display = '';
   let ih, iw;
   if (P.view === 2) { ih = Math.min(h - 22, (w - 22) * IH / IW); }
-  else { ih = Math.min(h * 0.62, (w * 0.34) * IH / IW, h - 96); }
+  else { ih = Math.min(h * 0.50, (w * 0.26) * IH / IW, h - 96); }
   iw = ih * IW / IH;
   if (P.view === 2) { imgbox.style.left = ((w - iw) / 2).toFixed(0) + 'px'; imgbox.style.top = ((h - ih) / 2).toFixed(0) + 'px'; }
   else { imgbox.style.left = (w - iw - 12).toFixed(0) + 'px'; imgbox.style.top = '46px'; }
   imgbox.style.width = iw.toFixed(0) + 'px'; imgbox.style.height = ih.toFixed(0) + 'px';
+  $('imgPar').style.display = iw < 200 ? 'none' : '';
   const px = xhairPx || REP[P.tissue];
   if (px && INIMG[P.tissue]) {
     xhair.style.display = '';
@@ -1920,8 +2008,6 @@ function refresh(keep) {
   $('imgPar').textContent = parText();
   $('preName').textContent = weightName();
   $('prePar').textContent = parText();
-  $('freeName').textContent = seqName();
-  $('freePar').textContent = parText();
   $('vTR').textContent = Math.round(P.TR) + ' ms';
   $('vTE').textContent = Math.round(P.TE) + ' ms';
   $('vTI').textContent = P.seq === 'IR' ? Math.round(P.TI) + ' ms' : '—';
@@ -1931,14 +2017,18 @@ function refresh(keep) {
   $('vT2p').textContent = isFinite(P.T2p) ? Math.round(P.T2p) + ' ms' : '均一（∞）';
   $('sTR').value = near(TRV, P.TR); $('sTE').value = near(TEV, P.TE);
   $('sTI').value = near(TIV, P.TI); $('sFA').value = P.FA; $('sT2p').value = near(TPV, P.T2p);
-  $('sTI').disabled = P.seq !== 'IR';
-  $('sFA').disabled = !(P.seq === 'GRE' || P.manual);
+  $('wTI').style.display = P.seq === 'IR' ? '' : 'none';
+  $('wFA').style.display = (P.seq === 'GRE' || P.manual) ? '' : 'none';
   segSet($('seqSeg'), P.seq, 'q'); segSet($('b0Seg'), P.B0, 'b');
   segSet($('viewSeg'), P.view, 'v'); segSet($('frameSeg'), P.frame, 'f');
   segSet($('nSeg'), P.nDisp, 'n'); segSet($('spdSeg'), P.spd, 's');
   const pr = presetOf();
   [...$('preGrid').children].forEach(b => b.setAttribute('aria-pressed', !!pr && b.dataset.k === pr.k));
-  $('preNote').innerHTML = pr ? pr.note : 'TR・TE を自分で決めた条件です。<b>' + weightName() + '</b>。下のグラフで、どの組織の差が開いているか確かめてください。';
+  $('preLede').textContent = pr ? pr.lede
+    : (P.TR < 1800 ? '短い' : '長い') + ' TR ＋ ' + (P.TE < 60 ? '短い' : '長い') + ' TE → ' + weightName();
+  $('preNote').innerHTML = pr ? pr.note
+    : 'TR・TE を自分で決めた条件です。右のグラフで、どの組織の差が開いているかを確かめてください。'
+      + '線のあいだが広いところが、そのまま画像の明暗の差になります。';
   $('tManual').checked = P.manual;
   $('bPause').textContent = P.paused ? '再生' : '一時停止';
   $('bPause').setAttribute('aria-pressed', P.paused);
@@ -1960,11 +2050,11 @@ $('modeTabs').addEventListener('click', e => {
   [...$('modeTabs').children].forEach(x => x.setAttribute('aria-pressed', x === b));
   for (let i = 0; i < 4; i++) $('pane' + i).hidden = i !== mode;
   document.body.classList.toggle('quiz', mode === 3);
-  if (mode !== 0) {            // 学習モード用の特別な表示（量子描像・手動）は持ち越さない
+  if (mode !== 1) {            // 学習モード用の特別な表示（量子描像・手動）は持ち越さない
     P.quantum = false; P.manual = false;
     refresh(true);
   }
-  if (mode === 0) gotoStep(stepI);
+  if (mode === 1) gotoStep(stepI);
   if (mode === 3) showQ();
   requestAnimationFrame(resize);
 });
@@ -1980,16 +2070,17 @@ STEPS.forEach((s, i) => {
   b.addEventListener('click', () => { auto = false; $('bAuto').textContent = '順に再生'; gotoStep(i); });
   li.appendChild(b); stepList.appendChild(li);
 });
-function gotoStep(i) {
+function gotoStep(i, apply) {
   stepI = Math.max(0, Math.min(STEPS.length - 1, i));
   const s = STEPS[stepI];
   [...stepList.querySelectorAll('button')].forEach((b, k) => k === stepI ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
   $('stepName').textContent = s.nm;
   $('stepNo').textContent = (stepI + 1) + ' / ' + STEPS.length;
   $('stepNote').innerHTML = s.note;
+  if (apply === false) return;                 // 起動時は一覧を作るだけ
   applySet(s.set, true);
   if (s.act === 'p90') { equilibrium(); clearTrail(); manualPulse(90, 'x'); }
-  if (mode === 0) $('stepName').scrollIntoView({ block:'nearest' });   // 説明が隠れないようにする
+  if (mode === 1) $('stepName').scrollIntoView({ block:'nearest' });   // 説明が隠れないようにする
 }
 $('bPrev').addEventListener('click', () => { auto = false; $('bAuto').textContent = '順に再生'; gotoStep(stepI - 1); });
 $('bNext').addEventListener('click', () => { auto = false; $('bAuto').textContent = '順に再生'; gotoStep(stepI + 1); });
@@ -2044,14 +2135,14 @@ detents('dTE', TEV, 'TE', [4, 15, 60, 100, 200]);
 detents('dTI', TIV, 'TI', [180, 400, 1200, 2400]);
 $('tManual').addEventListener('change', e => {
   P.manual = e.target.checked;
-  if (P.manual) { R.nut = null; R.phase = '手動'; }
+  if (P.manual) { R.nut = null; R.phase = '手動：ボタンでパルスを撃ってください'; }
   refresh(true);
 });
 $('bP90').addEventListener('click', () => { P.manual = true; $('tManual').checked = true; refresh(true); manualPulse(90, 'x'); });
 $('bP180').addEventListener('click', () => { P.manual = true; $('tManual').checked = true; refresh(true); manualPulse(180, 'y'); });
 $('bPa').addEventListener('click', () => { P.manual = true; $('tManual').checked = true; refresh(true); manualPulse(P.FA, 'x'); });
-$('bSpoil').addEventListener('click', () => { spoil(); R.phase = 'スポイラ'; });
-$('bReset').addEventListener('click', () => { equilibrium(); clearTrail(); R.t = 0; R.trace.length = 0; R.phase = '熱平衡'; });
+$('bSpoil').addEventListener('click', () => { spoil(); R.phase = 'スポイラ：位相をばらして横磁化を消す'; });
+$('bReset').addEventListener('click', () => { equilibrium(); clearTrail(); R.t = 0; R.trace.length = 0; R.phase = '熱平衡：まだ何もしていない（縦磁化だけ）'; });
 
 /* ================= 表示と操作 ================= */
 $('viewSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.view = +b.dataset.v; refresh(); });
@@ -2059,13 +2150,13 @@ $('frameSeg').addEventListener('click', e => { const b = e.target.closest('butto
 $('nSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.nDisp = +b.dataset.n; buildSpins(P.nDisp); refresh(); });
 $('spdSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.spd = +b.dataset.s; refresh(); });
 const chk = (id, key, after) => $(id).addEventListener('change', e => { P[key] = e.target.checked; if (after) after(); refresh(); });
-chk('tBody', 'showBody', () => { placeHead(); ctrl.want = P.showBody ? 96 : 20; });
+chk('tBody', 'showBody', () => { placeHead(); ctrl.want = P.showBody ? 96 : 23; });
 chk('tComp', 'showComp'); chk('tTrail', 'showTrail', clearTrail); chk('tLab', 'showLab');
 chk('tSlow', 'slowPulse'); chk('tNoise', 'noise');
 $('bHome').addEventListener('click', homeCam);
 $('bPause').addEventListener('click', () => { P.paused = !P.paused; refresh(); });
 $('bStep').addEventListener('click', () => {      // いまの周期の頭に戻す
-  R.t = 0; R.ei = 0; R.trace.length = 0; equilibrium(); clearTrail(); R.phase = '熱平衡'; P.paused = false; refresh(true);
+  R.t = 0; R.ei = 0; R.trace.length = 0; equilibrium(); clearTrail(); R.phase = '熱平衡：まだ何もしていない（縦磁化だけ）'; P.paused = false; refresh(true);
 });
 
 /* ================= 撮影した画像 ================= */
@@ -2238,11 +2329,15 @@ addEventListener('keydown', e => {
 /* ================= はじめての案内 ================= */
 const GKEY = 'mri-guide-v1';
 const coarse = matchMedia('(pointer:coarse)').matches || innerWidth <= 900;
-$('gTip').innerHTML = coarse
-  ? '3Dは<b>1本指でドラッグ</b>して回し、<b>2本指</b>で拡大縮小、<b>ダブルタップ</b>で元に戻せます。<br><br>' +
-    '右の画像を<b>タップ</b>すると、その組織のプロトンが3Dに出ます。下の「学習」を①から順に押していくのが近道です。'
-  : '3Dは<b>ドラッグ</b>して回し、<b>ホイール</b>で拡大縮小、<b>ダブルクリック</b>で元に戻せます。<br><br>' +
-    '右の画像を<b>クリック</b>すると、その組織のプロトンが3Dに出ます。まずは「学習」を①から順に押していくのが近道です。';
+$('gTip').innerHTML =
+  '画面は3つで1組です。<br>' +
+  '<b>① 3D</b>　体の中のプロトンが、いまどうなっているか<br>' +
+  '<b>② パルスシーケンス</b>　いつ、どんな力をかけているか<br>' +
+  '<b>③ 緩和曲線</b>　その結果、組織の差がどこで開くか<br><br>' +
+  'まず右の<b>「シーケンス」</b>で「T1強調」と「T2強調」を押し比べてみてください。3つとも同時に変わります。<br><br>' +
+  (coarse
+    ? '3Dは<b>1本指でドラッグ</b>で回転、<b>2本指</b>で拡大縮小、<b>ダブルタップ</b>で元に戻ります。'
+    : '3Dは<b>ドラッグ</b>で回転、<b>ホイール</b>で拡大縮小、<b>ダブルクリック</b>で元に戻ります。');
 $('bGuide').addEventListener('click', () => $('guide').classList.add('on'));
 $('gClose').addEventListener('click', () => {
   $('guide').classList.remove('on');
@@ -2262,6 +2357,7 @@ function resize() {
   layoutImg(); drawSeq(); drawRel();
 }
 new ResizeObserver(resize).observe(stage);
+new ResizeObserver(() => { drawSeq(); drawRel(); }).observe(document.querySelector('.panels'));
 addEventListener('resize', () => { applyRail(); resize(); });
 
 let last = performance.now(), acc = 0;
@@ -2271,7 +2367,7 @@ function loop(now) {
   advance(dt);
   updateScene(dt);
   renderer.render(scene, camera);
-  if (auto && mode === 0) {
+  if (auto && mode === 1) {
     autoT += dt;
     if (autoT > 12) { autoT = 0; if (stepI >= STEPS.length - 1) { auto = false; $('bAuto').textContent = '順に再生'; } else gotoStep(stepI + 1); }
   }
@@ -2279,8 +2375,8 @@ function loop(now) {
   if (acc > 0.08) {
     acc = 0;
     const m = netM();
-    $('hudT').textContent = Math.round(R.t) + ' ms';
-    $('hudPh').textContent = R.phase;
+    $('hudNow').textContent = R.phase;
+    $('hudT').textContent = Math.round(R.t);
     $('hudMz').textContent = m[2].toFixed(2);
     $('hudMxy').textContent = Math.hypot(m[0], m[1]).toFixed(2);
     drawSeq();
@@ -2295,7 +2391,8 @@ loadExam();
 applyRail();
 setTissue('wm');
 placeHead();
-gotoStep(0);
+gotoStep(0, false);
+applySet(Object.assign({ manual:false, quantum:false }, PRE[0].s), true);
 refresh(false);
 resize();
 homeCam();
