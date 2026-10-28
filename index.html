@@ -517,7 +517,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <div class="cvwrap"><canvas id="seqCv"></canvas></div>
       </div>
       <div class="pan">
-        <div class="ph2"><h2>緩和曲線とコントラスト</h2><span class="hint">組織の差がどこで開くか</span></div>
+        <div class="ph2"><h2>緩和曲線とコントラスト</h2><span class="hint">組織の差がどこで開くか　<button type="button" class="act" id="bRelPlay" style="padding:2px 8px">▶ 時間を追って画像を見る</button></span></div>
         <div class="cvwrap"><canvas id="relCv"></canvas></div>
       </div>
     </div>
@@ -1118,14 +1118,26 @@ function computeRep() {   // 組織ごとの代表画素（画像を切り替え
 computeRep();
 
 let noiseBuf = null;
+/* 時間を追う画像：緩和曲線の上で時刻を選ぶと（なぞる／▶ボタン）、その時刻の磁化の大きさで画像を描く。
+   relT = { panel: 1, t } … ①の時刻 t の縦磁化 |Mz(t)| × プロトン密度（反転回復では TI の代わりに t で 90° を入れたときの大きさ）
+   relT = { panel: 2, t } … ②の時刻 t の横磁化 |Mxy(t)| × プロトン密度（TE を t にしたときの画像と同じ）
+   明るさは時刻によらず同じ物差し（磁化 1 ＝白）で描くので、時間とともに明るくなる・暗くなるのが見える。
+   ② の時刻を TE に合わせると、ふだんの画像と同じ明暗の順になる。 */
+let relT = null, relGeo = null;
+function relSignal(t, panel) {
+  let T1 = T1of(t, P.B0), T2 = T2of(t);
+  if (P.seq === 'GRE' && isFinite(P.T2p)) T2 = 1 / (1 / T2 + 1 / P.T2p);
+  if (panel === 1) return t.PD * Math.abs(mzCurve(T1, relT.t, P));
+  return t.PD * Math.abs(mxy0(T1, P)) * Math.exp(-relT.t / T2);
+}
 function drawImage() {
   const sg = new Float64Array(TIS.length + 1);
   let mxs = 1e-6;
   for (let k = 0; k < TIS.length; k++) {
-    sg[k + 1] = sigTis(TIS[k], P);
+    sg[k + 1] = relT ? relSignal(TIS[k], relT.panel) : sigTis(TIS[k], P);
     if (INIMG[TIS[k].id] && sg[k + 1] > mxs) mxs = sg[k + 1];
   }
-  const norm = 1 / (mxs * 1.04);
+  const norm = relT ? 1 / 1.04 : 1 / (mxs * 1.04);
   if (!noiseBuf || noiseBuf.length !== IW * IH) {
     noiseBuf = new Float32Array(IW * IH);
     for (let i = 0; i < noiseBuf.length; i++) {
@@ -1143,6 +1155,10 @@ function drawImage() {
     d[i * 4] = g; d[i * 4 + 1] = g; d[i * 4 + 2] = g; d[i * 4 + 3] = 255;
   }
   mriCx.putImageData(imgData, 0, 0);
+  if (relT) {
+    $('imgSeq').textContent = relT.panel === 1 ? '縦磁化 Mz の地図' : '横磁化 Mxy の地図';
+    $('imgPar').textContent = 't = ' + Math.round(relT.t) + ' ms';
+  }
 }
 
 /* ================= 3Dシーン ================= */
@@ -1712,6 +1728,7 @@ function drawRel() {
   const Y2 = v => bot.y1 - v * (bot.y1 - bot.y0);
   const X1 = t => L + (Rr - L) * t / tmax1;
   const X2 = t => L + (Rr - L) * t / tmax2;
+  relGeo = { L, Rr, top, bot, tmax1, tmax2, mid: (top.y1 + bot.y0) / 2 };
 
   const tags = [], ys1 = [], ys2 = [];
   CURVE.forEach(id => {
@@ -1767,7 +1784,24 @@ function drawRel() {
   cx.fillStyle = C.dim; cx.textAlign = 'right';
   cx.fillText(Math.round(tmax1) + 'ms', Rr, top.y1 + 9);
   cx.fillText(Math.round(tmax2) + 'ms', Rr, bot.y1 + 9);
+  /* 時間を追う画像のカーソル：いま画像に描いている時刻と、各組織の値 */
+  if (relT) {
+    const r = relT.panel === 1 ? top : bot, x = relT.panel === 1 ? X1(relT.t) : X2(relT.t);
+    cx.strokeStyle = '#FFFFFF'; cx.lineWidth = 1.2; cx.globalAlpha = .85;
+    cx.beginPath(); cx.moveTo(x, r.y0); cx.lineTo(x, r.y1); cx.stroke(); cx.globalAlpha = 1;
+    CURVE.forEach(id => {
+      const t = TIS[TIX[id]], T1 = T1of(t, P.B0);
+      let T2 = T2of(t);
+      if (P.seq === 'GRE' && isFinite(P.T2p)) T2 = 1 / (1 / T2 + 1 / P.T2p);
+      const y = relT.panel === 1 ? Y1(mzCurve(T1, relT.t, P)) : Y2(Math.abs(mxy0(T1, P)) * Math.exp(-relT.t / T2));
+      cx.fillStyle = t.col; cx.beginPath(); cx.arc(x, y, 3.2, 0, 7); cx.fill();
+    });
+    tagBg(cx, Math.min(x + 4, Rr - 70), r.y0 + 8, 't = ' + Math.round(relT.t) + ' ms → 画像', 'left', '#FFFFFF');
+  }
 }
+
+
+
 
 /* ================= 学習ステップ ================= */
 const STEPS = [
@@ -2429,6 +2463,34 @@ function loop(now) {
     drawSeq();
   }
 }
+
+/* 緩和曲線をなぞると、その時刻の画像になる。指を離す／外に出ると、ふだんの画像に戻る */
+function relAt(ev) {
+  if (!relGeo) return null;
+  const cv = $('relCv'), b = cv.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top, g = relGeo;
+  if (x < g.L || x > g.Rr) return null;
+  const panel = y < g.mid ? 1 : 2, tmax = panel === 1 ? g.tmax1 : g.tmax2;
+  return { panel, t: (x - g.L) / (g.Rr - g.L) * tmax };
+}
+let relPlay = null;
+function relShow(v) { relT = v; drawImage(); drawRel(); if (!v) { $('imgSeq').textContent = weightName(); $('imgPar').textContent = parText(); } }
+$('relCv').addEventListener('pointermove', ev => { if (relPlay) return; const v = relAt(ev); if (v || relT) relShow(v); });
+$('relCv').addEventListener('pointerleave', () => { if (!relPlay && relT) relShow(null); });
+$('bRelPlay').addEventListener('click', () => {
+  if (relPlay) { cancelAnimationFrame(relPlay.id); relPlay = null; $('bRelPlay').textContent = '▶ 時間を追って画像を見る'; relShow(null); return; }
+  const D1 = 4000, D2 = 3000, HOLD = 1500, t0 = performance.now();
+  $('bRelPlay').textContent = '■ 止める';
+  const step = now => {
+    const e = now - t0, g = relGeo;
+    if (!g) return;
+    if (e < D1) relShow({ panel: 1, t: g.tmax1 * e / D1 });
+    else if (e < D1 + D2) relShow({ panel: 2, t: Math.min(g.tmax2, P.TE * 1.6) * (e - D1) / D2 });
+    else if (e < D1 + D2 + HOLD) relShow({ panel: 2, t: P.TE });
+    else { relPlay = null; $('bRelPlay').textContent = '▶ 時間を追って画像を見る'; relShow(null); return; }
+    relPlay.id = requestAnimationFrame(step);
+  };
+  relPlay = { id: requestAnimationFrame(step) };
+});
 
 /* ================= 起動 ================= */
 buildSpins(P.nDisp);
