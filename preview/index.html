@@ -1,0 +1,2514 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<title>【試作版】MRI スピン3Dシミュレーター</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="MRIのT1強調・T2強調画像がどうやって決まるのかを、体内のプロトンのスピンから3Dで追えるシミュレーター。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="webfont" rel="stylesheet" media="print"
+      href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<script>addEventListener('load', function () { var w = document.getElementById('webfont'); if (w) w.media = 'all'; });</script>
+<style>
+:root{
+  color-scheme: dark;
+  --ink:#0A0F14; --ink2:#0D131A; --panel:#121A22; --panel2:#182430;
+  --line:#223140; --line2:#31485C;
+  --text:#D9E4ED; --muted:#8AA0B2; --dim:#5E7386;
+  --teal:#52B8CE; --amber:#F0B24B; --alert:#E0645C; --grass:#7ED9A7; --violet:#A99BE8;
+  --b0:#8FB6C8; --sig:#52B8CE; --rf:#F0B24B;
+  --mincho:"Zen Maru Gothic",'Hiragino Maru Gothic ProN','Yu Gothic',system-ui,sans-serif;
+  --gothic:"Zen Kaku Gothic New",'Hiragino Sans','Yu Gothic',system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,'SFMono-Regular',monospace;
+  --r:4px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; -webkit-tap-highlight-color:transparent}
+body{
+  margin:0; background:var(--ink); color:var(--text);
+  font-family:var(--gothic); font-size:14px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1500px; margin:0 auto; padding-inline:20px; padding-block:0 48px}
+
+/* ---------- header ---------- */
+header{padding-block:14px 9px; border-bottom:1px solid var(--line); margin-bottom:11px;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.hbtn{flex:none; padding:5px 13px; background:var(--panel2); border:1px solid var(--line2);
+  border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:11.5px; cursor:pointer}
+.hbtn:hover{color:var(--text); border-color:var(--teal)}
+h1{
+  font-family:var(--mincho); font-weight:700; font-size:clamp(17px,2vw,22px);
+  letter-spacing:.03em; margin:0; line-height:1.3;
+}
+h1 small{font-family:var(--mono); font-size:10px; letter-spacing:.18em; color:var(--dim); display:block; font-weight:400}
+
+/* ---------- workspace ---------- */
+.work{
+  display:grid; grid-template-columns:minmax(0,1fr) 7px var(--railw,336px); gap:10px; align-items:stretch;
+  height:calc(100vh - 96px); height:calc(100dvh - 96px); min-height:560px;
+}
+/* 左列は 3D（上）とグラフ2枚（下）の2段。3つを1画面に収めるための骨格 */
+.left{display:grid; grid-template-rows:minmax(0,1.16fr) minmax(0,1fr); gap:10px; min-height:0; min-width:0}
+.split{align-self:stretch; height:auto; cursor:col-resize; position:relative}
+.split::after{content:""; position:absolute; top:0; bottom:0; left:2px; right:2px; border-radius:2px; background:var(--line); transition:background .15s}
+.split:hover::after,.split:focus-visible::after{background:var(--teal)}
+.split:focus-visible{outline:none}
+.railbar{display:none; justify-content:space-between; align-items:center; gap:8px; padding:2px 2px 8px; border-bottom:1px solid var(--line); margin-bottom:2px}
+.rbname{font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; color:var(--dim)}
+.rbbtn{padding:3px 10px; background:var(--panel2); border:1px solid var(--line2); border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:11px; cursor:pointer}
+.rbbtn:hover{color:var(--text); border-color:var(--teal)}
+body.detached .work{grid-template-columns:minmax(0,1fr)}
+body.detached .split{display:none}
+body.detached .rail{
+  position:fixed; z-index:40; width:348px; height:min(580px,80vh); min-width:250px; min-height:220px;
+  max-width:min(560px,72vw); max-height:80vh; resize:both;
+  background:var(--ink2); border:1px solid var(--line2); border-radius:6px;
+  box-shadow:0 18px 50px rgba(0,0,0,.72); padding:10px 11px 12px;
+}
+body.detached .railbar{display:flex; cursor:move; touch-action:none}
+.stage{
+  position:relative; height:100%; min-height:0; border:1px solid var(--line);
+  border-radius:var(--r); overflow:hidden;
+  background:radial-gradient(120% 100% at 50% 0%,#16222D 0%,#0A0F14 62%);
+}
+.stage canvas#gl{display:block; width:100%; height:100%; touch-action:none; cursor:grab}
+.stage canvas#gl:active{cursor:grabbing}
+.glerr{position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; justify-content:center;
+  gap:9px; padding:24px; background:rgba(10,15,20,.95); color:var(--muted); font-size:12.5px; line-height:1.85}
+.glerr b{color:var(--alert); font-size:14px; font-weight:700}
+.glinfo{margin:9px 0 0; font-family:var(--mono); font-size:9px; line-height:1.7; color:var(--dim); word-break:break-all}
+#labels{position:absolute; inset:0; pointer-events:none}
+.lab{
+  position:absolute; top:0; left:0; white-space:nowrap;
+  font-size:10px; font-weight:500; letter-spacing:.04em;
+  color:#E8F1F8; background:rgba(10,15,20,.6); border:1px solid rgba(49,72,92,.7);
+  padding:0 5px; border-radius:2px; transition:opacity .18s;
+  text-shadow:0 1px 3px #000;
+}
+.lab.axis{color:var(--dim); background:none; border:none; font-family:var(--mono); font-size:9.5px; letter-spacing:.14em}
+.lab.m{color:#EAF6FA; border-color:#2E6274; background:rgba(9,22,27,.82)}
+.lab.rf{color:#FFD79A; border-color:#6B4A2A; background:rgba(34,20,6,.82)}
+
+/* ---------- 画像パネル ---------- */
+#imgbox{
+  position:absolute; border:1px solid var(--line2); border-radius:2px; overflow:hidden;
+  background:#05080B; box-shadow:0 8px 28px rgba(0,0,0,.6); pointer-events:auto;
+}
+#imgbox canvas{display:block; width:100%; height:100%; cursor:crosshair}
+#imgbox .ih{
+  position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; gap:6px;
+  padding:3px 6px; font-family:var(--mono); font-size:9px; letter-spacing:.08em; color:#7FA9BD;
+  background:linear-gradient(180deg,rgba(5,8,11,.85),rgba(5,8,11,0)); pointer-events:none;
+}
+#imgbox .if{
+  position:absolute; bottom:0; left:0; right:0; padding:3px 6px; text-align:center;
+  font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; color:#6E93A6;
+  background:linear-gradient(0deg,rgba(5,8,11,.85),rgba(5,8,11,0)); pointer-events:none;
+}
+#imgbox .xh{position:absolute; width:13px; height:13px; margin:-7px 0 0 -7px; pointer-events:none}
+#imgbox .xh::before,#imgbox .xh::after{content:""; position:absolute; background:var(--amber)}
+#imgbox .xh::before{left:6px; top:0; width:1px; height:13px}
+#imgbox .xh::after{top:6px; left:0; height:1px; width:13px}
+
+/* ---------- stage toolbar / HUD ---------- */
+.bar{position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between; gap:10px; pointer-events:none; flex-wrap:wrap}
+.seg{display:flex; border:1px solid var(--line2); border-radius:3px; overflow:hidden; pointer-events:auto; background:rgba(10,15,20,.82); backdrop-filter:blur(4px)}
+.seg button{
+  padding:5px 11px; background:none; border:none; border-right:1px solid var(--line);
+  color:var(--muted); font-family:var(--mono); font-size:10px; letter-spacing:.1em; cursor:pointer;
+}
+.seg button:last-child{border-right:none}
+.seg button[aria-pressed="true"]{background:#1D3040; color:#EAF6FA}
+.seg button:hover{color:var(--text)}
+.barL{display:flex; gap:8px; align-items:center; flex-wrap:wrap; pointer-events:auto}
+.barR{display:flex; gap:8px; align-items:center; pointer-events:auto}
+.expose{
+  padding:5px 14px; border:1px solid #6B4A2A; background:rgba(40,22,8,.9); border-radius:3px;
+  color:#F3C173; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; cursor:pointer;
+}
+.expose:hover{background:#4A2B10; color:#FFD79A}
+.hud{
+  position:absolute; left:10px; bottom:26px; max-width:min(430px,62%); padding:6px 10px 7px; border-radius:3px;
+  background:rgba(10,15,20,.84); border:1px solid var(--line); pointer-events:none;
+}
+.hud .now{margin:0; font-size:12px; line-height:1.55; color:#FFD79A; letter-spacing:.02em}
+.hud .sub{margin:3px 0 0; font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; color:var(--dim); line-height:1.7}
+.hud .sub span{margin-right:4px}
+.hud .sub b{color:var(--teal); font-weight:400; margin-right:9px}
+.hud .sub .tis{color:var(--text); margin:0}
+.key{
+  position:absolute; left:0; right:0; bottom:0; height:20px; margin:0; padding:0 8px;
+  display:flex; gap:13px; align-items:center; justify-content:center; flex-wrap:nowrap; overflow:hidden;
+  background:linear-gradient(0deg,rgba(10,15,20,.9),rgba(10,15,20,0));
+  font-size:9.5px; color:var(--dim); pointer-events:none; white-space:nowrap;
+}
+.key i{display:inline-block; width:13px; height:3px; border-radius:1px; vertical-align:1px; margin-right:4px}
+.playbar{position:absolute; right:10px; bottom:26px; display:flex; gap:6px; align-items:center; pointer-events:auto}
+.playbar button{
+  padding:4px 11px; background:rgba(10,15,20,.86); border:1px solid var(--line2); border-radius:3px;
+  color:var(--muted); font-family:var(--mono); font-size:10px; letter-spacing:.08em; cursor:pointer;
+}
+.playbar button:hover{color:var(--text); border-color:var(--teal)}
+.playbar button[aria-pressed="true"]{background:#1D3040; color:#EAF6FA}
+
+/* ---------- rail ---------- */
+.rail{
+  display:flex; flex-direction:column; gap:12px;
+  height:100%; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  padding-right:6px; scrollbar-width:thin; scrollbar-color:var(--line2) transparent;
+}
+.rail::-webkit-scrollbar{width:7px}
+.rail::-webkit-scrollbar-thumb{background:var(--line2); border-radius:4px}
+.rail::-webkit-scrollbar-track{background:transparent}
+.grp{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:12px 13px 13px}
+.grp-h{
+  font-family:var(--mono); font-size:10px; letter-spacing:.2em; color:var(--dim);
+  text-transform:uppercase; margin:0 0 9px; display:flex; justify-content:space-between; align-items:baseline;
+}
+.grp-h b{font-family:var(--gothic); font-weight:500; font-size:11px; letter-spacing:.02em; color:var(--muted); text-transform:none}
+
+/* ---------- tabs ---------- */
+.tabs{display:grid; grid-template-columns:repeat(4,1fr); gap:0; border:1px solid var(--line2); border-radius:3px; overflow:hidden; margin-bottom:12px}
+.tabs button{
+  padding:7px 1px; background:var(--ink2); border:none; border-right:1px solid var(--line);
+  color:var(--muted); font-family:var(--gothic); font-size:11px; cursor:pointer;
+}
+.tabs button:last-child{border-right:none}
+.tabs button[aria-pressed="true"]{background:#1D3040; color:#EAF6FA; box-shadow:inset 0 -2px 0 var(--teal)}
+.pane[hidden]{display:none}
+
+/* ---------- readout ---------- */
+.readout{
+  display:flex; justify-content:space-between; align-items:baseline; padding:7px 10px; margin-bottom:10px;
+  background:#0B141B; border:1px solid var(--line); border-radius:2px;
+}
+.readout .big{font-family:var(--gothic); font-size:12.5px; color:#EAF6FA; letter-spacing:.02em}
+.readout .sm{font-family:var(--mono); font-size:9.5px; color:var(--dim); letter-spacing:.08em;
+  white-space:nowrap; padding-left:8px}
+.readout .sm b{color:var(--teal); font-weight:400}
+
+/* ---------- 学習ステップ ---------- */
+ol.seq{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:3px}
+ol.seq li{display:flex}
+ol.seq button{
+  flex:1; display:grid; grid-template-columns:20px 1fr; gap:6px; align-items:baseline; text-align:left;
+  padding:5px 7px; background:transparent; border:1px solid transparent; border-radius:3px;
+  color:var(--muted); font-family:var(--gothic); font-size:11.5px; cursor:pointer; line-height:1.5;
+}
+ol.seq button:hover{background:var(--panel2); color:var(--text)}
+ol.seq button[aria-current="step"]{background:#1B2E3D; border-color:var(--teal); color:#EAF6FA}
+ol.seq .no{font-family:var(--mono); font-size:10px; color:var(--teal)}
+ol.seq .tg2{display:block; font-size:10px; color:var(--dim); letter-spacing:.02em}
+ol.seq button[aria-current="step"] .tg2{color:#8FC8D8}
+.seqnav{display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:10px}
+.note{
+  margin:10px 0 0; padding:9px 11px; background:var(--ink2); border-left:2px solid var(--teal);
+  border-radius:0 2px 2px 0; font-size:12px; color:var(--muted); line-height:1.85;
+}
+.note b{color:#EAF6FA; font-weight:500}
+.note .eq{display:block; margin:6px 0 2px; font-family:var(--mono); font-size:11px; color:var(--amber); letter-spacing:.02em; line-height:1.7}
+.note .hl{color:var(--amber)}
+
+/* ---------- ボタン類 ---------- */
+button.opt{
+  display:flex; flex-direction:column; align-items:center; gap:2px; padding:7px 3px 6px;
+  background:var(--panel2); border:1px solid var(--line); border-radius:3px; color:var(--muted);
+  font-family:var(--gothic); font-size:11px; font-weight:500; cursor:pointer;
+  transition:border-color .15s,color .15s,background .15s;
+}
+button.opt .ruby{font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; color:var(--dim)}
+button.opt:hover{border-color:var(--line2); color:var(--text)}
+button.opt[aria-pressed="true"]{background:#1D3040; border-color:var(--teal); color:#EAF6FA}
+button.opt[aria-pressed="true"] .ruby{color:var(--teal)}
+button.opt:focus-visible,button.act:focus-visible,summary:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+.pre-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:6px}
+.acts{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+button.act{
+  padding:7px 4px; background:transparent; border:1px solid var(--line2); border-radius:3px;
+  color:var(--muted); font-family:var(--gothic); font-size:11.5px; cursor:pointer; transition:.15s;
+}
+button.act:hover{background:var(--panel2); color:var(--text); border-color:var(--teal)}
+button.act.wide{grid-column:1/-1}
+button.act.rf{color:#F3C173; border-color:#6B4A2A}
+button.act.rf:hover{background:#3A2A12; border-color:var(--amber)}
+
+/* ---------- スライダ ---------- */
+.sld{margin:0 0 9px}
+.sld-h{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:1px}
+.sld-h span{font-size:11.5px; color:var(--muted)}
+.sld-h b{font-family:var(--mono); font-size:11px; font-weight:400; color:var(--teal)}
+.sld-h b.off{color:var(--dim)}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; height:20px; background:transparent;
+  cursor:pointer; margin:0; display:block;
+}
+input[type=range]::-webkit-slider-runnable-track{height:4px; background:#0A1117; border:1px solid var(--line2); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:15px; height:15px; margin-top:-7px; border-radius:3px;
+  background:linear-gradient(180deg,#9FB4C4,#5E7386); border:1px solid #3C5265; box-shadow:0 2px 4px rgba(0,0,0,.6);
+}
+input[type=range]::-moz-range-track{height:4px; background:#0A1117; border:1px solid var(--line2); border-radius:2px}
+input[type=range]::-moz-range-thumb{width:13px; height:13px; border-radius:3px; background:#8FA5B6; border:1px solid #3C5265}
+input[type=range]:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+input[type=range]:disabled{opacity:.35; cursor:default}
+.detent{display:flex; gap:4px; margin:-2px 0 0; flex-wrap:wrap}
+.detent button{
+  padding:2px 7px; background:var(--panel2); border:1px solid var(--line); border-radius:2px;
+  color:var(--dim); font-family:var(--mono); font-size:9.5px; cursor:pointer;
+}
+.detent button:hover{color:var(--text); border-color:var(--teal)}
+
+/* ---------- チェックボックス ---------- */
+.toggles{display:flex; flex-direction:column; gap:1px}
+label.tg{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); cursor:pointer; padding:2px 0}
+label.tg:hover{color:var(--text)}
+input[type=checkbox]{
+  appearance:none; -webkit-appearance:none; width:14px; height:14px; flex:none;
+  border:1px solid var(--line2); border-radius:2px; background:var(--ink2); cursor:pointer; position:relative;
+}
+input[type=checkbox]:checked{background:var(--teal); border-color:var(--teal)}
+input[type=checkbox]:checked::after{
+  content:""; position:absolute; left:4px; top:1px; width:4px; height:8px;
+  border:solid var(--ink); border-width:0 2px 2px 0; transform:rotate(42deg);
+}
+input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
+
+/* ---------- 組織チップ ---------- */
+.chips{display:flex; flex-wrap:wrap; gap:5px}
+.chip{
+  display:flex; align-items:center; gap:6px; padding:4px 9px 4px 5px; background:var(--panel2);
+  border:1px solid var(--line); border-radius:3px; color:var(--muted);
+  font-family:var(--gothic); font-size:11.5px; cursor:pointer; transition:.15s;
+}
+.chip i{width:14px; height:14px; border-radius:2px; border:1px solid rgba(255,255,255,.22); flex:none}
+.chip:hover{color:var(--text); border-color:var(--line2)}
+.chip[aria-pressed="true"]{background:#1D3040; border-color:var(--teal); color:#EAF6FA}
+.tiny{margin:7px 0 0; font-size:10.5px; line-height:1.75; color:var(--dim)}
+.tiny b{color:var(--muted); font-weight:500}
+.lede{
+  margin:0 0 9px; padding:6px 10px; background:#0B141B; border-left:2px solid var(--amber);
+  border-radius:0 2px 2px 0; font-size:12px; line-height:1.7; color:#F3C173;
+}
+/* ---------- 組織テーブル（いまは未使用） ---------- */
+table.tis{width:100%; border-collapse:collapse; font-size:11.5px}
+table.tis th{
+  font-family:var(--mono); font-size:9px; letter-spacing:.1em; color:var(--dim);
+  font-weight:400; text-align:right; padding:0 0 4px; border-bottom:1px solid var(--line);
+}
+table.tis th:first-child{text-align:left}
+table.tis td{padding:3px 0; border-bottom:1px solid rgba(34,49,64,.5); vertical-align:middle}
+table.tis tr{cursor:pointer}
+table.tis tr:hover td{background:rgba(24,36,48,.6)}
+table.tis tr[aria-selected="true"] td{background:#1B2E3D}
+table.tis tr[aria-selected="true"] .nm{color:#EAF6FA}
+.sw{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; vertical-align:-1px}
+.nm{color:var(--muted)}
+td.num{text-align:right; font-family:var(--mono); font-size:10px; color:var(--dim); padding-left:6px; white-space:nowrap}
+td.barc{width:52px; padding-left:8px}
+.sigbar{height:7px; background:#0A1117; border:1px solid var(--line); border-radius:1px; overflow:hidden}
+.sigbar i{display:block; height:100%; background:linear-gradient(90deg,#2E5C6B,#9FD9E8)}
+
+/* ---------- 下段パネル ---------- */
+.panels{display:grid; grid-template-columns:1fr 1fr; gap:10px; min-height:0}
+.pan{background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
+  padding:9px 12px 10px; min-width:0; min-height:0; display:flex; flex-direction:column}
+.pan .ph2{display:flex; justify-content:space-between; align-items:baseline; margin:0; gap:10px; flex-wrap:wrap}
+.pan h2{font-family:var(--mincho); font-weight:700; font-size:13px; margin:0; color:#E9F2F8}
+.pan .hint{font-size:10px; color:var(--dim)}
+.pan .cvwrap{position:relative; flex:1; min-height:0; margin-top:5px}
+.pan canvas{position:absolute; inset:0; display:block; width:100%; height:100%}
+
+/* ---------- filmstrip ---------- */
+.films{margin-top:10px; border:1px solid var(--line); border-radius:var(--r); background:var(--panel); padding:12px 14px 14px}
+.films .fh2{display:flex; justify-content:space-between; align-items:baseline; margin:0 0 10px}
+.films h2{font-family:var(--mincho); font-weight:700; font-size:14px; margin:0; color:#E9F2F8}
+.films .hint{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; color:var(--dim)}
+.strip{display:flex; gap:9px; overflow-x:auto; padding-bottom:5px; min-height:132px; align-items:flex-start}
+.strip .empty{font-size:11.5px; color:var(--dim); padding:34px 4px; line-height:1.8}
+.strip figure{margin:0; flex:none; width:88px; cursor:zoom-in}
+.strip img{display:block; width:88px; height:104px; object-fit:cover; border:1px solid var(--line2); border-radius:2px; background:#05080B}
+.strip figcaption{font-family:var(--mono); font-size:8.5px; color:var(--dim); margin-top:4px; letter-spacing:.03em; line-height:1.45}
+.strip figcaption b{color:var(--teal); font-weight:400; display:block}
+.strip figure:hover img{border-color:var(--teal)}
+
+/* ---------- 問題 ---------- */
+.qnote{margin:0 0 10px; font-size:12px; line-height:1.8; color:var(--muted)}
+.qhead{display:flex; justify-content:space-between; align-items:center; margin-bottom:9px}
+.qhead span{font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--dim)}
+.qhead button{padding:4px 9px; font-size:10.5px}
+.qtext{margin:0 0 10px; font-size:13px; line-height:1.7; color:#E9F2F8; text-wrap:balance}
+.qsrc{margin:-5px 0 10px; font-family:var(--mono); font-size:9.5px; letter-spacing:.04em; color:var(--dim); line-height:1.6}
+.qsrc b{color:var(--teal); font-weight:400; letter-spacing:.1em}
+.choices{list-style:none; margin:0 0 10px; padding:0; display:flex; flex-direction:column; gap:4px}
+.choices button{
+  width:100%; text-align:left; display:grid; grid-template-columns:16px 1fr; gap:7px; align-items:baseline;
+  padding:6px 9px; background:var(--panel2); border:1px solid var(--line); border-radius:3px;
+  color:var(--muted); font-family:var(--gothic); font-size:12px; cursor:pointer; line-height:1.5;
+}
+.choices button:hover:not([disabled]){border-color:var(--line2); color:var(--text)}
+.choices button[disabled]{cursor:default}
+.choices .n{font-family:var(--mono); font-size:10px; color:var(--dim)}
+.choices button.ok{background:#12291E; border-color:#2F6B49; color:#9FE3BC}
+.choices button.ok .n{color:#4FBF88}
+.choices button.ng{background:#2A1416; border-color:#6E3036; color:#E9A0A0}
+.choices button.ng .n{color:#D06A6A}
+.qexp{margin:0 0 10px; padding:9px 11px; background:var(--ink2); border-left:2px solid var(--teal);
+  border-radius:0 2px 2px 0; font-size:12px; color:var(--muted); line-height:1.8}
+.qexp[hidden]{display:none}
+#qPaste{
+  width:100%; height:180px; resize:vertical; padding:9px 10px; border-radius:3px;
+  background:var(--ink2); border:1px solid var(--line2); color:var(--text);
+  font-family:var(--mono); font-size:11.5px; line-height:1.7;
+}
+#qPaste:focus-visible{outline:2px solid var(--teal); outline-offset:1px}
+pre.fmt{
+  margin:7px 0 0; padding:9px 10px; background:var(--ink2); border-radius:3px; overflow-x:auto;
+  font-family:var(--mono); font-size:10.5px; line-height:1.65; color:var(--muted); white-space:pre;
+}
+
+/* ---------- 折りたたみ ---------- */
+details.fold{margin-top:10px; border-top:1px solid var(--line); padding-top:8px}
+details.fold:first-child{margin-top:0; border-top:none; padding-top:0}
+details.fold summary{list-style:none; cursor:pointer; font-family:var(--mono); font-size:9.5px;
+  letter-spacing:.12em; color:var(--dim)}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary::before{content:"+ "; color:var(--teal)}
+details.fold[open] summary::before{content:"− "}
+details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1.8}
+
+/* ---------- ガイド・ライトボックス ---------- */
+#guide{position:fixed; inset:0; z-index:60; background:rgba(4,7,10,.82); display:none;
+  align-items:center; justify-content:center; padding:20px}
+#guide.on{display:flex}
+.gcard{width:min(340px,100%); background:var(--panel); border:1px solid var(--line2);
+  border-radius:6px; padding:16px 17px 15px; box-shadow:0 22px 60px rgba(0,0,0,.75)}
+.ghead{margin:0 0 12px}
+.ghead b{font-family:var(--mincho); font-size:14.5px; color:#EAF6FA}
+.gtip{margin:0 0 14px; font-size:12.5px; line-height:1.85; color:var(--muted)}
+.gtip b{font-weight:500; color:var(--text)}
+#gClose{width:100%; padding:10px; background:#1D3040; border:1px solid var(--teal); border-radius:3px;
+  color:#EAF6FA; font-family:var(--gothic); font-size:12.5px; cursor:pointer}
+#gClose:hover{background:#24425A}
+#lightbox{
+  position:fixed; inset:0; background:rgba(4,7,10,.93); display:none; z-index:50;
+  align-items:center; justify-content:center; padding:24px; flex-direction:column; gap:12px;
+}
+#lightbox.on{display:flex}
+#lightbox img{display:block; max-width:min(92vw,420px); max-height:78vh; border:1px solid var(--line2); image-rendering:auto}
+#lightbox p{margin:0; font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.06em; text-align:center; line-height:1.8}
+#lightbox button{padding:7px 20px; background:transparent; border:1px solid var(--line2); border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:12px; cursor:pointer}
+#lightbox button:hover{color:var(--text); border-color:var(--teal)}
+
+/* ---------- スマートフォン・タブレット ---------- */
+@media (max-width:900px){
+  /* 1画面に収めるのはあきらめて、3Dだけ上に貼りつけたまま縦に積む */
+  .work{display:flex; flex-direction:column; height:auto; min-height:0}
+  .left{display:contents}
+  .split{display:none}
+  .railbar{display:none !important}
+  .stage{
+    order:1; position:sticky; top:0; z-index:6;
+    height:clamp(230px,40vh,400px);
+    box-shadow:0 12px 20px -14px rgba(0,0,0,.95);
+  }
+  .rail{order:2; display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); align-items:start;
+    gap:10px; height:auto; overflow:visible; padding-right:0; margin-top:10px}
+  .panels{order:3; grid-template-columns:1fr; margin-top:10px}
+  .pan{height:270px}
+  body.quiz .stage{position:relative; box-shadow:none}
+  header{padding-block:12px 9px; margin-bottom:10px}
+  .bar{top:7px; left:7px; right:7px; gap:7px}
+  .seg button{padding:6px 9px}
+  .expose{padding:6px 12px}
+  .hud{bottom:24px; left:7px; max-width:calc(100% - 190px)}
+  .hud .now{font-size:11.5px}
+  .playbar{bottom:24px; right:7px}
+}
+@media (max-width:900px) and (min-width:660px) and (orientation:landscape){
+  .work{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:10px; align-items:start; height:auto}
+  .left{display:grid; grid-template-rows:auto auto; gap:10px}
+  .stage{position:relative; height:clamp(240px,58vh,400px); box-shadow:none}
+  .rail{display:flex; flex-direction:column; height:clamp(240px,80vh,520px);
+    overflow-y:auto; margin-top:0; padding-right:6px}
+  .panels{grid-template-columns:1fr 1fr; margin-top:0}
+  .pan{height:190px}
+}
+@media (max-width:700px){
+  .key{display:none}
+}
+@media (max-width:560px){
+  .seg button{padding:5px 6px; font-size:9px; letter-spacing:.06em}
+  .expose{padding:5px 10px; font-size:9.5px; letter-spacing:.08em}
+  .wrap{padding-inline:14px;
+    padding-left:max(14px,env(safe-area-inset-left)); padding-right:max(14px,env(safe-area-inset-right));
+    padding-bottom:max(40px,env(safe-area-inset-bottom))}
+  h1{font-size:17px}
+  .stage{height:clamp(230px,42vh,380px)}
+  .tabs button{font-size:11px; padding:9px 1px}
+  .pan{height:240px}
+  .choices button{padding:8px 9px; font-size:12.5px}
+  .seqnav .act,.acts .act{padding:9px 4px}
+  #imgbox .if{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>MRI スピン3Dシミュレーター<small>T1 / T2 CONTRAST — SPIN VIEWER</small></h1>
+  <button class="hbtn" id="bGuide" type="button">使い方</button>
+</header>
+
+<div class="work">
+  <div class="left">
+    <div class="stage" id="stage">
+      <canvas id="gl"></canvas>
+      <div id="labels"></div>
+
+      <div id="imgbox">
+        <div class="ih"><span id="imgSeq">T1強調</span><span id="imgPar">TR 500 / TE 15</span></div>
+        <canvas id="mri" width="176" height="208"></canvas>
+        <div class="xh" id="xhair"></div>
+      </div>
+
+      <div class="bar">
+        <div class="barL">
+          <div class="seg" id="viewSeg">
+            <button type="button" data-v="0">3Dだけ</button>
+            <button type="button" data-v="1" aria-pressed="true">3D + 画像</button>
+            <button type="button" data-v="2">画像だけ</button>
+          </div>
+          <div class="seg" id="frameSeg">
+            <button type="button" data-f="rot" aria-pressed="true">回転座標系</button>
+            <button type="button" data-f="lab">静止座標系</button>
+          </div>
+        </div>
+        <div class="barR">
+          <button class="expose" id="bShot" type="button">撮影</button>
+        </div>
+      </div>
+
+      <div class="hud" id="hud">
+        <p class="now" id="hudNow">まだ何もしていない（縦磁化だけ）</p>
+        <p class="sub"><span>t</span><b id="hudT">0</b>ms<span>縦 Mz</span><b id="hudMz">1.00</b><span>横 Mxy</span><b id="hudMxy">0.00</b><span class="tis" id="hudTis">白質</span></p>
+      </div>
+
+      <p class="key" id="key3d">
+        <span><i style="background:linear-gradient(90deg,#7ED9A7,#E8C77A,#C4A6E8)"></i>細い矢印＝スピン1本ずつ（色＝位相）</span>
+        <span><i style="background:#52B8CE"></i>太い矢印＝合計の磁化 M</span>
+        <span><i style="background:#7ED9A7"></i>Mz（縦・信号にならない）</span>
+        <span><i style="background:#E0645C"></i>Mxy（横・これが信号）</span>
+      </p>
+
+      <div class="playbar">
+        <button type="button" id="bStep">最初から</button>
+        <button type="button" id="bPause">一時停止</button>
+      </div>
+    </div>
+
+    <div class="panels">
+      <div class="pan">
+        <div class="ph2"><h2>パルスシーケンス</h2><span class="hint">いつ、どんな力をかけているか</span></div>
+        <div class="cvwrap"><canvas id="seqCv"></canvas></div>
+      </div>
+      <div class="pan">
+        <div class="ph2"><h2>緩和曲線とコントラスト</h2><span class="hint">組織の差がどこで開くか　<button type="button" class="act" id="bRelPlay" style="padding:2px 8px">▶ 時間を追って画像を見る</button></span></div>
+        <div class="cvwrap"><canvas id="relCv"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="split" id="split" role="separator" aria-label="コンソールの幅を変える" tabindex="0"></div>
+
+  <div class="rail" id="rail">
+    <div class="railbar" id="railbar">
+      <span class="rbname">コンソール</span>
+      <button class="rbbtn" id="bDetach" type="button">分離</button>
+    </div>
+
+    <div class="grp">
+      <div class="tabs" id="modeTabs">
+        <button type="button" data-m="0" aria-pressed="true">シーケンス</button>
+        <button type="button" data-m="1">学習</button>
+        <button type="button" data-m="2">詳細</button>
+        <button type="button" data-m="3">問題</button>
+      </div>
+
+      <!-- ===== シーケンス（メイン） ===== -->
+      <div class="pane" id="pane0">
+        <div class="readout"><span class="big" id="preName">T1強調 SE</span><span class="sm" id="prePar"></span></div>
+        <p class="lede" id="preLede"></p>
+        <div class="pre-grid" id="preGrid"></div>
+        <div class="note" id="preNote"></div>
+        <p class="grp-h" style="margin:13px 0 6px">つまみを動かす <b>すぐ反映されます</b></p>
+        <div class="sld">
+          <div class="sld-h"><span>TR　くり返す間隔</span><b id="vTR">500 ms</b></div>
+          <input type="range" id="sTR" min="0" max="10" value="0">
+          <div class="detent" id="dTR"></div>
+        </div>
+        <div class="sld">
+          <div class="sld-h"><span>TE　信号を読むまで</span><b id="vTE">15 ms</b></div>
+          <input type="range" id="sTE" min="0" max="10" value="0">
+          <div class="detent" id="dTE"></div>
+        </div>
+        <div class="sld" id="wTI">
+          <div class="sld-h"><span>TI　反転してから倒すまで</span><b id="vTI">—</b></div>
+          <input type="range" id="sTI" min="0" max="10" value="0">
+          <div class="detent" id="dTI"></div>
+        </div>
+        <div class="sld" id="wFA">
+          <div class="sld-h"><span>α　どれだけ倒すか</span><b id="vFA">90°</b></div>
+          <input type="range" id="sFA" min="2" max="180" value="90">
+        </div>
+      </div>
+
+      <!-- ===== 学習 ===== -->
+      <div class="pane" id="pane1" hidden>
+        <div class="readout"><span class="big" id="stepName">静磁場の中のプロトン</span><span class="sm" id="stepNo">1 / 10</span></div>
+        <div class="note" id="stepNote" style="margin-top:0"></div>
+        <div class="seqnav">
+          <button class="act" id="bPrev" type="button">前へ</button>
+          <button class="act" id="bAuto" type="button">順に再生</button>
+          <button class="act" id="bNext" type="button">次へ</button>
+        </div>
+        <p class="grp-h" style="margin:12px 0 8px">すすみ方</p>
+        <ol class="seq" id="stepList"></ol>
+      </div>
+
+      <!-- ===== 詳細 ===== -->
+      <div class="pane" id="pane2" hidden>
+        <p class="grp-h">シーケンスの種類</p>
+        <div class="seg" id="seqSeg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2); margin-bottom:4px">
+          <button type="button" data-q="SE" aria-pressed="true">SE</button>
+          <button type="button" data-q="GRE">GRE</button>
+          <button type="button" data-q="IR">IR</button>
+        </div>
+        <p class="tiny">SE＝スピンエコー（180°で位相をもどす）／GRE＝グラジエントエコー（180°なし＝T2*で減る）／IR＝反転回復（先に180°で反転させる）</p>
+
+        <p class="grp-h" style="margin-top:13px">静磁場 B₀</p>
+        <div class="seg" id="b0Seg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2)">
+          <button type="button" data-b="0.5">0.5 T</button>
+          <button type="button" data-b="1.5" aria-pressed="true">1.5 T</button>
+          <button type="button" data-b="3">3.0 T</button>
+        </div>
+        <p class="tiny">強いほど T1 が長くなります（共鳴周波数も比例して上がります）。</p>
+
+        <p class="grp-h" style="margin-top:13px">頭部の画像</p>
+        <div class="seg" id="phSeg" style="display:grid; grid-template-columns:repeat(2,1fr); background:var(--ink2)">
+          <button type="button" data-ph="brainweb" aria-pressed="true">BrainWeb</button>
+          <button type="button" data-ph="simple">簡易図形</button>
+        </div>
+        <p class="tiny">BrainWeb＝公開のデジタル脳ファントム（病変は描き足し）／簡易図形＝数式で組み立てた以前の画像。どちらも明暗は同じ式で計算します。</p>
+
+        <div class="sld" style="margin-top:13px">
+          <div class="sld-h"><span>静磁場のムラ（T2′）</span><b id="vT2p">40 ms</b></div>
+          <input type="range" id="sT2p" min="0" max="11" value="5">
+        </div>
+        <p class="tiny">小さいほど磁場がムラだらけ＝扇が速く開きます。SE では 180° で取り戻せますが、GRE では取り戻せません。</p>
+
+        <p class="grp-h" style="margin-top:13px">手でパルスをかける</p>
+        <label class="tg"><input type="checkbox" id="tManual">シーケンスを止めて手動にする</label>
+        <div class="acts" style="margin-top:7px">
+          <button class="act rf" id="bP90" type="button">90°パルス</button>
+          <button class="act rf" id="bP180" type="button">180°パルス</button>
+          <button class="act rf" id="bPa" type="button">α°パルス</button>
+          <button class="act" id="bSpoil" type="button">スポイラ</button>
+          <button class="act wide" id="bReset" type="button">熱平衡に戻す</button>
+        </div>
+        <p class="tiny">手動にすると自由歳差だけが進みます。<b>90° → 少し待つ → 180°</b> と押すと、自分の手でスピンエコーを作れます。</p>
+      </div>
+
+      <!-- ===== 問題 ===== -->
+      <div class="pane" id="pane3" hidden>
+        <div id="qBox">
+          <div class="qhead"><span id="qNo">問 1 / 1</span><button class="act" id="bLoadOpen" type="button">問題を入れ替える</button></div>
+          <p class="qtext" id="qText"></p>
+          <p class="qsrc" id="qSrc"></p>
+          <ul class="choices" id="qChoices"></ul>
+          <p class="qexp" id="qExp" hidden></p>
+          <div class="seqnav" style="grid-template-columns:1fr 1fr">
+            <button class="act" id="bQPrev" type="button">前の問題</button>
+            <button class="act" id="bQNext" type="button">次の問題</button>
+          </div>
+        </div>
+        <div id="qImport" hidden>
+          <p class="qnote">国家試験の過去問など、手元の問題を貼り付けて使えます。</p>
+          <textarea id="qPaste" spellcheck="false" placeholder="ここに貼り付け"></textarea>
+          <div class="seqnav" style="grid-template-columns:1fr 1fr 1fr; margin-top:8px">
+            <button class="act" id="bImportCancel" type="button">やめる</button>
+            <button class="act" id="bRestore" type="button">収録問題に戻す</button>
+            <button class="act" id="bImport" type="button">読み込む</button>
+          </div>
+          <details class="fold"><summary>書式</summary>
+            <pre class="fmt">出典: 自作 / 第○回 午前 第○問
+問題: 設問の本文。
+1: 選択肢
+2: 選択肢
+3: 選択肢
+4: 選択肢
+5: 選択肢
+答え: 2
+解説: 解説の文。
+設定: SE,2000,80
+---
+（2問目以降は --- で区切る）</pre>
+            <p>「設定」は シーケンス,TR,TE[,TI] 。書いておくと、その問題を開いたときシミュレーターが同じ条件になります（省略可）。「答え」は「2,3」のように複数書けます。</p>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 組織 ===== -->
+    <div class="grp">
+      <p class="grp-h">3D で見ている組織 <b id="tisSub"></b></p>
+      <div class="chips" id="tisChips"></div>
+      <p class="tiny" id="tisEq"></p>
+    </div>
+
+    <!-- ===== 表示と操作 ===== -->
+    <div class="grp">
+      <details class="fold" id="dispFold"><summary>表示と操作</summary>
+      <p class="grp-h" style="margin-top:10px">スピンの本数</p>
+      <div class="seg" id="nSeg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2)">
+        <button type="button" data-n="8">8</button>
+        <button type="button" data-n="24" aria-pressed="true">24</button>
+        <button type="button" data-n="48">48</button>
+      </div>
+      <p class="grp-h" style="margin-top:11px">再生の速さ</p>
+      <div class="seg" id="spdSeg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2)">
+        <button type="button" data-s="0.5">ゆっくり</button>
+        <button type="button" data-s="1" aria-pressed="true">標準</button>
+        <button type="button" data-s="2.5">速い</button>
+      </div>
+      <div class="toggles" style="margin-top:11px">
+        <label class="tg"><input type="checkbox" id="tBody">体（ボクセルの位置）を出す</label>
+        <label class="tg"><input type="checkbox" id="tComp" checked>Mz と Mxy に分けて見せる</label>
+        <label class="tg"><input type="checkbox" id="tTrail" checked>合成ベクトルの軌跡</label>
+        <label class="tg"><input type="checkbox" id="tLab" checked>3D のラベル</label>
+        <label class="tg"><input type="checkbox" id="tSlow" checked>パルスをゆっくり見せる</label>
+        <label class="tg"><input type="checkbox" id="tNoise" checked>画像にノイズを乗せる</label>
+      </div>
+      <div class="acts" style="margin-top:10px">
+        <button class="act" id="bClear" type="button">撮った画像を消す</button>
+        <button class="act" id="bHome" type="button">視点を戻す</button>
+      </div>
+      <p class="glinfo" id="glInfo"></p>
+      </details>
+    </div>
+  </div>
+</div>
+
+<div class="films">
+  <div class="fh2"><h2>撮影した画像</h2><span class="hint">CLICK TO ENLARGE</span></div>
+  <div class="strip" id="strip"><p class="empty">「撮影」を押すと、そのときの条件で撮った画像がここに並びます。<br>T1強調・T2強調・プロトン密度と続けて撮ると、同じ断面の見え方の違いを並べて比べられます。</p></div>
+</div>
+
+<div id="guide"><div class="gcard">
+  <p class="ghead"><b>このシミュレーターの見方</b></p>
+  <p class="gtip" id="gTip"></p>
+  <button type="button" id="gClose">はじめる</button>
+</div></div>
+
+<div id="lightbox">
+  <img id="lbImg" alt="拡大表示した画像">
+  <p id="lbCap"></p><button type="button" id="lbClose">閉じる</button>
+</div>
+
+</div>
+
+<script src="three.min.js"></script>
+<script>
+"use strict";
+/* =====================================================================
+   MRI スピン3Dシミュレーター
+
+   体内の1ボクセル分の水素原子核（プロトン）を、多数のアイソクロマット
+   （＝同じ共鳴周波数をもつスピンの集団）としてもち、Bloch方程式の
+   解析解をそのまま時間発展させている。
+
+     ・自由歳差 :  横磁化は exp(-dt/T2) で減り、位相は各自の Δω だけ回る
+                   縦磁化は  1 - (1-Mz)exp(-dt/T1)
+     ・RFパルス :  全アイソクロマットを x' 軸または y' 軸まわりに α 回す
+     ・スポイラ :  集団全体に大きな位相の傾斜を掛けて横磁化の和を0にする
+
+   Δω は静磁場の不均一を表す。ローレンツ分布の分位点を使うので、
+   合成ベクトルは exp(-t/T2') で減る。つまり FID は T2*（1/T2*=1/T2+1/T2'）で
+   消え、180°パルスを入れると Δω の項だけが巻き戻ってエコーが立つ。
+   エコーの高さは T2 だけで決まる — この関係が画面でそのまま見える。
+   ===================================================================== */
+(function () {
+
+/* ================= 組織のデータ =================
+   T1・T2 は 1.5T での代表的な値（教科書的な概数）。
+   T1 は磁場が強いほど長くなるので T1(B0)=T1(1.5)*(B0/1.5)^e1 で補正する。
+   e1 は 3T で報告されている値との比からきめた組織ごとの指数。
+   T2 は磁場依存が小さいので固定にしている。          */
+const TIS = [
+  { id:'fat',  nm:'脂肪',       col:'#E8C77A', T1:270,  T2:85,   PD:1.00, e1:0.50 },
+  { id:'wm',   nm:'白質',       col:'#CBD6DF', T1:650,  T2:80,   PD:0.70, e1:0.39 },
+  { id:'gm',   nm:'灰白質',     col:'#9FAFBD', T1:920,  T2:100,  PD:0.80, e1:0.53 },
+  { id:'csf',  nm:'脳脊髄液',   col:'#6FA8C9', T1:4000, T2:2000, PD:1.00, e1:0.05 },
+  { id:'mus',  nm:'筋肉',       col:'#B07A7A', T1:870,  T2:45,   PD:0.75, e1:0.70 },
+  { id:'les',  nm:'病変（浮腫）',col:'#C4A6E8', T1:1200, T2:180,  PD:0.85, e1:0.45 },
+  { id:'bone', nm:'皮質骨',     col:'#46545F', T1:250,  T2:1,    PD:0.05, e1:0.30 }
+];
+const TIX = {}; TIS.forEach((t, i) => TIX[t.id] = i);
+/* 画像の中にある組織（十字カーソルを置けるもの） */
+const INIMG = { fat:1, wm:1, gm:1, csf:1, mus:1, les:1, bone:1 };
+const GAMMA = 42.58;   // MHz/T 水素のジャイロ磁気比
+
+function T1of(t, B0) { return t.T1 * Math.pow(B0 / 1.5, t.e1); }
+function T2of(t) { return t.T2; }
+
+/* ================= いまの条件 ================= */
+const P = {
+  seq:'SE', TR:500, TE:15, TI:2400, FA:90,
+  T2p:40,          // 静磁場の不均一による減衰時定数 T2'（ms）。Infinity で完全均一
+  B0:1.5,
+  tissue:'wm',
+  frame:'rot',     // rot=回転座標系 / lab=静止座標系
+  manual:false, paused:false, spd:1,
+  nDisp:24, showBody:false, showComp:true, showTrail:true, showLab:true,
+  slowPulse:true, noise:true, quantum:false,
+  view:1           // 0=3D / 1=3D+画像 / 2=画像
+};
+
+/* スライダの刻み（きりのよい値だけを通す） */
+const TRV = [50,100,150,200,300,400,500,600,700,800,1000,1200,1500,2000,2500,3000,4000,5000,6000,8000,9000,12000];
+const TEV = [2,4,6,8,10,12,15,20,25,30,40,50,60,70,80,90,100,120,140,160,200,250];
+const TIV = [50,80,110,150,180,220,280,350,450,550,700,900,1100,1400,1700,2000,2400,2800,3200,3600];
+const TPV = [5,10,15,20,30,40,60,90,150,300,600,Infinity];
+const near = (arr, v) => { if (!isFinite(v)) { const j = arr.indexOf(Infinity); if (j >= 0) return j; } let k = 0; for (let i = 1; i < arr.length; i++) if (Math.abs(arr[i] - v) < Math.abs(arr[k] - v)) k = i; return k; };
+
+/* ================= 信号の式 =================
+   SE  : S = ρ(1-e^(-TR/T1)) e^(-TE/T2)
+   GRE : S = ρ sinα (1-E1)/(1-cosα E1) e^(-TE/T2*)
+   IR  : S = ρ|1-2e^(-TI/T1)+e^(-TR/T1)| e^(-TE/T2)                  */
+function sigOf(T1, T2, PD, p) {
+  const E1 = Math.exp(-p.TR / T1);
+  if (p.seq === 'GRE') {
+    const a = p.FA * Math.PI / 180;
+    const T2s = 1 / (1 / T2 + (isFinite(p.T2p) ? 1 / p.T2p : 0));
+    return PD * Math.sin(a) * (1 - E1) / (1 - Math.cos(a) * E1) * Math.exp(-p.TE / T2s);
+  }
+  if (p.seq === 'IR') return PD * Math.abs(1 - 2 * Math.exp(-p.TI / T1) + E1) * Math.exp(-p.TE / T2);
+  return PD * (1 - E1) * Math.exp(-p.TE / T2);
+}
+function sigTis(t, p) { return sigOf(T1of(t, p.B0), T2of(t), t.PD, p); }
+
+/* ================= シーケンスの組み立て ================= */
+function events(p) {
+  const e = [];
+  if (p.seq === 'SE') {
+    e.push({ t:0, k:'rf', a:90, ax:'x' });
+    e.push({ t:p.TE / 2, k:'rf', a:180, ax:'y' });
+    e.push({ t:p.TE, k:'echo' });
+    e.push({ t:Math.max(p.TE + 2, p.TR - 5), k:'crush' });   // 実際の装置のクラッシャーにあたる。T2 が長い組織（脳脊髄液など）で、
+                                                            // 前の TR の横磁化が次のエコーに混ざらないようにする
+  } else if (p.seq === 'GRE') {
+    e.push({ t:0, k:'rf', a:p.FA, ax:'x' });
+    e.push({ t:p.TE, k:'echo' });
+    e.push({ t:Math.max(p.TE + 2, p.TR - 5), k:'spoil' });
+  } else {
+    e.push({ t:0, k:'rf', a:180, ax:'x' });
+    e.push({ t:p.TI, k:'rf', a:90, ax:'x' });
+    e.push({ t:p.TI + p.TE / 2, k:'rf', a:180, ax:'y' });
+    e.push({ t:p.TI + p.TE, k:'echo' });
+    e.push({ t:Math.max(p.TI + p.TE + 2, p.TR - 5), k:'crush' });
+  }
+  return e.filter(x => x.t < p.TR).sort((a, b) => a.t - b.t);
+}
+/* TE・TI が TR に収まるように丸める */
+function clampTimes() {
+  const lim = P.seq === 'IR' ? P.TR * 0.5 : P.TR * 0.7;
+  if (P.TE > lim) P.TE = TEV[near(TEV, lim)];
+  if (P.seq === 'IR') {
+    const tl = P.TR - P.TE - 50;
+    if (P.TI > tl) P.TI = TIV[near(TIV, Math.max(50, tl))];
+  }
+}
+
+/* ================= Bloch エンジン ================= */
+const NISO = 241;                       // 内部で解くアイソクロマットの数
+const mx = new Float64Array(NISO), my = new Float64Array(NISO), mz = new Float64Array(NISO);
+const dw = new Float64Array(NISO);      // 共鳴周波数のずれ rad/ms
+let dispIx = [];                        // 3Dに出すアイソクロマットの番号
+
+function setInhomo(T2p) {
+  const k = isFinite(T2p) && T2p > 0 ? 1 / T2p : 0;
+  for (let i = 0; i < NISO; i++) {
+    const u = (i + 0.5) / NISO;
+    let w = Math.tan(Math.PI * (u - 0.5)) * k;
+    const lim = 25 * k;
+    if (w > lim) w = lim; else if (w < -lim) w = -lim;
+    dw[i] = w;
+  }
+}
+function setDisp(n) {
+  dispIx = [];
+  for (let j = 0; j < n; j++) {
+    const u = n === 1 ? 0.5 : 0.15 + 0.70 * j / (n - 1);
+    dispIx.push(Math.min(NISO - 1, Math.max(0, Math.round(u * NISO - 0.5))));
+  }
+}
+function equilibrium() { for (let i = 0; i < NISO; i++) { mx[i] = 0; my[i] = 0; mz[i] = 1; } }
+function freeStep(dt, T1, T2) {
+  const E1 = Math.exp(-dt / T1), E2 = Math.exp(-dt / T2);
+  for (let i = 0; i < NISO; i++) {
+    const a = dw[i] * dt, c = Math.cos(a), s = Math.sin(a);
+    const x = mx[i], y = my[i];
+    mx[i] = (x * c - y * s) * E2;
+    my[i] = (x * s + y * c) * E2;
+    mz[i] = 1 - (1 - mz[i]) * E1;
+  }
+}
+/* x' 軸まわり: (0,0,1) は α=90° で +y へ倒れる。y' 軸まわりの180°は位相を折り返す */
+function pulse(aDeg, ax) {
+  const a = aDeg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  if (ax === 'x') {
+    for (let i = 0; i < NISO; i++) { const y = my[i], z = mz[i]; my[i] = y * c + z * s; mz[i] = -y * s + z * c; }
+  } else {
+    for (let i = 0; i < NISO; i++) { const x = mx[i], z = mz[i]; mx[i] = x * c + z * s; mz[i] = -x * s + z * c; }
+  }
+}
+function spoil() {   // 傾斜磁場で位相をばらす（大きさは変えない）
+  for (let i = 0; i < NISO; i++) {
+    const a = (i / NISO - 0.5) * Math.PI * 16, c = Math.cos(a), s = Math.sin(a);
+    const x = mx[i], y = my[i];
+    mx[i] = x * c - y * s; my[i] = x * s + y * c;
+  }
+}
+/* クラッシャー（SE・IR の TR の終わり）：残った横磁化を 0 にする。spoil() のように毎回同じ位相のばらし方にすると、
+   180°パルスで位相が折り返されたあと次の周期の spoil() で打ち消され、前の横磁化がエコーに戻ってくるため */
+function crush() { for (let i = 0; i < NISO; i++) { mx[i] = 0; my[i] = 0; } }
+function netM() {
+  let sx = 0, sy = 0, sz = 0;
+  for (let i = 0; i < NISO; i++) { sx += mx[i]; sy += my[i]; sz += mz[i]; }
+  return [sx / NISO, sy / NISO, sz / NISO];
+}
+
+/* ================= 走行状態 ================= */
+const R = {
+  t:0, evs:[], ei:0, phase:'熱平衡：まだ何もしていない（縦磁化だけ）',
+  nut:null,                 // パルスをゆっくり見せている最中の状態
+  trace:[],                 // いまの周期の |Mxy| の記録
+  cycles:0, echoPeak:0
+};
+function rebuildSeq(keep) {
+  clampTimes();
+  R.evs = events(P);
+  if (!keep) { R.t = 0; R.ei = 0; R.trace.length = 0; equilibrium(); R.phase = '熱平衡：まだ何もしていない（縦磁化だけ）'; R.cycles = 0; }
+  else { R.ei = 0; while (R.ei < R.evs.length && R.evs[R.ei].t <= R.t) R.ei++; }
+}
+function curT1() { return T1of(TIS[TIX[P.tissue]], P.B0); }
+function curT2() { return T2of(TIS[TIX[P.tissue]]); }
+
+/* 事件のあいだの「時間の進み方」。パルスの前後はゆっくり、
+   ただ待っているだけの区間は速く進めて、TRが長くても退屈しないようにする */
+function rateAt(t) {
+  let prev = 0, next = P.TR;
+  for (const e of R.evs) { if (e.t <= t) prev = e.t; else { next = e.t; break; } }
+  const d = Math.min(t - prev, next - t);
+  return Math.max(15, Math.min(900, 18 + 1.1 * d)) * P.spd;
+}
+
+/* 1フレーム分（wall秒）進める */
+function advance(wall) {
+  if (R.nut) {                                   // パルスのアニメーション中は時間を止める
+    const st = Math.min(R.nut.left, wall / R.nut.dur * R.nut.total);
+    pulse(st * (R.nut.sign), R.nut.ax);
+    R.nut.left -= Math.abs(st);
+    if (R.nut.left <= 0.01) R.nut = null;
+    return;
+  }
+  if (P.paused) return;
+  const T1 = curT1(), T2 = curT2();
+  if (P.manual) {                                 // 手動のときは自由歳差だけを進める
+    const dtSim = Math.min(60, 130 * P.spd * wall);
+    freeStep(dtSim, T1, T2); R.t += dtSim;
+    const m0 = netM(); R.trace.push([R.t, Math.hypot(m0[0], m0[1])]);
+    if (R.trace.length > 4000) R.trace.shift();
+    autoPhase();
+    return;
+  }
+
+  let budget = wall;
+  let guard = 0;
+  while (budget > 1e-4 && guard++ < 400) {
+    const rate = rateAt(R.t);                     // ms（シミュレーション）/ 秒（実時間）
+    const nextT = R.ei < R.evs.length ? R.evs[R.ei].t : P.TR;
+    let dtSim = Math.min(rate * budget, nextT - R.t, 4 + rate * 0.02);
+    if (dtSim <= 1e-6) dtSim = Math.min(nextT - R.t, 1e-4);
+    freeStep(dtSim, T1, T2);
+    R.t += dtSim;
+    budget -= dtSim / rate;
+    const m = netM();
+    R.trace.push([R.t, Math.hypot(m[0], m[1])]);
+    if (R.trace.length > 4000) R.trace.shift();
+    if (R.ei < R.evs.length && R.t >= R.evs[R.ei].t - 1e-6) {
+      fire(R.evs[R.ei]); R.ei++;
+      if (R.nut) return;
+    }
+    if (R.t >= P.TR - 1e-6) {                     // 次の繰り返しへ
+      R.t = 0; R.ei = 0; R.trace.length = 0; R.cycles++; clearTrail();
+    }
+  }
+  autoPhase();
+}
+/* いま何が起きているかをHUDに出す文言 */
+function autoPhase() {
+  if (R.nut || echoFlash > 0) return;
+  const m = netM(), t = Math.hypot(m[0], m[1]);
+  if (P.manual) {
+    R.phase = t > 0.02 ? '自由歳差：横磁化が回りながら減っていく'
+      : (m[2] > 0.98 ? '熱平衡：まだ何もしていない（縦磁化だけ）' : 'T1 で縦磁化がもどっている途中');
+    return;
+  }
+  if (R.ei >= R.evs.length) R.phase = '次の TR まで待つ（T1 で縦磁化がもどる）';
+  else if (R.evs[R.ei].k === 'echo') R.phase = '位相がそろってきた（エコーに向かっている）';
+  else if (R.evs[R.ei].k === 'spoil') R.phase = '自由歳差：T2* で減っていく（180°がないので戻せない）';
+  else if (R.evs[R.ei].k === 'crush') R.phase = 'エコーのあと：横磁化が T2* で減っていく';
+  else R.phase = '自由歳差：位相がばらけて信号が減っていく';
+}
+function fire(e) {
+  if (e.k === 'spoil') { spoil(); R.phase = 'スポイラ：位相をばらして横磁化を消す'; return; }
+  if (e.k === 'crush') { crush(); R.phase = 'クラッシャー：残った横磁化を消す'; return; }
+  if (e.k === 'echo') {
+    const m = netM(); R.echoPeak = Math.hypot(m[0], m[1]);
+    echoFlash = 0.55;
+    R.phase = 'エコー：ここで信号を読む'; return;
+  }
+  R.phase = pulseSay(e.a);
+  if (P.slowPulse) R.nut = { total:e.a, left:e.a, ax:e.ax, sign:1, dur:0.45 / Math.max(0.5, P.spd) };
+  else pulse(e.a, e.ax);
+}
+function pulseSay(a) {
+  a = Math.round(a);
+  if (a === 180) return '180°パルス：位相を折り返す（または縦磁化を反転）';
+  return a + '°パルス：RF（B₁）で磁化を倒している';
+}
+function manualPulse(a, ax) {
+  R.phase = pulseSay(a);
+  if (P.slowPulse) R.nut = { total:a, left:a, ax:ax, sign:1, dur:0.45 / Math.max(0.5, P.spd) };
+  else pulse(a, ax);
+}
+
+/* ================= 画像（模擬ファントム） =================
+   実写ではなく、公開のデジタル脳ファントム（BrainWeb）の組織の地図から、組織ごとの T1・T2・プロトン密度で濃度を計算したもの。
+   画素ごとに組織を決めておき、条件が変わったら組織→信号の対応だけ引き直す。 */
+const IW = 176, IH = 208;
+const FOVX = 220, FOVY = 260;                     // mm
+const LABM = new Uint8Array(IW * IH);             // 0=空気、1以上は TIS の番号+1
+const mriCv = document.getElementById('mri'), mriCx = mriCv.getContext('2d');
+const imgData = mriCx.createImageData(IW, IH);
+let xhairPx = null;
+
+/* 頭部の組織の地図は BrainWeb の正常脳のデジタルファントム（離散モデル、1 mm）の軸位断（Talairach z = +20 mm、側脳室の体部の高さ）を、
+   この画像の画素（1.25 mm）に最近傍で取り直したもの。画像の左が患者の右（放射線科の表示）、上が前。
+   BrainWeb の組織 → この画像の組織：髄液→脳脊髄液、灰白質・グリア→灰白質、白質→白質、脂肪→脂肪、
+   筋肉/皮膚・皮膚・結合組織→筋肉、頭蓋骨→皮質骨。BrainWeb の正常脳には病変がないので、側脳室のまわりの白質に
+   病変（浮腫）を 3 つ楕円で描き足した。値は TIS の番号+1（0 は空気）を（値, 個数）のランレングスにして base64 にしたもの。
+   出典：Collins DL, et al. IEEE Trans Med Imaging 1998;17(3):463-468 / Cocosco CA, et al. NeuroImage 1997;5(4):S425 /
+   Kwan RK-S, et al. IEEE Trans Med Imaging 1999;18(11):1085-1097 / Kwan RK-S, et al. VBC 1996:135-140
+   （https://brainweb.bic.mni.mcgill.ca/brainweb/）。作り方は tools/brainweb_slice.py */
+const PHANTOM_RLE = 'AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wAaBRQAmAUcAJEFIgCMBScAhQUPAQQFBgEHBQ8AfwUOAQUFDgEFBQ0AfAULAQUFCAcEBQoBAgUNAHoFCgEDBQgHDwUHAQIFCwB1BQkBAQUGBwgFEAcFBQQBAQUMAHEFCQECBQQHBgUKBwEFDAcFBQQBAwUIAG4FDwcDBQwHAwUCBwUFCgcCBQUBAgUIAGwFCAECBQQHAwUKBwUFBAcHBAEFCAcEBQQBAgUHAGkFCAEBBQQHAgUHBwgEBQUFBAYHBAUHBwUFDABlBQcBAgUDBwIFBwcGBAoFAwQLBwUFAwcFBQMBAQUHAGQFBwEBBQQHAgUGBwQEDwUCBAIDAgQKBwcFAgcDBQMBAgUGAGIFBgECBQMHAgUEBwEFAgcBBAQDAwQOAwUEDAcDBQQHAgUDAQEFBwBfBQYBAgUCBwMFBAcEBAUDCAQJAwMCAQMDBA8HAQUJAQEFBgBdBQYBAgUDBwIFBAcDBAcDCAQJAwMCAgMDBAMDCAQEBwEFBgcBBQkAWwUGAQIFAwcCBQMHBAQIAwMCAgMEBAgDAwIDAwMEAgMIBAQHAgUQAFoFBAECBQMHAwUDBwUEBwMDAgQDAwQBAwIEBQMEAgMDDgQEBwEFBQcBBQMBAQUGAFcFBQEBBQQHAwUBBwYECAMDAgUDAwQBAwIEBAMEAgUDAwIIAwMEBgcBBQQHAgUCAQIFBABVBQUBAgUDBwMFAgcFBAkDAgIGAwIEAgMDBAMDBAIQAwQEBQcCBQMHAgUDAQEFBQBTBQUBAgUDBwIFBQcDBAoDAgIGAwIEAgMDBAMDBAIQAwQEBQcCBQQHAgUDAQEFBABTBQQBAgUDBwIFBQcCBAwDAgIGAwMEAQMDBAMDBAILAwECBAMEBAcHAQUEBwEFAwECBQQAUQUJBwIFAgcDBAIDAwQDAwkCCAMGBAIDBgIOAwUEAwMCBAIHAgUCBwQFAgECBQQATgUJBwIFAwcCBAIDBQQBAwoCCQMFBAMDBQIPAwQEAwMDBAMFAwcDBQMBAQUEAE4FBAEBBQMHAgUDBwIEAgMGBAEDBAICAwMCDAMEBAIDBgIPAwMEAwMEBAMHBgUHAE0FCQcCBQIHAgQCAwQCAQMCBAEDAwIPAwYEAgMHAg8DBAQCAwQEBAcFBQMBAQUEAEsFBAEBBQQHAgUCBwIEAQMEAgMDAQQCAwICDgMHBAMDBgIRAwIEAwMEBAUHBQUDAQEFBABJBQkHAgUCBwMEAQMEAgMDAQQCAwICDgMCBAIDAgQEAwQCEgMDBAMDCAQCBwUFAwEBBQQARwUFAQEFBAcCBQIHAgQCAwQCAwMBBAIDAgINAwkEAgMEAgwDCQQCAwoEAQcGBQMBAQUEAEYFBAECBQQHAQUDBwEEAgMFAgQDAQQBAwMCDQMIBAEDBQIMAxUEAgcFBQgARAUEAQIFBQcBBQIHAgQCAwgCAgMCBAEDAgISAwMEAQMJAggDDwIFAwIEAgcEBQkAQwUEAQEFBQcCBQIHAgQBAwkCAgMFAhIDAwQCAwgCCQMKAgkDAwQBBwQFCQBDBQoHAQUCBwIEAgMJAgMDBQIQAwQEAwMHAgsDBwIKAwQHBQUEAQEFBABBBQoHAQUCBwMEAQMHBAEDAwIDAwMCDwMGBAQDAgQBAwQCCwMFAgcDCAcDBQEHAQUFAQEFBAA/BQoHAgUCBwIEAQMIBAEDAgIUAwgEAgMKAgsDAwIHAwkEAQcCBQEHAgUKAD0FCwcBBQMHAQQCAwcEAgMDAhMDCAQBAwwCFQMHBAIHAwUBBwIFCQA9BQQBAQUGBwEFAwcBBAIDBgQDAwQCEgMHBAIDDAIVAwYEBAcCBQIHAgUIADwFBAEBBQYHAQUDBAQDDgIRAwcEAgMNAhYDBQQEBwEFAwcBBQgAPAUJBwMFAwcBBAMDDwIPAwUEBgMEAgIDBgIRAwsEBAcBBQIHAQUKADoFAwEBBQUHAwUCBwEEAwMIAgIDBgIOAwQEBAMDBAEDBAIEAwMCEQMNBAMHAgUBBwIFCQA5BQkHAwUCBwIEAgMHAgQDBwINAwQEAwMEBAEDBgIDAwECEgMQBwIFAQcCBQoANwUEAQEFBQcDBQEEAQcBBAMDAwIIAwgCDAMMBAEDBQIVAxEEAQcFBQkANgULBwQEAgMJAggDBQIMAwsEAgMGAhUDBAIKAwMEAQcFBQkANQULBwQEAQMGBAEDBQIJAwECDQMLBAIDBgIjAwMEAgcEBQkANQUDAQEFBgcFBAEDBwQBAwUCFgMEAgQDAwQCAwUCJQMCBAIHBQUIADQFBAEBBQYHBAQBAwQCAQMDBAMDAwIWAwQCBAMDBAMDAwImAwIEAgUBBwQFCAA0BQoHBAQCAwQCBAMGAh4DAwQBAwUCJQMCBAQHBAUJADMFCgcEBAMDAwInAwQEAQMEAiYDAwQDBQEHAwUKADIFCgcDBQEEBAMDAiUDBQQBAwQCJwMFBQEHAwUKADEFCgcEBAYDAwIkAwQEAgMFAicDBAUCBwMFCQAxBQMBAQUGBwEFAQcBBQEEAgMGAiQDBQQDAwUCKAMCBQIHAwUKADAFAwEBBQYHAQUBBwEFAQQBAwQCKAMDBAUDAwInAwQFAwcCBQoAMAUJBwIFAwMDAioDAwQFAwICJQMHBAEFAgcDBQoALwUJBwMFAQQBAwMCLAMHAiUDCAQBBQIHAwUKAC8FCQcDBQEEAQMKAjQDAgIbAwoFAgcCBQoALgUKBwMFAQQBAwsCMgMDAhwDCQUCBwIFCgAuBQoHAwUBBAQDCAIxAwIEAQMBAiIDAwUCBwIFCgAuBQoHAgUCBAQDCAIwAwEEAwMBAiMDAgUDBwEFCgAuBQoHAgUBBAUDBAIgBAIDAgIPAwEEBAMBAgEDAQIdAwcFAgcCBQoALQUKBwEFAgQBAwMEAQMEAiAEAwMBAg4DAgQEAwMCHQMHBQEHAwUKAC0FCgcBBQIEAQMEBAEDBQIeBAQDAQIMAwIEBQMDAhwDBwQCBwMFCgAtBQkHAwUBAwUEAgMGAhwEBAMCAgoDAQQHAwMCHAMEBAEDAQQDBQEHAgUKAC0FCQcDBAEDAgIDAwMEAQMIAhQDBAQGAwICBgMCBAcDBAIXAwkEBQcDBQoALAUKBwMEAgMCAgIDDAIUAwQECAMCAgMDAQQJAwQCFgMKBAUHBAUJACwFCgcDBAIDAwICAwYEAwMCAhQDBQQIAwICAQMBBAoDBQIUAwsEBQcEBQkALAUKBwMEAgMEAgMDBAQDAwICCwYFAgQDBQQJAwMECQMGAhQDDAQEBwQFCQAsBQoHAgQDAwQCBgMGAgkGCQICAwYEFAMGAhMDDQQBAwIEAQcEBQkALAUJBwMEAgMFAggDAgILBgoCAQMFBBUDBgIUAwMCAwMKBwQFCgArBQkHAwQBAwMCFwYLAwYEFQMGAhkDCwQBBwMFCgArBQkHAwQBAwMCFwYMAwUEFQMGAhgDDAQBBwMFCgAqBQoHAgQCAwMCFwYMAwUEFQMGAgYGBgILAwQEAgMDAgEDAwQBBwMFCgAqBQoHAgQDAwMCFgYLAgEDBQQVAwYCBQYIAgoDAgQDAwMCAgMDBAEHAwUKACoFCgcCBAMDAwIXBgkCAgMFBBUDBgIEBgoCCQMGAgMDBAQCBwIFBgEBBQMAKgUJBwMEAwMEAhgGBgIEAwQEFgMFAgQGCgIKAwQCBAMFBAEHAgUGAQEFAwAqBQkHAwQBAwUCDgMGAg4DBQQLAwEECgMEAgUGCgISAwYEAQcBBQoAKgUJBwMDBAIRAwYCDQMFBAoDAgQEAwEEBQMEAgUGCQIVAwMEAgcBBQYBAQUDACoFCQcDAwMCFQMEAg0DAwQLAwIEBAMCBAQDBQIFBgcCFwMCBAIHAQUGAQEFAwAqBQkHAwMDAgMDBQINAwQCDQMDBAsDAgQLAwQCCAYCAgIDBAITAwMEAQcCBQkAKgUJBwMDBwQBAwQCCgMGAg0DAwQLAwECAQMBBAoDBAIMAwoCDgMCBAEHAgUJACoFCQcDAwYEAgMEAgkDBwIOAwIECgMBAgEDAgQKAwQCCwMKAg8DAwUBBwEFCgApBQkHAwMEBAQDBAIKAwYCDQMDBAoDAQIBAwECAQQKAwQCCwMJAhADAwUBBwEFCgApBQkHAwQBAwMEAwMEAgwDBgIMAwMECgMDAgEDAQQJAwQCCwMIAgoDBAIDAwMFAQcBBQoAKQUJBwMDCQIQAwUCCwMCBAoDAQIBAwEEAQIBAwEEBAMBBAUDAwILAwQCDAMIAgEDAgQBBwIFCgApBQkHAwMIAgsDBAIEAwMCCgMDBAoDAQIBBAICAgQEAwEEBQMDAgsDBAIMAwMEAgMGBAEHAgUKACkFCQcDAwMCEAMGAgMDAgIKAwIECwIBAwEEAgMBAgEDAQQKAwMCCgMEAgwDAgQEAwUEAQcCBQoAKQUJBwMDBAIQAwcCDQMCBAoDAQIBAwEEAgMBAgEDAQQKAwMCCgMEAgwDBAQCAwQEAgcCBQoAKAUKBwMDBAISAwkCCQMBBAsCAQMBBAQDAQIBBAUDAQQFAwICCQMEAgIDBAIIAwkEAgcCBQoAKAUKBwMDBAISAwUEAQMEAgcDAQQMAgEEBgIBBAwDAQIJAwMCAgMFAgwDBgQBBwIFCwAnBQoHAwQBAwMCDwMHBAIDBAIIBAsDAgQGAwIECwMCAgcDCwIPAwMEAQcCBQsAJwUKBwMEAQMPAgMDBwQCAwMCCAMBBAoDAQIBAwEEAgMCBAIDAQIBAwEECgMCAgcDCgIRAwIEAQcCBQsAJwUKBwMEAQMSAgIDCQIIAwEECQMCAgwDAgQKAwECBgMHAggDCAIDAwIEAQcDBQsAJwUKBwMEAQMBBAEDAwQIAwYCAwMGAgkDAQQJAg8DAQQKAwECBgMHAgUDEAQBBwMFCwAnBQoHAwQDAwUECAMFAgMDBAIJAwEECQMBAhAECwMBAgYDBQIEAxIEAQcDBQsAJwUKBwMEAQMJBAkDBAINAwEECQMBAhEDAQQLAgcDAwIDAwcEAwMKBAEHAwULACcFCgcDBAEDGAILBAgDAQIVAwEECQIMAwQEBAMMBAIHAwULACcFCgcDBAEDGAIKAwEECAMBAhYDAQQIAwECCwMDBAUDAgQCAwgEAgcDBQsAJwUKBwMEAQMXAgsDAQQIAhgECAMBAgsDBAQDAwUEAQMHBAIHAwULACgFCQcDBAEDEwIPAwEEBwMBAhgDAQQIAgsDBAQCAw4EAgcDBQsAKAUKBwIEAQMDAgEDCAIQBgYEBgMBAgoDAwQCAwICCgMBBAcDAQIMAxIEAgcDBQsAKAUKBwIEAQMDAhgGBwQGAgoDAQQHAwECCgMBBAYDAQINAxAEAwcCBQwAKAUKBwIEAQMDAhgGBwQFAwECCQMEBAYDAQIJAwEEBgMBAg8DDgQDBwIFDAAoBQoHAgQBAwMCBQMGAgwGBwMBBAUCCAMHBAYDAgIIAwEEBQMBAhIDDAQCBwIFDAAoBQsHAgQBAwICAwMJAgsGBwMBBAMDAQIJAwECAwMDBAMDBwIHBAUDAQITAwwEAQcCBQsAKQULBwIEAQMDAgEDCgIMBgYDAQQCAwECDQMDBAQDBwIHBAUDAQIbAwQEAQcCBQsAKQULBwIEAQMOAg0GBQMBBAEDAQIMAwUEBAMGAggDAQQEAwECHAMDBAEHAgUEAQEFBQAqBQQBAQUGBwIEAgMLAhEGAgIBAwICDAMFBAUDAgINAwEEAwMBAhADBwIFAwMEAQcCBQQBAQUFACoFDAcDBAEDCAIkAwUEBQMGAgsDAgIQAwsCAgMCBAEHAwUEAQEFBAArBQwHAwQCAwYCBwMCAhwDBQQFAwYCHQMLAgIDAgQBBwMFCQArBQUBAQUGBwQDBgIGAwQCFgMEAgMDBQQDAwgCHgMNBAEHAwUJACsFBQEBBQYHBAMFAgYDBQIUAwcCAwMEBAQDAgQBAwMCIQMLBAEHAgUEAQEFBAAsBQwHBAQBAwUCBQMCAgcDAwIKAwYEAQMEAgQDAgQDAwcCBAMBAhIDBQIIAwgHAwUEAQEFBAAtBQUBAgUEBwQEAQMFAg0DBQIJAwUEAwMDAgQDAgQDAwcCAwMEAhADCAIGAwYEAQcCBQUBAQUEAC0FBgEBBQUHBAQBAwMCCwMHAgoDBAQEAwQCAwMCBAMDBgIDAwYCDwMMAgIDAwQDBwMFBAECBQQALgULBwQEAQMDAgQDDgIKAwUEBAMEAgIDAgQEAwUCAgMDBAEDAwIPAw0CAQMDBAIHBAUEAQEFBQAvBQUBAQUFBwQEAQMCAgEDEAILAwcEAwMIBAEDBQICAwgCEQMFBAUDBgQBBwQFBAEBBQUAMQUKBwQEAQMRAg0DBwQCAwkEAQMEAgEDCQITAwYEBQMEBwMFAQcBBQMBAgUFADEFBQECBQQHBAQBAw8CDgMHBAIDCQQBAwMCAQMJAhYDCAQBAwMEAQcCBQEHAgUDAQEFBgAxBQUBAgUEBwQEAQMIAhUDBwQCAwkEAQMHBAEDBAIYAwkEAwcEBQQBAQUFADMFBQECBQQHBAQDAwwCDgMHBAIDCQQBAwQEAwMDAhQDBAIGAwYEAgUCBwIFCQA1BQUBAQUEBwQEAgMOAg4DBgQCAwkEAQMEBAIDBAICAwICDwMHAgcDAwQCBQIHAgUIADYFCgcCBQEHAQQBAwYEAwMGAg4DBQQDAwEEAQMHBAEDCQIDAwICDwMHAgcDAwQBBwEFAgcCBQIBAQUFADcFBQEBBQMHAgUBBwIEAQMGBAEDBwIPAwIEBwMQAgQDAgIPAwkCAwMFBAEHAQUBBwIFAgECBQUAOAUJBwUEAQMCAgIDAQIYAwEEAQMGAgIDBAQBAwkCBAMBAhMDDAQCBwQFAgEDBQQAOQUFAQEFAwcFBAEDBAIZAwcCBAMBBAMDCgIXAwwEAQcFBQIBAwUEADoFBQEBBQMHBQQBAwUCDwMCAgYDBAIGAwIEAwMKAhcDDAcFBQMBAgUFADoFBQEBBQMHBgMGAg4DAwIFAwMCBQMEBAMDAgIEAwQCEwMCAgMDCgQBBwUFAwECBQQAPAUFAQEFAwcCBQEHAgQCAwMCDgMFAgsDBwQCAwUCFwMDAgQDAwQFBwIFAgcBBQMBAgUEAD0FCgcFBAEDAwIOAwUCDAMBAgMDAgQDAwUCFQMFAgQDAwQDBwYFAwECBQQAPgUFAQEFAwcGBAEDBgIFAwoCEAMCBAQDBQIUAwUCBAMDBAIHAwUBBwMFAgECBQUAPgUFAQIFAgcHBAEDBQIDAwwCEAMCBAMDBgITAwcCAwMDBAEHCAUCAQIFBABABQkHBwQEAwECAwMLAg4DBAQFAwICFgMCBAEDBQICAwIEAgcCBQIHAwUCAQIFBQBABQoHBwQDAwECAwMKAhIDAQQFAwICFgMCBAIDBQIBAwIEAQcDBQEHAwUCAQMFBQBBBQYBAQUCBwcEAwMCAgMDCAITAwEEBAMDAhYDAgQDAwYEAgcCBQEHAwUDAQIFBQBDBQUBAQUDBwQFAQcCBAIDAgIHAwQCEAMEBAQDBgINAwICBQMBBAQDBQQBBwIFAQcDBQQBAQUGAEQFBQEBBQMHBwQBAwMCBwMFAhEDAQQCAwgCDQMEAgQDCAQBBwIFAgcCBQMBAgUFAEcFBAEBBQQHBwMEAgEDAwIDAwQCEQMBBAIDCAINAwQCBAMHBAEHAgUCBwMFAwECBQUARwUFAQEFBAcGBAEDBwIDAwgCBQMDAgQDAgQCAwcCBwMDAgQDBQIEAwQEAwcBBQMHAgUDAQIFBQBIBQUBAgUEBwYEAgMFAgMDCAIFAwMCAwMCBAMDBgIIAwMCBAMFAgUDAwQCBwIFAgcCBQMBAgUGAEoFCgcIBAIDAgIDAwYCDwQDAwYCCAMEAgMDBQIDAwQHCAUDAQEFBgBNBQoHCAQCAwkCEAQDAwUCCgMBBAEDAgICAwUCAgMDBAIHAwUBBwMFAwECBQUATgULBwgEAgMEBAEDAwIPAwEEAwMEAgsDBQIBAwQCAgMDBAIHBwUDAQMFBABQBQsHCQQBAwIEAQMCAgoDAQIFAwIEBAMFAgQDAgIDAwIEAQMCAgEDCAQBBwgFBAECBQUAUQUMBwoEAQMCAgMDAwIEAwYEBQMIAgIDAwIEAwEEAQMHBAIHCAUFAQEFBgBTBQ0HCQQCAwYCBQMDBAQFAQQCAwgCAgMDAgQDAgQBAwMEBAcIBQUBAQUFAFYFDQcJBAIDBwIFAwEEAgMCBQEEAgMDAgIDAgIEAwMCAwMCBAUHBQUBBwQFBAECBQUAWAUMBwoEBgMIBAEDAwUDBAEDAgIIAwMCAwMCBAMHCAUBBwIFBAEBBQcAWQUPBwoECgMDBQUEAQMDAgQDAQIBAwIEAgMCBAIHDAUEAQIFBgBdBQ0HDAQLBQMHAgQBAwsEBAcMBQ0AXwUOBxsFAQQBAwUEAgMBBAIHDgUNAGAFEAcNBAEFAgcHBQEHAwUBBAgHAgQCBQMHBwUNAGQFCAEBBQgHCwUNBwUFCAcGBQ0AaAURBxEFCgcNBQ4AagUUByMFDQBuBRkHGQUPAHIFPAB2BTgAeQU2AHwFMQCGBSYAjwUdAP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/ADo=';
+function buildPhantomBrainWeb() {
+  const bin = atob(PHANTOM_RLE);
+  let p = 0;
+  for (let k = 0; k < bin.length; k += 2) { const v = bin.charCodeAt(k), n = bin.charCodeAt(k + 1); LABM.fill(v, p, p + n); p += n; }
+}
+/* 以前の簡易画像（頭部の軸位断を数式で組み立てたもの）。詳細タブの「頭部の画像」でいつでも切り替えられる */
+function buildPhantomSimple() {
+  const put = (i, j, v) => { LABM[j * IW + i] = v; };
+  /* 脳溝は等間隔だと車輪のように見えるので、決まった乱数でばらけさせる */
+  let seed = 20250914;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const SUL = [];
+  for (let i = 0; i < 20; i++) {
+    SUL.push({ a:(i + rnd() * 0.75) / 20 * Math.PI * 2, d:0.63 + rnd() * 0.18, w:0.0075 + rnd() * 0.006 });
+  }
+  for (let j = 0; j < IH; j++) {
+    for (let i = 0; i < IW; i++) {
+      const x = (i - IW / 2) / (IW / 2), y = (j - IH / 2) / (IH / 2);
+      const th = Math.atan2(y, x);
+      const wob = 1 + 0.020 * Math.sin(th * 3 + 1.1) + 0.013 * Math.sin(th * 5 - 0.4);
+      const rr = Math.hypot(x / 0.84, y / 0.93) / wob;
+      let t = 0;
+      if (rr < 1.0) {
+        t = TIX.fat + 1;                                       // 皮下脂肪
+        if (Math.abs(x) > 0.50 && Math.abs(y) < 0.45 && rr > 0.90) t = TIX.mus + 1;  // 側頭筋
+        if (rr < 0.950) t = TIX.bone + 1;                      // 頭蓋骨
+        if (rr < 0.900) t = TIX.csf + 1;                       // くも膜下腔
+        const brain = 0.876 + 0.016 * Math.sin(th * 4 + 0.7) + 0.010 * Math.sin(th * 7 - 1.4);
+        if (rr < brain) {
+          const rib = 0.155 + 0.035 * Math.sin(th * 5 + 2.1) + 0.020 * Math.sin(th * 9);
+          t = rr > brain - rib ? TIX.gm + 1 : TIX.wm + 1;      // 皮質（灰白質）と白質
+          for (const su of SUL) {                              // 脳溝（くも膜下腔からの切れこみ）
+            let da = th - su.a;
+            while (da > Math.PI) da -= Math.PI * 2;
+            while (da < -Math.PI) da += Math.PI * 2;
+            if (rr > su.d && Math.abs(da) * rr < su.w) { t = TIX.csf + 1; break; }
+          }
+          if (Math.abs(x) < 0.011 && Math.abs(y) > 0.30) t = TIX.csf + 1;   // 大脳縦裂
+        }
+      }
+      put(i, j, t);
+    }
+  }
+  /* 側脳室（左右）と第三脳室 */
+  const ell = (px, py, a, b, rot) => (i, j) => {
+    const x = (i - IW / 2) / (IW / 2) - px, y = (j - IH / 2) / (IH / 2) - py;
+    const c = Math.cos(rot), s = Math.sin(rot);
+    const u = x * c + y * s, v = -x * s + y * c;
+    return (u * u) / (a * a) + (v * v) / (b * b) < 1;
+  };
+  const vR = ell(0.155, -0.03, 0.075, 0.26, -0.10), vL = ell(-0.155, -0.03, 0.075, 0.26, 0.10);
+  const vR2 = ell(0.10, -0.05, 0.055, 0.20, -0.10), vL2 = ell(-0.10, -0.05, 0.055, 0.20, 0.10);
+  const v3 = ell(0, 0.02, 0.022, 0.12, 0);
+  const bgR = ell(0.30, 0.02, 0.085, 0.15, -0.25), bgL = ell(-0.30, 0.02, 0.085, 0.15, 0.25);
+  const lesA = ell(0.245, -0.235, 0.055, 0.042, 0), lesB = ell(-0.215, 0.185, 0.040, 0.033, 0);
+  for (let j = 0; j < IH; j++) for (let i = 0; i < IW; i++) {
+    const at = LABM[j * IW + i];
+    if (at !== TIX.wm + 1 && at !== TIX.gm + 1) continue;
+    if (bgR(i, j) || bgL(i, j)) put(i, j, TIX.gm + 1);
+    if ((vR(i, j) && !vR2(i, j)) || (vL(i, j) && !vL2(i, j)) || v3(i, j)) put(i, j, TIX.csf + 1);
+  }
+  for (let j = 0; j < IH; j++) for (let i = 0; i < IW; i++) {
+    if (LABM[j * IW + i] === TIX.wm + 1 && (lesA(i, j) || lesB(i, j))) put(i, j, TIX.les + 1);
+  }
+}
+/* 頭部の画像の切り替え：'brainweb'（既定）か 'simple'。URL に ?phantom=simple を付けても選べる。選んだものはブラウザに保存する */
+const PKEY = 'mri-phantom-v1';
+let phantomKind = 'brainweb';
+try { const q = new URLSearchParams(location.search).get('phantom'); const v = q || localStorage.getItem(PKEY); if (v === 'simple' || v === 'brainweb') phantomKind = v; } catch (e) { }
+function buildPhantom() {
+  LABM.fill(0);
+  if (phantomKind === 'simple') buildPhantomSimple(); else buildPhantomBrainWeb();
+}
+buildPhantom();
+
+/* 組織ごとの代表画素（十字カーソルの置き場所） */
+const REP = {};
+function computeRep() {   // 組織ごとの代表画素（画像を切り替えたら求め直す）
+  for (const k in REP) delete REP[k];
+  const sum = {};
+  for (let j = 0; j < IH; j++) for (let i = 0; i < IW; i++) {
+    const v = LABM[j * IW + i]; if (!v) continue;
+    const id = TIS[v - 1].id;
+    (sum[id] = sum[id] || [0, 0, 0]);
+    sum[id][0] += i; sum[id][1] += j; sum[id][2]++;
+  }
+  for (const id in sum) {
+    let bi = 0, bj = 0, bd = 1e9;
+    const cx = sum[id][0] / sum[id][2], cy = sum[id][1] / sum[id][2];
+    for (let j = 0; j < IH; j += 2) for (let i = 0; i < IW; i += 2) {
+      if (LABM[j * IW + i] !== TIX[id] + 1) continue;
+      const d = (i - cx) * (i - cx) + (j - cy) * (j - cy);
+      if (d < bd) { bd = d; bi = i; bj = j; }
+    }
+    REP[id] = [bi, bj];
+  }
+  if (phantomKind === 'simple') REP.les = [Math.round(IW / 2 + 0.245 * IW / 2), Math.round(IH / 2 - 0.235 * IH / 2)];
+}
+computeRep();
+
+let noiseBuf = null;
+/* 時間を追う画像：緩和曲線の上で時刻を選ぶと（なぞる／▶ボタン）、その時刻の磁化の大きさで画像を描く。
+   relT = { panel: 1, t } … ①の時刻 t の縦磁化 |Mz(t)| × プロトン密度（反転回復では TI の代わりに t で 90° を入れたときの大きさ）
+   relT = { panel: 2, t } … ②の時刻 t の横磁化 |Mxy(t)| × プロトン密度（TE を t にしたときの画像と同じ）
+   明るさは時刻によらず同じ物差し（磁化 1 ＝白）で描くので、時間とともに明るくなる・暗くなるのが見える。
+   ② の時刻を TE に合わせると、ふだんの画像と同じ明暗の順になる。 */
+let relT = null, relGeo = null;
+function relSignal(t, panel) {
+  let T1 = T1of(t, P.B0), T2 = T2of(t);
+  if (P.seq === 'GRE' && isFinite(P.T2p)) T2 = 1 / (1 / T2 + 1 / P.T2p);
+  if (panel === 1) return t.PD * Math.abs(mzCurve(T1, relT.t, P));
+  return t.PD * Math.abs(mxy0(T1, P)) * Math.exp(-relT.t / T2);
+}
+function drawImage() {
+  const sg = new Float64Array(TIS.length + 1);
+  let mxs = 1e-6;
+  for (let k = 0; k < TIS.length; k++) {
+    sg[k + 1] = relT ? relSignal(TIS[k], relT.panel) : sigTis(TIS[k], P);
+    if (INIMG[TIS[k].id] && sg[k + 1] > mxs) mxs = sg[k + 1];
+  }
+  const norm = relT ? 1 / 1.04 : 1 / (mxs * 1.04);
+  if (!noiseBuf || noiseBuf.length !== IW * IH) {
+    noiseBuf = new Float32Array(IW * IH);
+    for (let i = 0; i < noiseBuf.length; i++) {
+      let s = 0; for (let k = 0; k < 3; k++) s += Math.random();
+      noiseBuf[i] = (s / 3 - 0.5) * 2;
+    }
+  }
+  const d = imgData.data;
+  for (let i = 0; i < IW * IH; i++) {
+    const l = LABM[i];
+    let v = l ? sg[l] * norm : 0.012;
+    if (P.noise) v += noiseBuf[i] * 0.026;
+    v = v < 0 ? 0 : v > 1 ? 1 : v;
+    const g = Math.round(255 * Math.pow(v, 0.92));
+    d[i * 4] = g; d[i * 4 + 1] = g; d[i * 4 + 2] = g; d[i * 4 + 3] = 255;
+  }
+  mriCx.putImageData(imgData, 0, 0);
+  if (relT) {
+    $('imgSeq').textContent = relT.panel === 1 ? '縦磁化 Mz の地図' : '横磁化 Mxy の地図';
+    $('imgPar').textContent = 't = ' + Math.round(relT.t) + ' ms';
+  }
+}
+
+/* ================= 3Dシーン ================= */
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('gl');
+const labelBox = document.getElementById('labels');
+const smallScr = matchMedia('(max-width:900px)').matches;
+const U = 5;                      // 1シーン単位 = 5 mm
+const ML = 5.2;                   // 磁化ベクトルの長さ（M0のとき）
+let renderer;
+function showFail(msg) {
+  const d = document.createElement('div');
+  d.className = 'glerr';
+  d.innerHTML = '<b>3Dを表示できません</b><span>' + msg + '</span>';
+  stage.appendChild(d);
+}
+try {
+  renderer = new THREE.WebGLRenderer({ canvas:canvas, antialias:!smallScr, alpha:false, preserveDrawingBuffer:false });
+} catch (e) {
+  showFail('WebGL を初期化できませんでした。' + (e && e.message ? e.message : ''));
+  return;
+}
+canvas.addEventListener('webglcontextlost', e => {
+  e.preventDefault(); showFail('WebGL のコンテキストが失われました。ページを開き直してください。');
+});
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+{
+  const gl = renderer.getContext();
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  document.getElementById('glInfo').textContent =
+    (dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) +
+    ' / ' + gl.getParameter(gl.VERSION);
+}
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, 1, 0.4, 900);
+camera.up.set(0, 0, 1);                       // z（B0）を画面の上に置く
+scene.add(new THREE.AmbientLight(0x9fb4c4, 0.62));
+const dl = new THREE.DirectionalLight(0xffffff, 0.72); dl.position.set(6, -9, 12); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0x6fa8c9, 0.30); dl2.position.set(-8, 6, -4); scene.add(dl2);
+
+const GY = new THREE.Vector3(0, 1, 0);
+const _v = new THREE.Vector3(), _q = new THREE.Quaternion();
+function mkArrow(color, rs, rh, hh, op) {
+  const mat = new THREE.MeshPhongMaterial({
+    color:color, shininess:26, emissive:new THREE.Color(color).multiplyScalar(0.20),
+    transparent:op !== undefined, opacity:op === undefined ? 1 : op
+  });
+  const grp = new THREE.Group();
+  const sg = new THREE.CylinderGeometry(rs, rs, 1, 8); sg.translate(0, 0.5, 0);
+  const shaft = new THREE.Mesh(sg, mat);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(rh, hh, 12), mat);
+  grp.add(shaft, head);
+  return { grp:grp, shaft:shaft, head:head, mat:mat, hh:hh };
+}
+function setArrow(a, x, y, z, unit) {
+  _v.set(x, y, z);
+  const L = _v.length() * unit;
+  if (L < 0.03) { a.grp.visible = false; return 0; }
+  a.grp.visible = true;
+  _v.normalize(); _q.setFromUnitVectors(GY, _v); a.grp.quaternion.copy(_q);
+  const hh = Math.min(a.hh, L * 0.45);
+  a.shaft.scale.y = Math.max(0.001, L - hh);
+  const k = hh / a.hh;
+  a.head.scale.set(k, k, k); a.head.position.y = L - hh / 2;
+  return L;
+}
+function line(pts, col, op) {
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  return new THREE.Line(g, new THREE.LineBasicMaterial({ color:col, transparent:true, opacity:op === undefined ? 1 : op }));
+}
+function dashCircle(r, n, col, op) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) { const a = i / n * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0)); }
+  return line(pts, col, op);
+}
+
+/* ---- 座標軸と静磁場 ---- */
+const AX = 6.0;
+const axGrp = new THREE.Group(); scene.add(axGrp);
+axGrp.add(line([new THREE.Vector3(-AX, 0, 0), new THREE.Vector3(AX, 0, 0)], 0x3d566b, .9));
+axGrp.add(line([new THREE.Vector3(0, -AX, 0), new THREE.Vector3(0, AX, 0)], 0x3d566b, .9));
+axGrp.add(line([new THREE.Vector3(0, 0, -AX * .8), new THREE.Vector3(0, 0, AX)], 0x4d6a80, .9));
+axGrp.add(dashCircle(ML, 72, 0x2b3f4f, .75));
+{
+  const b0 = mkArrow(0x6d93a6, 0.045, 0.20, 0.7);
+  setArrow(b0, 0, 0, 1, AX + 1.1);
+  b0.grp.position.set(0, 0, 0);
+  axGrp.add(b0.grp);
+  for (let i = 0; i < 6; i++) {                    // 静磁場の場の線
+    const a = i / 6 * Math.PI * 2, r = 7.9;
+    const l = line([new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, -6.4),
+                    new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 6.6)], 0x24384a, .55);
+    axGrp.add(l);
+  }
+}
+/* 横磁化の面 */
+const planeXY = new THREE.Mesh(
+  new THREE.CircleGeometry(ML * 1.02, 48),
+  new THREE.MeshBasicMaterial({ color:0x123240, transparent:true, opacity:0.30, side:THREE.DoubleSide, depthWrite:false })
+);
+scene.add(planeXY);
+
+/* ---- 回転座標系にのるもの（スピン・合成ベクトル・B1） ---- */
+const spinGrp = new THREE.Group(); scene.add(spinGrp);
+let spins = [];
+function buildSpins(n) {
+  spins.forEach(s => { spinGrp.remove(s.grp); s.shaft.geometry.dispose(); s.head.geometry.dispose(); s.mat.dispose(); });
+  spins = [];
+  for (let i = 0; i < n; i++) {
+    const a = mkArrow(0x9fb4c4, 0.032, 0.13, 0.44);
+    spinGrp.add(a.grp); spins.push(a);
+  }
+  setDisp(n);
+}
+const mArrow = mkArrow(0x52B8CE, 0.105, 0.34, 1.0); spinGrp.add(mArrow.grp);
+const mzArrow = mkArrow(0x7ED9A7, 0.055, 0.20, 0.6, 0.92); spinGrp.add(mzArrow.grp);
+const mxyArrow = mkArrow(0xE0645C, 0.055, 0.20, 0.6, 0.92); spinGrp.add(mxyArrow.grp);
+const compPos = new Float32Array(12);
+const compGeo = new THREE.BufferGeometry();
+compGeo.setAttribute('position', new THREE.BufferAttribute(compPos, 3));
+const compLine = new THREE.LineSegments(compGeo, new THREE.LineBasicMaterial({ color:0x5b7387, transparent:true, opacity:.7 }));
+compLine.frustumCulled = false; spinGrp.add(compLine);
+const b1Arrow = mkArrow(0xF0B24B, 0.075, 0.26, 0.72); spinGrp.add(b1Arrow.grp);
+const b1Ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.045, 8, 40, Math.PI * 1.5),
+  new THREE.MeshBasicMaterial({ color:0xF0B24B, transparent:true, opacity:.75 }));
+spinGrp.add(b1Ring);
+
+/* 合成ベクトルの先端の軌跡（実験室系でもそのまま見えるようワールド座標で持つ） */
+const TRN = 420;
+const trailPos = new Float32Array(TRN * 3), trailCol = new Float32Array(TRN * 3);
+const trailGeo = new THREE.BufferGeometry();
+trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+trailGeo.setAttribute('color', new THREE.BufferAttribute(trailCol, 3));
+const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ vertexColors:true, transparent:true, opacity:.85 }));
+trail.frustumCulled = false; scene.add(trail);
+let trailN = 0;
+function pushTrail(x, y, z) {
+  if (trailN >= TRN) {
+    trailPos.copyWithin(0, 3); trailN = TRN - 1;
+  }
+  trailPos[trailN * 3] = x; trailPos[trailN * 3 + 1] = y; trailPos[trailN * 3 + 2] = z;
+  trailN++;
+  for (let i = 0; i < trailN; i++) {
+    const f = i / trailN;
+    trailCol[i * 3] = 0.18 + 0.30 * f; trailCol[i * 3 + 1] = 0.45 + 0.40 * f; trailCol[i * 3 + 2] = 0.55 + 0.35 * f;
+  }
+  trailGeo.attributes.position.needsUpdate = true;
+  trailGeo.attributes.color.needsUpdate = true;
+  trailGeo.setDrawRange(0, trailN);
+}
+function clearTrail() { trailN = 0; trailGeo.setDrawRange(0, 0); }
+
+/* ---- 熱平衡のようす（量子的な描き方）: ±z のコーンの上を歳差する ---- */
+const conGrp = new THREE.Group(); scene.add(conGrp); conGrp.visible = false;
+const cons = [];
+(function () {
+  const up = 17, dn = 13;
+  for (let i = 0; i < up + dn; i++) {
+    const par = i < up;
+    const a = mkArrow(par ? 0x8FC8D8 : 0xB07A7A, 0.030, 0.12, 0.40);
+    a.par = par; a.ph = Math.random() * Math.PI * 2;
+    a.rx = (Math.random() - .5) * 4.6; a.ry = (Math.random() - .5) * 4.6; a.rz = (Math.random() - .5) * 5.0;
+    conGrp.add(a.grp); cons.push(a);
+  }
+})();
+
+/* ---- 体（ボクセルの位置） ---- */
+const headGrp = new THREE.Group(); scene.add(headGrp); headGrp.visible = false;
+{
+  const sk = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28),
+    new THREE.MeshPhongMaterial({ color:0x9FB4C4, transparent:true, opacity:0.10, shininess:8, side:THREE.DoubleSide, depthWrite:false }));
+  sk.scale.set(FOVX * 0.84 / 2 / U, FOVY * 0.93 / 2 / U, 23);
+  headGrp.add(sk);
+  const br = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 22),
+    new THREE.MeshPhongMaterial({ color:0xC2CFDA, transparent:true, opacity:0.13, shininess:10, depthWrite:false }));
+  br.scale.set(FOVX * 0.72 / 2 / U, FOVY * 0.78 / 2 / U, 17);
+  headGrp.add(br);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(2.2, 4.4, 12),
+    new THREE.MeshPhongMaterial({ color:0xFFA94D, emissive:0x4a2c0a }));
+  nose.position.set(0, FOVY * 0.93 / 2 / U + 1.4, 0); nose.rotation.x = -Math.PI / 2;
+  headGrp.add(nose);
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(FOVX / U, FOVY / U),
+    new THREE.MeshBasicMaterial({ color:0x2E7A8C, transparent:true, opacity:0.16, side:THREE.DoubleSide, depthWrite:false }));
+  headGrp.add(pl);
+  headGrp.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(FOVX / U, FOVY / U)),
+    new THREE.LineBasicMaterial({ color:0x3E8FA3, transparent:true, opacity:.5 })));
+}
+const voxel = new THREE.Group(); scene.add(voxel); voxel.visible = false;
+{
+  const s = 5;
+  voxel.add(new THREE.Mesh(new THREE.BoxGeometry(s, s, s),
+    new THREE.MeshBasicMaterial({ color:0xF0B24B, transparent:true, opacity:0.10, depthWrite:false })));
+  voxel.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(s, s, s)),
+    new THREE.LineBasicMaterial({ color:0xF0B24B, transparent:true, opacity:.85 })));
+}
+function voxelWorld() {
+  const px = xhairPx || REP[P.tissue] || [IW / 2, IH / 2];
+  return new THREE.Vector3(((px[0] + .5) / IW - .5) * FOVX / U, (.5 - (px[1] + .5) / IH) * FOVY / U, 0);
+}
+function placeHead() {
+  const v = voxelWorld();
+  headGrp.position.set(-v.x, -v.y, 0);
+}
+
+/* ---- カメラ操作 ---- */
+const ctrl = { th:-1.05, phi:1.15, dist:23, want:23 };
+function applyCam() {
+  const sp = Math.sin(ctrl.phi), cp = Math.cos(ctrl.phi);
+  camera.position.set(ctrl.dist * sp * Math.cos(ctrl.th), ctrl.dist * sp * Math.sin(ctrl.th), ctrl.dist * cp);
+  camera.lookAt(0, 0, 0);
+}
+function homeCam() { ctrl.th = -1.05; ctrl.phi = 1.15; ctrl.want = P.showBody ? 96 : 23; applyCam(); }
+let drag = null, pinch = 0;
+canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); drag = { x:e.clientX, y:e.clientY }; });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  drag.x = e.clientX; drag.y = e.clientY;
+  ctrl.th -= dx * 0.008;
+  ctrl.phi = Math.max(0.12, Math.min(Math.PI - 0.12, ctrl.phi - dy * 0.008));
+  applyCam();
+});
+const endDrag = () => { drag = null; };
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('dblclick', homeCam);
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  ctrl.want = Math.max(7, Math.min(220, ctrl.want * (1 + Math.sign(e.deltaY) * 0.11)));
+}, { passive:false });
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 2) {
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    if (pinch) { ctrl.want = Math.max(7, Math.min(220, ctrl.want * pinch / d)); }
+    pinch = d; drag = null;
+  }
+}, { passive:true });
+canvas.addEventListener('touchend', () => { pinch = 0; });
+
+/* ---- ラベル ---- */
+const LABS = {};
+function mkLab(key, cls) {
+  const d = document.createElement('div');
+  d.className = 'lab' + (cls ? ' ' + cls : '');
+  labelBox.appendChild(d); LABS[key] = d; return d;
+}
+['z', 'x', 'y'].forEach(k => mkLab(k, 'axis'));
+mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
+mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf');
+const _p = new THREE.Vector3();
+function place(key, x, y, z, txt, on) {
+  const el = LABS[key];
+  if (!on) { el.style.display = 'none'; return; }
+  _p.set(x, y, z).project(camera);
+  if (_p.z > 1) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.textContent = txt;
+  el.style.transform = 'translate(-50%,-50%) translate(' +
+    ((_p.x * .5 + .5) * stage.clientWidth).toFixed(1) + 'px,' +
+    ((-_p.y * .5 + .5) * stage.clientHeight).toFixed(1) + 'px)';
+}
+
+/* ================= 画面の更新 ================= */
+let labPhase = 0, echoFlash = 0, b1Spin = 0;
+const _m = new THREE.Vector3(), ZAX = new THREE.Vector3(0, 0, 1);
+function updateScene(dt) {
+  if (P.frame === 'lab' && !P.paused) labPhase += dt * 0.85 * P.spd;
+  spinGrp.rotation.z = P.frame === 'lab' ? labPhase : 0;
+
+  /* --- スピン1本ずつ --- */
+  const showSpin = !P.quantum;
+  for (let k = 0; k < spins.length; k++) {
+    const a = spins[k];
+    if (!showSpin) { a.grp.visible = false; continue; }
+    const i = dispIx[k];
+    setArrow(a, mx[i], my[i], mz[i], ML);
+    const tr = Math.hypot(mx[i], my[i]);
+    const h = (Math.atan2(my[i], mx[i]) / (Math.PI * 2) + 1) % 1;
+    a.mat.color.setHSL(h, Math.min(0.72, tr * 1.5), 0.58 + 0.06 * (1 - tr));
+    a.mat.emissive.setHSL(h, Math.min(0.6, tr * 1.2), 0.12);
+  }
+  /* --- 合成ベクトル --- */
+  const m = netM();
+  const L = setArrow(mArrow, m[0], m[1], m[2], ML);
+  mArrow.grp.visible = showSpin && L > 0;
+  if (echoFlash > 0) { echoFlash -= dt; mArrow.mat.emissive.setRGB(0.25 + echoFlash, 0.5, 0.6); }
+  else mArrow.mat.emissive.setRGB(0.06, 0.14, 0.17);
+
+  const txy = Math.hypot(m[0], m[1]);
+  const comp = P.showComp && showSpin;
+  setArrow(mzArrow, 0, 0, m[2], ML); mzArrow.grp.visible = comp && Math.abs(m[2]) > 0.02;
+  setArrow(mxyArrow, m[0], m[1], 0, ML); mxyArrow.grp.visible = comp && txy > 0.02;
+  compLine.visible = comp && txy > 0.02 && Math.abs(m[2]) > 0.02;
+  if (compLine.visible) {
+    const tx = m[0] * ML, ty = m[1] * ML, tz = m[2] * ML;
+    compPos.set([0, 0, tz, tx, ty, tz, tx, ty, 0, tx, ty, tz]);
+    compGeo.attributes.position.needsUpdate = true;
+  }
+  /* --- 軌跡 --- */
+  if (P.showTrail && showSpin && !P.paused) {
+    _m.set(m[0] * ML, m[1] * ML, m[2] * ML).applyAxisAngle(ZAX, spinGrp.rotation.z);
+    pushTrail(_m.x, _m.y, _m.z);
+  }
+  trail.visible = P.showTrail && showSpin;
+
+  /* --- B1（RFをかけている最中だけ） --- */
+  const onRF = !!R.nut;
+  b1Arrow.grp.visible = onRF; b1Ring.visible = onRF;
+  if (onRF) {
+    const ax = R.nut.ax === 'x' ? [1, 0, 0] : [0, 1, 0];
+    setArrow(b1Arrow, ax[0], ax[1], 0, 3.0);
+    b1Spin += dt * 6;
+    if (R.nut.ax === 'x') b1Ring.rotation.set(b1Spin, Math.PI / 2, 0);
+    else b1Ring.rotation.set(Math.PI / 2, 0, b1Spin);
+  }
+  /* --- 熱平衡の量子的な絵 --- */
+  conGrp.visible = P.quantum;
+  if (P.quantum) {
+    for (const a of cons) {
+      a.ph += dt * (P.paused ? 0 : 1.9);
+      const s = Math.sin(54.7 * Math.PI / 180), c = Math.cos(54.7 * Math.PI / 180) * (a.par ? 1 : -1);
+      setArrow(a, Math.cos(a.ph) * s, Math.sin(a.ph) * s, c, 1.65);
+      a.grp.position.set(a.rx, a.ry, a.rz);
+    }
+  }
+  /* --- 体 --- */
+  headGrp.visible = P.showBody; voxel.visible = P.showBody;
+  axGrp.visible = !P.showBody || ctrl.dist < 45;
+  planeXY.visible = !P.showBody && showSpin;
+
+  /* --- カメラをなめらかに追従 --- */
+  ctrl.dist += (ctrl.want - ctrl.dist) * (1 - Math.exp(-dt * 4.5));
+  applyCam();
+
+  /* --- ラベル --- */
+  const near3d = !P.showBody || ctrl.dist < 45;
+  const on = P.showLab && near3d;
+  const rot = P.frame === 'rot';
+  place('z', 1.7, 0, AX - 0.2, 'z ＝ B₀ の向き', on);
+  place('b0', 0, 0, 0, '', false);
+  place('x', AX + 0.5, 0, 0, rot ? "x'" : 'x', on && !P.showBody);
+  place('y', 0, AX + 0.5, 0, rot ? "y'" : 'y', on && !P.showBody);
+  {
+    const t = new THREE.Vector3(m[0] * ML, m[1] * ML, m[2] * ML).applyAxisAngle(ZAX, spinGrp.rotation.z);
+    place('m', t.x * 1.13, t.y * 1.13, t.z * 1.13 + 0.35, 'M', on && showSpin && L > 0.4);
+    place('mz', 0.55, 0.55, m[2] * ML, 'Mz', on && comp && Math.abs(m[2]) > 0.18);
+    const q = new THREE.Vector3(m[0] * ML, m[1] * ML, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
+    place('mxy', q.x * 1.18, q.y * 1.18, -0.5, 'Mxy', on && comp && txy > 0.18);
+  }
+  if (onRF) {
+    const ax = R.nut.ax === 'x' ? [1, 0, 0] : [0, 1, 0];
+    const b = new THREE.Vector3(ax[0] * 3.3, ax[1] * 3.3, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
+    place('b1', b.x, b.y, 0.5, 'B₁', on);
+  } else place('b1', 0, 0, 0, '', false);
+  place('vox', 0, 0, 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40);
+}
+
+/* ================= グラフ ================= */
+function fitCv(cv) {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const w = Math.max(220, cv.clientWidth || 620);
+  const h = Math.max(130, cv.clientHeight || 250);
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  }
+  const cx = cv.getContext('2d');
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cx.clearRect(0, 0, w, h);
+  return { cx:cx, w:w, h:h };
+}
+const C = {
+  line:'#223140', dim:'#5E7386', mut:'#8AA0B2', text:'#D9E4ED',
+  rf:'#F0B24B', sig:'#52B8CE', grad:'#6E8598', alert:'#E0645C', grid:'#1A2733'
+};
+const MONO = '10px "IBM Plex Mono",monospace';
+/* 曲線に重なっても読めるよう、背景を敷いて書く */
+function tagBg(cx, x, y, txt, align, col) {
+  const w = cx.measureText(txt).width + 7;
+  cx.fillStyle = 'rgba(10,15,20,.85)';
+  cx.fillRect(align === 'right' ? x - w : x, y - 7, w, 14);
+  cx.fillStyle = col; cx.textAlign = align;
+  cx.fillText(txt, align === 'right' ? x - 4 : x + 4, y);
+}
+
+/* ---- パルスシーケンス図 ---- */
+function drawSeq() {
+  const cv = document.getElementById('seqCv');
+  const { cx, w, h } = fitCv(cv);
+  const L = 64, Rr = w - 16;
+  const rows = [
+    { y:h * 0.15, nm:'RF' },
+    { y:h * 0.42, nm:'傾斜磁場' },
+    { y:h * 0.72, nm:'信号' }
+  ];
+  /* TR をそのまま等間隔にすると、パルスとエコーが左端に固まって読めない。
+     前半（パルスとエコーのあたり）だけ拡大し、残りは折れ目を入れて縮める */
+  const Td = Math.min(P.TR, (P.seq === 'IR' ? P.TI + P.TE * 1.8 : P.TE * 2.4) + 30);
+  const brk = Td < P.TR * 0.90;
+  const wDet = brk ? (Rr - L) * 0.66 : (Rr - L);
+  const X = t => {
+    t = Math.min(P.TR, Math.max(0, t));
+    return t <= Td ? L + wDet * (t / Td) : L + wDet + (Rr - L - wDet) * ((t - Td) / (P.TR - Td));
+  };
+  cx.strokeStyle = C.line; cx.lineWidth = 1;
+  cx.font = MONO; cx.textBaseline = 'middle';
+  rows.forEach(r => {
+    cx.beginPath(); cx.moveTo(L, r.y); cx.lineTo(Rr, r.y); cx.stroke();
+    cx.fillStyle = C.dim; cx.textAlign = 'right';
+    cx.fillText(r.nm, L - 7, r.y);
+  });
+  /* 目盛 */
+  cx.textAlign = 'center'; cx.fillStyle = C.dim;
+  const NICE = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
+  let stp = NICE[0];
+  for (const v of NICE) if (v <= Td / 2.6) stp = v;
+  const ticks = [];
+  for (let t = 0; t <= Td + 1e-6; t += stp) ticks.push(t);
+  if (brk) ticks.push(P.TR);
+  ticks.forEach(t => {
+    const x = X(t);
+    cx.strokeStyle = C.grid; cx.beginPath(); cx.moveTo(x, h * 0.10); cx.lineTo(x, h * 0.86); cx.stroke();
+    cx.fillStyle = C.dim; cx.fillText(Math.round(t), x, h * 0.93);
+  });
+  cx.textAlign = 'right'; cx.fillText('ms', L - 6, h * 0.93); cx.textAlign = 'center';
+  if (brk) {                                   // 折れ目のしるし
+    const xb = L + wDet;
+    cx.strokeStyle = C.dim; cx.lineWidth = 1;
+    [-3, 1].forEach(o => {
+      cx.beginPath(); cx.moveTo(xb + o - 2, h * 0.90); cx.lineTo(xb + o + 3, h * 0.84); cx.stroke();
+    });
+    cx.textAlign = 'center';
+  }
+
+  const evs = R.evs;
+  /* RF */
+  let lastRFx = -1e9, rfRow = 0;
+  evs.forEach(e => {
+    if (e.k !== 'rf') return;
+    const x = X(e.t), hh = (e.a / 180) * (h * 0.11) + h * 0.028;
+    cx.strokeStyle = C.rf; cx.lineWidth = 1.4; cx.beginPath();
+    for (let k = -14; k <= 14; k++) {
+      const u = k / 14 * 2.6, s = u === 0 ? 1 : Math.sin(Math.PI * u) / (Math.PI * u);
+      const px = x + k * 0.62, py = rows[0].y - s * hh;
+      k === -14 ? cx.moveTo(px, py) : cx.lineTo(px, py);
+    }
+    cx.stroke();
+    cx.fillStyle = C.rf; cx.textAlign = 'center'; cx.font = MONO;
+    cx.fillText(Math.round(e.a) + '°', x, rows[0].y - hh - 8);
+    /* 何のためのパルスかを、ことばでも添える */
+    const word = Math.round(e.a) === 180
+      ? (P.seq === 'IR' && e.t === 0 ? '縦磁化を反転' : '位相をもどす') : '倒す';
+    rfRow = (x - lastRFx < 52) ? 1 - rfRow : 0;     // 近すぎるときは上下にずらす
+    lastRFx = x;
+    cx.fillStyle = '#9A7A44'; cx.textAlign = 'center';
+    const ww = cx.measureText(word).width;      // 行頭の「RF」に重ならないところまで寄せる
+    cx.fillText(word, Math.max(x, L + 3 + ww / 2), rows[0].y + 11 + rfRow * 12);
+  });
+  /* 傾斜磁場（スライス選択・位相・読み出し）を模式的に */
+  const gy = rows[1].y;
+  cx.strokeStyle = C.grad; cx.lineWidth = 1.2;
+  const box = (x0, x1, hh) => { cx.beginPath(); cx.moveTo(x0 - 3, gy); cx.lineTo(x0, gy - hh); cx.lineTo(x1, gy - hh); cx.lineTo(x1 + 3, gy); cx.stroke(); };
+  evs.forEach(e => { if (e.k === 'rf') box(X(e.t) - 9, X(e.t) + 9, h * 0.05); });
+  const te = evs.find(e => e.k === 'echo');
+  if (te) {
+    box(X(te.t) - 18, X(te.t) + 18, h * 0.075);
+    for (let k = 0; k < 4; k++) { const x = X(te.t) - 34 + k * 1.5; box(x, x + 1, h * 0.018 + k * h * 0.006); }
+  }
+  /* 信号：実際に計算している |Mxy| の記録 */
+  const sy = rows[2].y, sh = h * 0.18;
+  if (R.trace.length > 1) {
+    cx.strokeStyle = C.sig; cx.lineWidth = 1.5; cx.beginPath();
+    let first = true;
+    for (const p of R.trace) {
+      const x = X(p[0]), y = sy - p[1] * sh;
+      first ? (cx.moveTo(x, y), first = false) : cx.lineTo(x, y);
+    }
+    cx.stroke();
+    cx.globalAlpha = .5; cx.beginPath(); first = true;
+    for (const p of R.trace) {
+      const x = X(p[0]), y = sy + p[1] * sh;
+      first ? (cx.moveTo(x, y), first = false) : cx.lineTo(x, y);
+    }
+    cx.stroke(); cx.globalAlpha = 1;
+  }
+  /* T2 の包絡線（エコーの頂点はこの線の上にのる） */
+  if (P.seq !== 'GRE') {
+    const T2 = curT2(), t0 = P.seq === 'IR' ? P.TI : 0;
+    cx.strokeStyle = 'rgba(224,100,92,.75)'; cx.setLineDash([3, 3]); cx.lineWidth = 1; cx.beginPath();
+    const a0 = R.trace.length ? Math.max.apply(null, R.trace.map(p => p[1])) : 1;
+    for (let k = 0; k <= 60; k++) {
+      const t = t0 + (P.TR - t0) * k / 60, y = sy - a0 * Math.exp(-(t - t0) / T2) * sh;
+      k === 0 ? cx.moveTo(X(t), y) : cx.lineTo(X(t), y);
+    }
+    cx.stroke(); cx.setLineDash([]);
+    cx.fillStyle = 'rgba(224,100,92,.9)'; cx.textAlign = 'right';
+    cx.fillText('T2 の包絡線', L + wDet - 4, sy - a0 * Math.exp(-(Td - t0) / T2) * sh - 8);
+  }
+  /* エコーの位置に「ここで読む」と書く */
+  if (te) {
+    cx.fillStyle = C.sig; cx.textAlign = 'center';
+    cx.fillText('↓ ここで信号を読む', X(te.t), sy - sh - 7);
+  }
+  /* TE・TI・TR の寸法線 */
+  const dim = (t0, t1, y, nm) => {
+    const x0 = X(t0), x1 = X(t1);
+    cx.strokeStyle = C.mut; cx.lineWidth = 1; cx.setLineDash([]);
+    cx.beginPath(); cx.moveTo(x0, y); cx.lineTo(x1, y);
+    cx.moveTo(x0, y - 3); cx.lineTo(x0, y + 3); cx.moveTo(x1, y - 3); cx.lineTo(x1, y + 3); cx.stroke();
+    cx.fillStyle = C.mut; cx.textAlign = 'center'; cx.fillText(nm, (x0 + x1) / 2, y - 8);
+  };
+  const yd = h * 0.30;
+  if (te) dim(P.seq === 'IR' ? P.TI : 0, te.t, yd, 'TE ' + Math.round(P.TE));
+  if (P.seq === 'IR') dim(0, P.TI, h * 0.56, 'TI ' + Math.round(P.TI));
+  dim(0, P.TR, h * 0.045, 'TR ' + Math.round(P.TR));
+  cx.textAlign = 'right';
+  if (P.manual) { cx.fillStyle = C.rf; cx.fillText('手動：パルスは自分で撃ちます', Rr, h * 0.115); }
+  else if (brk) { cx.fillStyle = C.dim; cx.fillText('// より右は時間の目盛が変わります', Rr, h * 0.115); }
+  /* いまの時刻 */
+  const xc = X(R.t);
+  cx.strokeStyle = C.alert; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xc, h * 0.08); cx.lineTo(xc, h * 0.88); cx.stroke();
+}
+
+/* ---- 緩和曲線 ---- */
+const CURVE = ['fat', 'wm', 'gm', 'csf', 'les'];
+function mzCurve(T1, t, p) {
+  if (p.seq === 'IR') return 1 - 2 * Math.exp(-t / T1);
+  if (p.seq === 'GRE') {
+    const E1 = Math.exp(-p.TR / T1), ca = Math.cos(p.FA * Math.PI / 180);
+    const mzm = (1 - E1) / (1 - ca * E1);
+    return 1 - (1 - mzm * ca) * Math.exp(-t / T1);
+  }
+  return 1 - Math.exp(-t / T1);
+}
+function mxy0(T1, p) {
+  const E1 = Math.exp(-p.TR / T1);
+  if (p.seq === 'IR') return 1 - 2 * Math.exp(-p.TI / T1) + E1;
+  if (p.seq === 'GRE') return (1 - E1) / (1 - Math.cos(p.FA * Math.PI / 180) * E1) * Math.sin(p.FA * Math.PI / 180);
+  return 1 - E1;
+}
+function drawRel() {
+  const cv = document.getElementById('relCv');
+  const { cx, w, h } = fitCv(cv);
+  const L = 40, Rr = w - 62;
+  const top = { y0:h * 0.145, y1:h * 0.44 }, bot = { y0:h * 0.635, y1:h * 0.92 };
+  cx.font = MONO; cx.textBaseline = 'middle';
+  const isIR = P.seq === 'IR';
+  const sampT = isIR ? P.TI : P.TR;
+  const tmax1 = isIR ? Math.min(P.TR, P.TI * 1.6) : P.TR;
+  const tmax2 = Math.max(P.TE * 2.2, 60);
+
+  const frame = (r, ymin, ymax, ttl) => {
+    cx.strokeStyle = C.line; cx.lineWidth = 1;
+    cx.beginPath(); cx.moveTo(L, r.y0); cx.lineTo(L, r.y1); cx.lineTo(Rr, r.y1); cx.stroke();
+    if (ymin < 0) {                       // 反転回復では0の線が「消える瞬間」の目印になる
+      const y = r.y1 - (0 - ymin) / (ymax - ymin) * (r.y1 - r.y0);
+      cx.strokeStyle = '#3B5568'; cx.setLineDash([2, 3]);
+      cx.beginPath(); cx.moveTo(L, y); cx.lineTo(Rr, y); cx.stroke(); cx.setLineDash([]);
+      cx.fillStyle = C.dim; cx.textAlign = 'right'; cx.fillText('0', L - 3, y);
+    }
+    cx.fillStyle = C.dim; cx.textAlign = 'left'; cx.fillText(ttl, L - 26, r.y0 - 9);
+  };
+  frame(top, isIR ? -1 : 0, 1,
+    isIR ? '① 反転させた縦磁化が TI までにどこまで戻るか' : '① TR のあいだに縦磁化 Mz がどこまで戻るか');
+  frame(bot, 0, 1, '② TE までに横磁化 Mxy がどれだけ残るか' + (P.seq === 'GRE' ? '（T2*）' : '（T2）'));
+
+  const Y1 = v => { const lo = isIR ? -1 : 0; return top.y1 - (v - lo) / (1 - lo) * (top.y1 - top.y0); };
+  const Y2 = v => bot.y1 - v * (bot.y1 - bot.y0);
+  const X1 = t => L + (Rr - L) * t / tmax1;
+  const X2 = t => L + (Rr - L) * t / tmax2;
+  relGeo = { L, Rr, top, bot, tmax1, tmax2, mid: (top.y1 + bot.y0) / 2 };
+
+  const tags = [], ys1 = [], ys2 = [];
+  CURVE.forEach(id => {
+    const t = TIS[TIX[id]], T1 = T1of(t, P.B0);
+    let T2 = T2of(t);
+    if (P.seq === 'GRE' && isFinite(P.T2p)) T2 = 1 / (1 / T2 + 1 / P.T2p);
+    const sel = P.tissue === id;
+    cx.strokeStyle = t.col; cx.lineWidth = sel ? 2.2 : 1.2; cx.globalAlpha = sel ? 1 : .72;
+    cx.beginPath();
+    for (let k = 0; k <= 80; k++) { const tt = tmax1 * k / 80; const y = Y1(mzCurve(T1, tt, P)); k ? cx.lineTo(X1(tt), y) : cx.moveTo(X1(tt), y); }
+    cx.stroke();
+    const a0 = Math.abs(mxy0(T1, P));
+    cx.beginPath();
+    for (let k = 0; k <= 80; k++) { const tt = tmax2 * k / 80; const y = Y2(a0 * Math.exp(-tt / T2)); k ? cx.lineTo(X2(tt), y) : cx.moveTo(X2(tt), y); }
+    cx.stroke();
+    cx.globalAlpha = 1;
+    /* 標本化する点 */
+    const xs = Math.min(X1(sampT), Rr), ys = Y1(mzCurve(T1, Math.min(sampT, tmax1), P));
+    cx.fillStyle = t.col; cx.beginPath(); cx.arc(xs, ys, sel ? 3.4 : 2.4, 0, 7); cx.fill();
+    const xe = Math.min(X2(P.TE), Rr), ye = Y2(a0 * Math.exp(-P.TE / T2));
+    cx.beginPath(); cx.arc(xe, ye, sel ? 3.4 : 2.4, 0, 7); cx.fill();
+    ys1.push(ys); ys2.push(ye);
+    tags.push({ y:ye, nm:t.nm, col:t.col });
+  });
+  /* 読み取る瞬間の、いちばん上といちばん下の差。ここが画像の明暗になる */
+  const gap = (xg, arr, nm, right) => {
+    if (arr.length < 2) return;
+    const y0 = Math.min.apply(null, arr), y1 = Math.max.apply(null, arr);
+    if (y1 - y0 < 4) return;
+    cx.strokeStyle = '#9FD9E8'; cx.lineWidth = 1; cx.beginPath();
+    cx.moveTo(xg, y0); cx.lineTo(xg, y1);
+    cx.moveTo(xg - 3, y0); cx.lineTo(xg + 3, y0);
+    cx.moveTo(xg - 3, y1); cx.lineTo(xg + 3, y1); cx.stroke();
+    tagBg(cx, right ? xg - 4 : xg + 4, (y0 + y1) / 2, nm, right ? 'right' : 'left', '#9FD9E8');
+  };
+  /* 右端の名前が重ならないようにずらす */
+  tags.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 11) tags[i].y = tags[i - 1].y + 11;
+  const over = tags.length ? tags[tags.length - 1].y - (bot.y1 + 4) : 0;
+  if (over > 0) tags.forEach(t => t.y -= over);
+  cx.textAlign = 'left';
+  tags.forEach(t => { cx.fillStyle = t.col; cx.fillText(t.nm, Rr + 4, t.y); });
+  /* 標本化の線 */
+  const vline = (x, y0, y1, nm) => {
+    cx.strokeStyle = C.alert; cx.setLineDash([3, 3]); cx.lineWidth = 1;
+    cx.beginPath(); cx.moveTo(x, y0); cx.lineTo(x, y1); cx.stroke(); cx.setLineDash([]);
+    cx.fillStyle = C.alert; cx.textAlign = 'center'; cx.fillText(nm, x, y0 - 1);
+  };
+  vline(Math.min(X1(sampT), Rr), top.y0, top.y1, isIR ? 'TI' : 'TR');
+  vline(Math.min(X2(P.TE), Rr), bot.y0, bot.y1, 'TE');
+  gap(Math.min(X1(sampT), Rr) - 8, ys1, 'ここの差', true);
+  gap(Math.min(X2(P.TE), Rr) + 8, ys2, 'この差が画像の明暗', false);
+  cx.fillStyle = C.dim; cx.textAlign = 'right';
+  cx.fillText(Math.round(tmax1) + 'ms', Rr, top.y1 + 9);
+  cx.fillText(Math.round(tmax2) + 'ms', Rr, bot.y1 + 9);
+  /* 時間を追う画像のカーソル：いま画像に描いている時刻と、各組織の値 */
+  if (relT) {
+    const r = relT.panel === 1 ? top : bot, x = relT.panel === 1 ? X1(relT.t) : X2(relT.t);
+    cx.strokeStyle = '#FFFFFF'; cx.lineWidth = 1.2; cx.globalAlpha = .85;
+    cx.beginPath(); cx.moveTo(x, r.y0); cx.lineTo(x, r.y1); cx.stroke(); cx.globalAlpha = 1;
+    CURVE.forEach(id => {
+      const t = TIS[TIX[id]], T1 = T1of(t, P.B0);
+      let T2 = T2of(t);
+      if (P.seq === 'GRE' && isFinite(P.T2p)) T2 = 1 / (1 / T2 + 1 / P.T2p);
+      const y = relT.panel === 1 ? Y1(mzCurve(T1, relT.t, P)) : Y2(Math.abs(mxy0(T1, P)) * Math.exp(-relT.t / T2));
+      cx.fillStyle = t.col; cx.beginPath(); cx.arc(x, y, 3.2, 0, 7); cx.fill();
+    });
+    tagBg(cx, Math.min(x + 4, Rr - 70), r.y0 + 8, 't = ' + Math.round(relT.t) + ' ms → 画像', 'left', '#FFFFFF');
+  }
+}
+
+
+
+
+/* ================= 学習ステップ ================= */
+const STEPS = [
+{ nm:'静磁場の中のプロトン', tg:'B₀ と M₀',
+  set:{ quantum:true, manual:true, frame:'lab', view:0, seq:'SE', TR:2000, TE:20, T2p:40 },
+  note:`体の中の水素原子核（プロトン）は、それ自体が小さな磁石です。静磁場 <b>B₀</b> の中に置くと、
+  B₀ のまわりをコマのように回ります（<b>歳差運動</b>）。その速さが<b>ラーモア周波数</b>。
+  <span class="eq">ω₀ = γ·B₀ ／ 水素は γ/2π = 42.58 MHz/T → 1.5T で約 64 MHz</span>
+  B₀ と同じ向き（水色）が逆向き（赤）よりほんの少しだけ多く、その差の合計が縦磁化 <b>M₀</b> です。
+  <span class="hl">※ 実際の歳差は毎秒6400万回。ここでは見えるように大幅に遅くしています。</span>` },
+
+{ nm:'合成すると1本のベクトル', tg:'M と回転座標系',
+  set:{ quantum:false, manual:true, frame:'rot', view:0 },
+  note:`1本ずつ追うのは大変なので、ふつうは全部の和である磁化ベクトル <b>M</b> だけを見ます。
+  熱平衡では横向きの成分は打ち消し合い、M は z 軸（＝B₀）の向きで止まっています。
+  このままではコイルに何も起こらない＝<b>信号はゼロ</b>です。<br>
+  ここから先は<b>回転座標系</b>（ラーモア周波数で一緒に回る視点）で見ます。B₀ のまわりの回転が止まって見えるので、
+  倒れ方と減り方だけに集中できます。上の「静止座標系」に切り替えると、実際に回っているようすが見えます。` },
+
+{ nm:'RFパルスで倒す（共鳴）', tg:'α = γ·B₁·τ',
+  set:{ quantum:false, manual:true, frame:'rot', view:0 }, act:'p90',
+  note:`ラーモア周波数と<b>同じ周波数</b>の電波（RF）を横から当てると共鳴が起き、M が倒れます。
+  回転座標系では、この RF は x′ 軸に止まった磁場 <b>B₁</b>（オレンジ）に見え、M は B₁ のまわりを回ります。
+  <span class="eq">フリップ角 α = γ·B₁·τ　（B₁ の強さ × 当てる時間 τ）</span>
+  つまり<b>どんな力をどれだけかけるか</b>で倒れる角度が決まります。90°倒すと縦磁化がすべて横磁化になります。
+  「フリー」タブの手動ボタンで、90°・180°・任意の α を自分で撃てます。` },
+
+{ nm:'横磁化だけが信号になる', tg:'FID',
+  set:{ quantum:false, manual:true, frame:'lab', view:0 },
+  note:`回っている<b>横磁化 Mxy</b>（赤い成分）がコイルを横切ると起電力が生まれます。これが MR 信号、
+  90°直後のものを <b>FID</b>（自由誘導減衰）といいます。<br>
+  縦磁化 Mz（緑の成分）はどれだけ大きくても、それだけでは信号になりません。
+  だからいったん倒す必要があります。静止座標系にすると、Mxy がぐるぐる回りながら短くなっていくのが見えます。` },
+
+{ nm:'T2：横磁化が消えていく', tg:'スピン-スピン緩和',
+  set:{ quantum:false, manual:false, frame:'rot', view:0, seq:'SE', TR:2000, TE:120, T2p:Infinity },
+  note:`隣り合うスピンどうしが作るわずかな磁場のゆらぎで位相がランダムにずれ、和としての横磁化が減ります。
+  これが <b>T2 緩和（スピン-スピン緩和）</b>。横磁化が最初の <b>37%（1/e）</b> になるまでの時間が T2 です。
+  <span class="eq">Mxy(t) = Mxy(0)·e^(−t/T2)</span>
+  ここでは静磁場を完全に均一（T2′ = ∞）にしてあるので、扇は開かず長さだけが減ります。
+  <span class="hl">※ この模型では、ランダムな位相のずれを「1本ごとの矢印が短くなる」形で表しています（和としては同じ）。</span>` },
+
+{ nm:'T2*：静磁場のムラで もっと速く', tg:'1/T2* = 1/T2 + 1/T2′',
+  set:{ quantum:false, manual:false, frame:'rot', view:0, seq:'SE', TR:2000, TE:120, T2p:40 },
+  note:`実際の静磁場には必ずムラがあり、場所によって共鳴周波数が少し違います。
+  速いスピンと遅いスピンで位相が開いて<b>扇</b>になり、和は T2 よりずっと速く消えます。これが <b>T2*</b>。
+  <span class="eq">1/T2* = 1/T2 + 1/T2′　（T2′ は磁場の不均一による分）</span>
+  FID が消えるのは T2 ではなく T2* の速さです。「フリー」タブの「静磁場の不均一さ」を動かすと扇の開き方が変わります。` },
+
+{ nm:'スピンエコー：180°で呼びもどす', tg:'エコーの高さは T2 だけ',
+  set:{ quantum:false, manual:false, frame:'rot', view:0, seq:'SE', TR:2000, TE:120, T2p:40 },
+  note:`TE/2 のところで <b>180°パルス</b>を当てると、扇が y′ 軸のまわりに折り返されます。
+  進みすぎたスピンは後ろに置かれ、遅れたスピンは前に出るので、同じだけ時間がたった <b>TE</b> でぴたりと揃います
+  — これが<b>エコー</b>です。<br>
+  磁場のムラ（T2′）は巻きもどせますが、ランダムな T2 の分は戻りません。だからエコーの高さは <b>T2 だけ</b>で決まります。
+  <span class="eq">S ∝ e^(−TE/T2)　→ TE を長くするほど T2 の差が開く</span>` },
+
+{ nm:'T1：縦磁化がもどる', tg:'スピン-格子緩和',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, seq:'SE', TR:500, TE:15, T2p:40 },
+  note:`倒された磁化は、まわり（格子）にエネルギーを渡しながら z 軸へ戻ります。これが <b>T1 緩和</b>。
+  M₀ の <b>63%</b> まで戻る時間が T1 です。
+  <span class="eq">Mz(t) = M₀(1 − e^(−t/T1))</span>
+  次の 90°パルスが来る <b>TR</b> の時点で戻っている量が、そのまま次の信号の大きさになります。
+  TR を短くすると、T1 の短い組織（脂肪）だけがよく戻って明るく、T1 の長い組織（水）は戻れず暗くなります
+  — これが <b>T1 コントラスト</b>です。` },
+
+{ nm:'TR と TE で画像が変わる', tg:'T1強調 / PD / T2強調',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, seq:'SE', TR:500, TE:15, T2p:40 },
+  note:`信号の大きさは、結局この式で決まります。
+  <span class="eq">S = ρ·(1 − e^(−TR/T1))·e^(−TE/T2)</span>
+  ・<b>短い TR・短い TE</b> → T1 の差が出て T2 の差は消える＝<b>T1強調</b>（脂肪が白、水が黒）<br>
+  ・<b>長い TR・短い TE</b> → どちらの差も消える＝<b>プロトン密度強調</b><br>
+  ・<b>長い TR・長い TE</b> → T1 の差が消えて T2 の差が出る＝<b>T2強調</b>（水が白、病変が白）<br>
+  「シーケンス」タブで切り替えるか、「フリー」タブで TR・TE を動かしてみてください。右の画像がその場で変わります。` },
+
+{ nm:'反転回復：消したい組織を選ぶ', tg:'STIR / FLAIR',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, seq:'IR', TR:9000, TE:100, TI:2400, T2p:40 },
+  note:`先に <b>180°パルス</b>で縦磁化を −M₀ に反転させ、戻る途中で 90° を撃ちます。
+  ある組織の縦磁化がちょうど <b>0 を横切る瞬間</b>に 90° を当てると、その組織は横磁化を作れず信号が出ません。
+  <span class="eq">TI ≈ 0.69 × T1　（TR が十分長いとき）</span>
+  ・脂肪（T1≈270ms）を狙う → TI ≈ 180ms ＝ <b>STIR</b><br>
+  ・脳脊髄液（T1≈4000ms）を狙う → TI ≈ 2400ms ＝ <b>FLAIR</b>（脳室の水を黒くして、その脇の病変を見やすくする）<br>
+  上のグラフで、縦磁化の線が 0 を横切るところに赤い TI の線を合わせてみてください。` }
+];
+
+/* ================= シーケンスのプリセット ================= */
+const PRE = [
+{ k:'t1',  nm:'T1強調 SE',   ruby:'T1W SE',  s:{ seq:'SE', TR:500, TE:15 },
+  lede:'短い TR で T1 の差を出し、短い TE で T2 の差を消す → 脂肪が白・水が黒',
+  note:`脂肪が白く、水（CSF）が黒い。解剖の形を見るのに向いています。<b>右のグラフ①</b>で、TR の線のところに組織の差が大きく開いているのを確かめてください。` },
+{ k:'t2',  nm:'T2強調 SE',   ruby:'T2W SE',  s:{ seq:'SE', TR:4000, TE:100 },
+  lede:'長い TR で T1 の差を消し、長い TE で T2 の差を出す → 水と病変が白',
+  note:`水が白いのが目印。浮腫をともなう病変が白く光るので、病変さがしの基本になります。<b>グラフ②</b>で、TE の線のところに差が開きます。` },
+{ k:'pd',  nm:'プロトン密度', ruby:'PD SE',   s:{ seq:'SE', TR:2500, TE:15 },
+  lede:'長い TR・短い TE で T1 も T2 も効かせない → 水素の量そのもの',
+  note:`全体にのっぺりと明るく、灰白質が白質よりわずかに明るくなります。グラフ①でも②でも、線がほとんど重なっているのが分かります。` },
+{ k:'t2s', nm:'T2*強調 GRE', ruby:'GRE',     s:{ seq:'GRE', TR:500, TE:25, FA:20 },
+  lede:'180° を使わないので T2 ではなく T2* で減る → 出血や石灰化が黒く抜ける',
+  note:`傾斜磁場の反転でエコーを作るため、磁場のムラによる位相のずれが戻りません。「詳細」タブの<b>静磁場のムラ</b>を動かすと、画像が大きく変わります。` },
+{ k:'t1g', nm:'T1強調 GRE',  ruby:'GRE',     s:{ seq:'GRE', TR:150, TE:4, FA:70 },
+  lede:'TR がとても短くても、大きく倒せば T1 の差が出る',
+  note:`息止めで撮る腹部などに使います。α（どれだけ倒すか）を動かすと信号の大きさが変わります。` },
+{ k:'stir',nm:'STIR（脂肪抑制）', ruby:'IR', s:{ seq:'IR', TR:4000, TE:60, TI:180 },
+  lede:'TI ≒ 0.69 × T1（脂肪）→ 脂肪だけ黒くする',
+  note:`脂肪だけが黒くなり、脂肪に埋もれていた病変が見えるようになります。グラフ①で、脂肪の線がちょうど 0 を横切るところに TI があります。` },
+{ k:'flair',nm:'FLAIR（水抑制）', ruby:'IR', s:{ seq:'IR', TR:9000, TE:100, TI:2400 },
+  lede:'TI ≒ 0.69 × T1（水）→ 脳室の水を黒くして、そのふちの病変を見せる',
+  note:`脳室の水が黒くなり、そのすぐ脇の白質病変が見やすくなります。T2強調では水と病変がどちらも白くて紛れるところを、分けられます。` },
+{ k:'t2h',  nm:'強いT2強調', ruby:'HEAVY T2', s:{ seq:'SE', TR:6000, TE:200 },
+  lede:'TE をさらに伸ばす → T2 の長い水以外はほとんど消える',
+  note:`MRCP や内耳の撮影の考え方です。信号そのものは小さくなるので、実際にはノイズとの兼ね合いになります。` }
+];
+
+/* ================= 練習問題 =================
+   このアプリで作成した自作問題です。国家試験の過去問ではありません。
+   手元の過去問は「問題を入れ替える」から貼り付けて使えます。 */
+const BUILTIN = [
+{ q:'T1強調画像で最も高信号（白く）描出されるのはどれか。', c:['脂肪','脳脊髄液','皮質骨','筋肉','空気'], a:[0],
+  e:'T1が短い組織ほど、次の90°パルスまでに縦磁化がよく回復するので信号が高い。脂肪のT1は1.5Tで約270msと最も短い。',
+  s:{ seq:'SE', TR:500, TE:15 } },
+{ q:'T2強調画像を得るための撮像条件はどれか。', c:['短いTR・短いTE','短いTR・長いTE','長いTR・短いTE','長いTR・長いTE','短いTR・長いTI'], a:[3],
+  e:'長いTRでT1の差を消し、長いTEでT2の差を出す。短TR短TEはT1強調、長TR短TEはプロトン密度強調。',
+  s:{ seq:'SE', TR:4000, TE:100 } },
+{ q:'プロトン密度強調画像の条件はどれか。', c:['短いTR・短いTE','長いTR・短いTE','長いTR・長いTE','短いTR・長いTE','長いTI'], a:[1],
+  e:'長いTRでT1の効果を、短いTEでT2の効果を消すと、水素原子核の量そのものの差が残る。',
+  s:{ seq:'SE', TR:2500, TE:15 } },
+{ q:'T1値の定義として正しいのはどれか。', c:['縦磁化が最大値の63%まで回復する時間','横磁化が最初の37%に減衰する時間','縦磁化が0になる時間','横磁化が最大になる時間','90°パルスの照射時間'], a:[0],
+  e:'Mz(t)=M0(1−e^(−t/T1))。t=T1のとき1−1/e＝0.63。T2は横磁化が1/e（37%）に減る時間。',
+  s:{ seq:'SE', TR:500, TE:15 } },
+{ q:'T2値の定義として正しいのはどれか。', c:['縦磁化が63%回復する時間','横磁化が最初の37%に減衰する時間','磁場が半分になる距離','エコーが返ってくる時間','反転してから90°までの時間'], a:[1],
+  e:'Mxy(t)=Mxy(0)e^(−t/T2)。t=T2で1/e＝0.37。エコーが返る時間はTE、反転から90°までがTI。',
+  s:{ seq:'SE', TR:4000, TE:100 } },
+{ q:'スピンエコー法における180°パルスの働きはどれか。', c:['縦磁化を反転させて信号を消す','静磁場の不均一による位相のずれを再収束させる','スライスを選択する','T1緩和を速める','プロトン密度を上げる'], a:[1],
+  e:'180°パルスで位相が折り返され、静磁場の不均一による位相差（T2′の分）が打ち消される。残るのは不可逆なT2だけ。',
+  s:{ seq:'SE', TR:2000, TE:120 } },
+{ q:'T2*について正しいのはどれか。', c:['T2より長い','T2と等しい','T2より短い','TRで決まる','プロトン密度で決まる'], a:[2],
+  e:'1/T2*＝1/T2＋1/T2′ なので、必ずT2*＜T2。FIDはT2ではなくT2*で減衰する。',
+  s:{ seq:'GRE', TR:500, TE:25, FA:20 } },
+{ q:'1.5Tにおける水素原子核の共鳴周波数に最も近いのはどれか。', c:['6.4 MHz','21 MHz','42 MHz','64 MHz','128 MHz'], a:[3],
+  e:'水素のジャイロ磁気比は42.58 MHz/T。42.58×1.5＝63.9 MHz。3Tでは約128 MHz。' },
+{ q:'脂肪のT1を270 msとするとき、STIRで脂肪を抑制するTIとして最も適切なのはどれか。', c:['約30 ms','約90 ms','約180 ms','約400 ms','約2400 ms'], a:[2],
+  e:'TI≒0.69×T1＝0.69×270≒186 ms。反転した縦磁化が0を横切る瞬間に90°を当てると信号が出ない。',
+  s:{ seq:'IR', TR:4000, TE:60, TI:180 } },
+{ q:'FLAIR法で抑制されるのはどれか。', c:['脂肪','脳脊髄液','皮質骨','筋肉','白質'], a:[1],
+  e:'脳脊髄液のT1（約4000 ms）に合わせた長いTI（約2000〜2500 ms）で水の信号を消す。脳室に接した病変が見やすくなる。',
+  s:{ seq:'IR', TR:9000, TE:100, TI:2400 } },
+{ q:'グラジエントエコー法について正しいのはどれか。', c:['180°パルスで再収束する','T2*の影響を受けない','静磁場の不均一の影響を受けやすい','TRを長くしないと撮れない','フリップ角は常に90°である'], a:[2],
+  e:'傾斜磁場の反転でエコーを作るため、静磁場の不均一による位相のずれは戻らない。減衰はT2*で決まる。',
+  s:{ seq:'GRE', TR:500, TE:25, FA:20 } },
+{ q:'静磁場強度を1.5 Tから3.0 Tにしたときの変化として正しいのはどれか。', c:['共鳴周波数は変わらない','T1は短くなる','T1は長くなる','T2は大きく長くなる','SNRは低下する'], a:[2],
+  e:'共鳴周波数はB0に比例して約128 MHzになる。T1は磁場が強いほど長くなる。T2の変化は小さい。SNRは上がる。' },
+{ q:'フリップ角を決めるのはどれか。', c:['TRとTE','B₁の強さと照射時間','静磁場強度とT1','プロトン密度','TIとT2'], a:[1],
+  e:'α＝γ·B₁·τ。強いRFを短く当てても、弱いRFを長く当てても、同じ角度だけ倒せる。',
+  s:{ seq:'GRE', TR:500, TE:25, FA:20 } },
+{ q:'90°パルス直後の縦磁化Mzはどれか。', c:['M₀','0.5 M₀','0','−M₀','0.63 M₀'], a:[2],
+  e:'90°倒すと縦磁化はすべて横磁化に移るのでMz＝0。180°パルスならMz＝−M₀。' },
+{ q:'MR信号を直接生み出すのはどれか。', c:['縦磁化','横磁化','静磁場','傾斜磁場','プロトン密度のみ'], a:[1],
+  e:'回転する横磁化がコイルに起電力を誘導する。縦磁化はそのままでは信号にならないので、RFで倒す必要がある。' },
+{ q:'TEを一定にしてTRを長くしたときの変化はどれか。', c:['T1コントラストが大きくなる','T1コントラストが小さくなる','T2コントラストが小さくなる','信号が小さくなる','撮像時間が短くなる'], a:[1],
+  e:'TRが長いとどの組織も縦磁化が回復しきるので、T1の差が信号差に出なくなる。信号自体は大きくなり、撮像時間は延びる。',
+  s:{ seq:'SE', TR:4000, TE:15 } },
+{ q:'T2強調画像で高信号を示すのはどれか。', c:['皮質骨','急性期の出血','浮腫','石灰化','流速の速い血流'], a:[2],
+  e:'浮腫は自由水が増えた状態でT2が長く、T2強調で高信号になる。皮質骨や石灰化はプロトンが乏しく低信号。',
+  s:{ seq:'SE', TR:4000, TE:100 } },
+{ q:'反転回復法で最初に照射するパルスはどれか。', c:['90°パルス','180°パルス','α°パルス','傾斜磁場','スポイラ'], a:[1],
+  e:'まず180°で縦磁化を反転させ、TI後に90°で倒して読み出す。TIの選び方で消す組織を決められる。',
+  s:{ seq:'IR', TR:9000, TE:100, TI:2400 } }
+];
+
+/* ================= 画面まわりの部品 ================= */
+const $ = id => document.getElementById(id);
+const segSet = (el, val, attr) => [...el.children].forEach(b => b.setAttribute('aria-pressed', b.dataset[attr] === String(val)));
+
+function presetOf() {
+  for (const p of PRE) {
+    if (p.s.seq !== P.seq) continue;
+    if (p.s.TR !== P.TR || p.s.TE !== P.TE) continue;
+    if (p.s.TI !== undefined && p.s.TI !== P.TI) continue;
+    if (p.s.FA !== undefined && p.s.FA !== P.FA) continue;
+    return p;
+  }
+  return null;
+}
+function seqName() { return P.seq === 'SE' ? 'スピンエコー' : P.seq === 'GRE' ? 'グラジエントエコー' : '反転回復'; }
+function parText() {
+  let s = 'TR ' + Math.round(P.TR) + ' / TE ' + Math.round(P.TE);
+  if (P.seq === 'IR') s += ' / TI ' + Math.round(P.TI);
+  if (P.seq === 'GRE') s += ' / α ' + Math.round(P.FA) + '°';
+  return s;
+}
+function weightName() {
+  const pr = presetOf();
+  if (pr) return pr.nm;
+  if (P.seq === 'IR') return '反転回復';
+  if (P.seq === 'GRE') return 'GRE';
+  const longTR = P.TR >= 1800, longTE = P.TE >= 60;
+  if (!longTR && !longTE) return 'T1強調ぎみ';
+  if (longTR && !longTE) return 'プロトン密度ぎみ';
+  if (longTR && longTE) return 'T2強調ぎみ';
+  return '混ざった重みづけ';
+}
+
+/* ---- 組織チップ：四角の明るさが、いまの条件での画像上の明るさ ---- */
+const CHIPS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'bone'];
+const tisChips = $('tisChips');
+CHIPS.forEach(id => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'chip'; b.dataset.t = id;
+  b.innerHTML = '<i></i>' + TIS[TIX[id]].nm;
+  b.addEventListener('click', () => setTissue(id));
+  tisChips.appendChild(b);
+});
+function eqText() {
+  return P.seq === 'IR' ? 'S = ρ|1 − 2e^(−TI/T1) + e^(−TR/T1)|·e^(−TE/T2)'
+    : P.seq === 'GRE' ? 'S = ρ·sinα·(1−E1)/(1−cosα·E1)·e^(−TE/T2*)'
+      : 'S = ρ·(1 − e^(−TR/T1))·e^(−TE/T2)';
+}
+function updateTis() {
+  const sg = {};
+  let mxs = 1e-6;
+  CHIPS.forEach(id => { const v = sigTis(TIS[TIX[id]], P); sg[id] = v; if (v > mxs) mxs = v; });
+  [...tisChips.children].forEach(b => {
+    const id = b.dataset.t;
+    const g = Math.round(255 * Math.pow(Math.min(1, sg[id] / (mxs * 1.04)), 0.92));
+    b.querySelector('i').style.background = 'rgb(' + g + ',' + g + ',' + g + ')';
+    b.setAttribute('aria-pressed', id === P.tissue);
+  });
+  const t = TIS[TIX[P.tissue]];
+  $('tisSub').textContent = 'T1 ' + Math.round(T1of(t, P.B0)) + ' / T2 ' + Math.round(T2of(t)) + ' ms';
+  $('tisEq').innerHTML = '四角の明るさ＝いまの条件でその組織が画像に出る明るさです。画像をクリックしても選べます。<br>' + eqText();
+}
+function setTissue(id) {
+  P.tissue = id;
+  if (REP[id]) xhairPx = REP[id].slice();
+  $('hudTis').textContent = TIS[TIX[id]].nm;
+  clearTrail();
+  updateTis(); layoutImg(); drawRel();
+}
+
+/* ---- 画像パネルの配置 ---- */
+const imgbox = $('imgbox'), xhair = $('xhair');
+function layoutImg() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (P.view === 0) { imgbox.style.display = 'none'; return; }
+  imgbox.style.display = '';
+  let ih, iw;
+  if (P.view === 2) { ih = Math.min(h - 22, (w - 22) * IH / IW); }
+  else { ih = Math.min(h * 0.50, (w * 0.26) * IH / IW, h - 96); }
+  iw = ih * IW / IH;
+  if (P.view === 2) { imgbox.style.left = ((w - iw) / 2).toFixed(0) + 'px'; imgbox.style.top = ((h - ih) / 2).toFixed(0) + 'px'; }
+  else { imgbox.style.left = (w - iw - 12).toFixed(0) + 'px'; imgbox.style.top = '46px'; }
+  imgbox.style.width = iw.toFixed(0) + 'px'; imgbox.style.height = ih.toFixed(0) + 'px';
+  $('imgPar').style.display = iw < 200 ? 'none' : '';
+  const px = xhairPx || REP[P.tissue];
+  if (px && INIMG[P.tissue]) {
+    xhair.style.display = '';
+    xhair.style.left = ((px[0] + .5) / IW * 100) + '%';
+    xhair.style.top = ((px[1] + .5) / IH * 100) + '%';
+  } else xhair.style.display = 'none';
+}
+mriCv.addEventListener('pointerdown', e => {
+  const r = mriCv.getBoundingClientRect();
+  const i = Math.floor((e.clientX - r.left) / r.width * IW), j = Math.floor((e.clientY - r.top) / r.height * IH);
+  if (i < 0 || j < 0 || i >= IW || j >= IH) return;
+  const l = LABM[j * IW + i];
+  if (!l) return;
+  xhairPx = [i, j];
+  setTissue(TIS[l - 1].id);
+  if (P.showBody) placeHead();
+});
+
+/* ---- ぜんぶ書き直す ---- */
+function refresh(keep) {
+  clampTimes();
+  rebuildSeq(keep === undefined ? true : keep);
+  setInhomo(P.T2p);
+  $('hudTis').textContent = TIS[TIX[P.tissue]].nm;
+  $('imgSeq').textContent = weightName();
+  $('imgPar').textContent = parText();
+  $('preName').textContent = weightName();
+  $('prePar').textContent = parText();
+  $('vTR').textContent = Math.round(P.TR) + ' ms';
+  $('vTE').textContent = Math.round(P.TE) + ' ms';
+  $('vTI').textContent = P.seq === 'IR' ? Math.round(P.TI) + ' ms' : '—';
+  $('vTI').className = P.seq === 'IR' ? '' : 'off';
+  $('vFA').textContent = Math.round(P.FA) + '°';
+  $('vFA').className = P.seq === 'GRE' || P.manual ? '' : 'off';
+  $('vT2p').textContent = isFinite(P.T2p) ? Math.round(P.T2p) + ' ms' : '均一（∞）';
+  $('sTR').value = near(TRV, P.TR); $('sTE').value = near(TEV, P.TE);
+  $('sTI').value = near(TIV, P.TI); $('sFA').value = P.FA; $('sT2p').value = near(TPV, P.T2p);
+  $('wTI').style.display = P.seq === 'IR' ? '' : 'none';
+  $('wFA').style.display = (P.seq === 'GRE' || P.manual) ? '' : 'none';
+  segSet($('seqSeg'), P.seq, 'q'); segSet($('b0Seg'), P.B0, 'b'); segSet($('phSeg'), phantomKind, 'ph');
+  segSet($('viewSeg'), P.view, 'v'); segSet($('frameSeg'), P.frame, 'f');
+  segSet($('nSeg'), P.nDisp, 'n'); segSet($('spdSeg'), P.spd, 's');
+  const pr = presetOf();
+  [...$('preGrid').children].forEach(b => b.setAttribute('aria-pressed', !!pr && b.dataset.k === pr.k));
+  $('preLede').textContent = pr ? pr.lede
+    : (P.TR < 1800 ? '短い' : '長い') + ' TR ＋ ' + (P.TE < 60 ? '短い' : '長い') + ' TE → ' + weightName();
+  $('preNote').innerHTML = pr ? pr.note
+    : 'TR・TE を自分で決めた条件です。右のグラフで、どの組織の差が開いているかを確かめてください。'
+      + '線のあいだが広いところが、そのまま画像の明暗の差になります。';
+  $('tManual').checked = P.manual;
+  $('bPause').textContent = P.paused ? '再生' : '一時停止';
+  $('bPause').setAttribute('aria-pressed', P.paused);
+  drawImage(); updateTis(); layoutImg(); drawRel();
+}
+function applySet(s, hard) {
+  if (!s) return;
+  for (const k in s) P[k] = s[k];
+  if (s.nDisp) buildSpins(s.nDisp);
+  refresh(!hard);
+  if (hard) { equilibrium(); clearTrail(); }
+}
+
+/* ================= タブ ================= */
+let mode = 0;
+$('modeTabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  mode = +b.dataset.m;
+  [...$('modeTabs').children].forEach(x => x.setAttribute('aria-pressed', x === b));
+  for (let i = 0; i < 4; i++) $('pane' + i).hidden = i !== mode;
+  document.body.classList.toggle('quiz', mode === 3);
+  if (mode !== 1) {            // 学習モード用の特別な表示（量子描像・手動）は持ち越さない
+    P.quantum = false; P.manual = false;
+    refresh(true);
+  }
+  if (mode === 1) gotoStep(stepI);
+  if (mode === 3) showQ();
+  requestAnimationFrame(resize);
+});
+
+/* ================= 学習 ================= */
+let stepI = 0, auto = false, autoT = 0;
+const stepList = $('stepList');
+STEPS.forEach((s, i) => {
+  const li = document.createElement('li');
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.innerHTML = '<span class="no">' + (i + 1) + '</span><span>' + s.nm + '<span class="tg2">' + s.tg + '</span></span>';
+  b.addEventListener('click', () => { auto = false; $('bAuto').textContent = '順に再生'; gotoStep(i); });
+  li.appendChild(b); stepList.appendChild(li);
+});
+function gotoStep(i, apply) {
+  stepI = Math.max(0, Math.min(STEPS.length - 1, i));
+  const s = STEPS[stepI];
+  [...stepList.querySelectorAll('button')].forEach((b, k) => k === stepI ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
+  $('stepName').textContent = s.nm;
+  $('stepNo').textContent = (stepI + 1) + ' / ' + STEPS.length;
+  $('stepNote').innerHTML = s.note;
+  if (apply === false) return;                 // 起動時は一覧を作るだけ
+  applySet(s.set, true);
+  if (s.act === 'p90') { equilibrium(); clearTrail(); manualPulse(90, 'x'); }
+  if (mode === 1) $('stepName').scrollIntoView({ block:'nearest' });   // 説明が隠れないようにする
+}
+$('bPrev').addEventListener('click', () => { auto = false; $('bAuto').textContent = '順に再生'; gotoStep(stepI - 1); });
+$('bNext').addEventListener('click', () => { auto = false; $('bAuto').textContent = '順に再生'; gotoStep(stepI + 1); });
+$('bAuto').addEventListener('click', () => {
+  auto = !auto; autoT = 0;
+  $('bAuto').textContent = auto ? '止める' : '順に再生';
+});
+
+/* ================= シーケンスのプリセット ================= */
+const preGrid = $('preGrid');
+PRE.forEach(p => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'opt'; b.dataset.k = p.k;
+  b.innerHTML = p.nm + '<span class="ruby">' + p.ruby + '</span>';
+  b.addEventListener('click', () => {
+    applySet(Object.assign({ TI:P.TI, FA:P.FA }, p.s, { manual:false, quantum:false }), true);
+  });
+  preGrid.appendChild(b);
+});
+
+/* ================= フリー ================= */
+$('seqSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  P.seq = b.dataset.q;
+  if (P.seq === 'IR' && P.TR < 3000) P.TR = 4000;
+  if (P.seq === 'GRE' && P.FA === 90) P.FA = 30;
+  applySet({}, true);
+});
+$('phSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.ph === phantomKind) return;
+  phantomKind = b.dataset.ph;
+  try { localStorage.setItem(PKEY, phantomKind); } catch (e) { }
+  buildPhantom(); computeRep(); xhairPx = null; refresh(true);
+});
+$('b0Seg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  P.B0 = +b.dataset.b; refresh();
+});
+function wireSlider(id, arr, key) {
+  const el = $(id);
+  el.min = 0; el.max = arr.length - 1; el.step = 1;
+  el.addEventListener('input', () => { P[key] = arr[+el.value]; refresh(); });
+}
+wireSlider('sTR', TRV, 'TR'); wireSlider('sTE', TEV, 'TE');
+wireSlider('sTI', TIV, 'TI'); wireSlider('sT2p', TPV, 'T2p');
+$('sFA').addEventListener('input', () => { P.FA = +$('sFA').value; refresh(); });
+function detents(boxId, arr, key, vals, unit) {
+  const box = $(boxId);
+  vals.forEach(v => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = v + (unit || '');
+    b.addEventListener('click', () => { P[key] = arr[near(arr, v)]; refresh(); });
+    box.appendChild(b);
+  });
+}
+detents('dTR', TRV, 'TR', [100, 500, 2000, 4000, 9000]);
+detents('dTE', TEV, 'TE', [4, 15, 60, 100, 200]);
+detents('dTI', TIV, 'TI', [180, 400, 1200, 2400]);
+$('tManual').addEventListener('change', e => {
+  P.manual = e.target.checked;
+  if (P.manual) { R.nut = null; R.phase = '手動：ボタンでパルスを撃ってください'; }
+  refresh(true);
+});
+$('bP90').addEventListener('click', () => { P.manual = true; $('tManual').checked = true; refresh(true); manualPulse(90, 'x'); });
+$('bP180').addEventListener('click', () => { P.manual = true; $('tManual').checked = true; refresh(true); manualPulse(180, 'y'); });
+$('bPa').addEventListener('click', () => { P.manual = true; $('tManual').checked = true; refresh(true); manualPulse(P.FA, 'x'); });
+$('bSpoil').addEventListener('click', () => { spoil(); R.phase = 'スポイラ：位相をばらして横磁化を消す'; });
+$('bReset').addEventListener('click', () => { equilibrium(); clearTrail(); R.t = 0; R.trace.length = 0; R.phase = '熱平衡：まだ何もしていない（縦磁化だけ）'; });
+
+/* ================= 表示と操作 ================= */
+$('viewSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.view = +b.dataset.v; refresh(); });
+$('frameSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.frame = b.dataset.f; clearTrail(); refresh(); });
+$('nSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.nDisp = +b.dataset.n; buildSpins(P.nDisp); refresh(); });
+$('spdSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.spd = +b.dataset.s; refresh(); });
+const chk = (id, key, after) => $(id).addEventListener('change', e => { P[key] = e.target.checked; if (after) after(); refresh(); });
+chk('tBody', 'showBody', () => { placeHead(); ctrl.want = P.showBody ? 96 : 23; });
+chk('tComp', 'showComp'); chk('tTrail', 'showTrail', clearTrail); chk('tLab', 'showLab');
+chk('tSlow', 'slowPulse'); chk('tNoise', 'noise');
+$('bHome').addEventListener('click', homeCam);
+$('bPause').addEventListener('click', () => { P.paused = !P.paused; refresh(); });
+$('bStep').addEventListener('click', () => {      // いまの周期の頭に戻す
+  R.t = 0; R.ei = 0; R.trace.length = 0; equilibrium(); clearTrail(); R.phase = '熱平衡：まだ何もしていない（縦磁化だけ）'; P.paused = false; refresh(true);
+});
+
+/* ================= 撮影した画像 ================= */
+let shots = [];
+$('bShot').addEventListener('click', () => {
+  shots.unshift({ url:mriCv.toDataURL('image/png'), nm:weightName(), par:parText(), b0:P.B0 });
+  if (shots.length > 30) shots.pop();
+  renderStrip();
+});
+$('bClear').addEventListener('click', () => { shots = []; renderStrip(); });
+const strip = $('strip');
+function renderStrip() {
+  strip.innerHTML = '';
+  if (!shots.length) {
+    strip.innerHTML = '<p class="empty">「撮影」を押すと、そのときの条件で撮った画像がここに並びます。<br>' +
+      'T1強調・T2強調・プロトン密度と続けて撮ると、同じ断面の見え方の違いを並べて比べられます。</p>';
+    return;
+  }
+  shots.forEach(s => {
+    const f = document.createElement('figure');
+    const im = document.createElement('img'); im.src = s.url; im.alt = s.nm + ' ' + s.par;
+    const c = document.createElement('figcaption');
+    c.innerHTML = '<b>' + s.nm + '</b>' + s.par + '<br>' + s.b0 + 'T';
+    f.appendChild(im); f.appendChild(c);
+    f.addEventListener('click', () => {
+      $('lbImg').src = s.url; $('lbCap').textContent = s.nm + '　' + s.par + '　' + s.b0 + 'T';
+      $('lightbox').classList.add('on');
+    });
+    strip.appendChild(f);
+  });
+}
+$('lbClose').addEventListener('click', () => $('lightbox').classList.remove('on'));
+$('lightbox').addEventListener('click', e => { if (e.target.id === 'lightbox') $('lightbox').classList.remove('on'); });
+
+/* ================= 問題 ================= */
+const QKEY = 'mri-exam-v1';
+let EXAM = BUILTIN.slice(), qi = 0, qAns = [], qDone = false;
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function loadExam() {
+  try { const v = localStorage.getItem(QKEY); const j = v && JSON.parse(v); if (j && j.length) EXAM = j; } catch (e) { }
+  shuffle(EXAM);
+}
+function showQ() {
+  const q = EXAM[qi];
+  $('qBox').hidden = false; $('qImport').hidden = true;
+  if (!q) { $('qText').textContent = '問題がありません。'; $('qChoices').innerHTML = ''; return; }
+  $('qNo').textContent = '問 ' + (qi + 1) + ' / ' + EXAM.length;
+  $('qText').textContent = q.q + (q.a.length > 1 ? '（2つ選べ）' : '');
+  $('qSrc').innerHTML = q.src ? '<b>' + q.src + '</b>' : '<b>このアプリで作った練習問題です（国家試験の過去問ではありません）</b>';
+  const ul = $('qChoices'); ul.innerHTML = '';
+  qAns = []; qDone = false;
+  q.c.forEach((c, i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '<span class="n">' + (i + 1) + '</span><span>' + c + '</span>';
+    b.addEventListener('click', () => pick(i));
+    li.appendChild(b); ul.appendChild(li);
+  });
+  $('qExp').hidden = true;
+  if (q.s) applySet(Object.assign({ manual:false, quantum:false }, q.s), true);
+}
+function pick(i) {
+  const q = EXAM[qi];
+  if (qDone) return;
+  if (q.a.length > 1) {
+    const k = qAns.indexOf(i);
+    if (k >= 0) qAns.splice(k, 1); else qAns.push(i);
+    [...$('qChoices').querySelectorAll('button')].forEach((b, n) => b.classList.toggle('sel', qAns.indexOf(n) >= 0));
+    if (qAns.length < q.a.length) return;
+  } else qAns = [i];
+  qDone = true;
+  [...$('qChoices').querySelectorAll('button')].forEach((b, n) => {
+    b.disabled = true; b.classList.remove('sel');
+    if (q.a.indexOf(n) >= 0) b.classList.add('ok');
+    else if (qAns.indexOf(n) >= 0) b.classList.add('ng');
+  });
+  $('qExp').hidden = false; $('qExp').textContent = q.e || '';
+}
+$('bQPrev').addEventListener('click', () => { qi = (qi - 1 + EXAM.length) % EXAM.length; showQ(); });
+$('bQNext').addEventListener('click', () => { qi = (qi + 1) % EXAM.length; showQ(); });
+$('bLoadOpen').addEventListener('click', () => { $('qBox').hidden = true; $('qImport').hidden = false; });
+$('bImportCancel').addEventListener('click', showQ);
+$('bRestore').addEventListener('click', () => {
+  try { localStorage.removeItem(QKEY); } catch (e) { }
+  EXAM = BUILTIN.slice(); shuffle(EXAM); qi = 0; showQ();
+});
+$('bImport').addEventListener('click', () => {
+  const list = parseExam($('qPaste').value);
+  if (!list.length) { alert('読み取れませんでした。書式を確かめてください。'); return; }
+  EXAM = list; shuffle(EXAM); qi = 0;
+  try { localStorage.setItem(QKEY, JSON.stringify(EXAM)); } catch (e) { }
+  showQ();
+});
+function parseExam(txt) {
+  const out = [];
+  txt.split(/^\s*-{3,}\s*$/m).forEach(blk => {
+    const o = { q:'', c:[], a:[], e:'', src:'' };
+    blk.split(/\r?\n/).forEach(ln => {
+      let m;
+      if ((m = ln.match(/^\s*(?:出典|出題)\s*[:：]\s*(.+)$/))) o.src = m[1].trim();
+      else if ((m = ln.match(/^\s*問題\s*\d*\s*[:：.．]?\s*(.+)$/))) o.q = (o.q ? o.q + ' ' : '') + m[1].trim();
+      else if ((m = ln.match(/^\s*([1-9])\s*[:：.．]\s*(.+)$/))) o.c[+m[1] - 1] = m[2].trim();
+      else if ((m = ln.match(/^\s*(?:答え|正答|解答)\s*[:：]\s*(.+)$/))) o.a = m[1].split(/[,、\s]+/).map(x => parseInt(x, 10) - 1).filter(x => x >= 0);
+      else if ((m = ln.match(/^\s*解説\s*[:：]\s*(.+)$/))) o.e = m[1].trim();
+      else if ((m = ln.match(/^\s*設定\s*[:：]\s*(.+)$/))) {
+        const p = m[1].split(/[,、\s]+/);
+        const s = {};
+        if (/^(SE|GRE|IR)$/i.test(p[0])) s.seq = p[0].toUpperCase();
+        if (p[1]) s.TR = +p[1]; if (p[2]) s.TE = +p[2]; if (p[3]) s.TI = +p[3];
+        if (s.seq) o.s = s;
+      }
+    });
+    o.c = o.c.filter(x => x);
+    if (o.q && o.c.length >= 2 && o.a.length) out.push(o);
+  });
+  return out;
+}
+
+/* ================= コンソールの幅・分離 ================= */
+const RKEY = 'mri-rail-v1';
+const rail = $('rail'), railbar = $('railbar'), split = $('split');
+const rst = { w:336, det:false, x:80, y:90 };
+try { Object.assign(rst, JSON.parse(localStorage.getItem(RKEY) || '{}')); } catch (e) { }
+function saveRail() { try { localStorage.setItem(RKEY, JSON.stringify(rst)); } catch (e) { } }
+function applyRail() {
+  const wide = innerWidth > 900;
+  rst.w = Math.max(250, Math.min(560, rst.w));
+  document.documentElement.style.setProperty('--railw', rst.w + 'px');
+  document.body.classList.toggle('detached', wide && rst.det);
+  if (wide && rst.det) {
+    rst.x = Math.max(4, Math.min(innerWidth - 260, rst.x));
+    rst.y = Math.max(4, Math.min(innerHeight - 200, rst.y));
+    rail.style.left = rst.x + 'px'; rail.style.top = rst.y + 'px';
+  } else { rail.style.left = rail.style.top = ''; }
+  $('bDetach').textContent = rst.det ? '戻す' : '分離';
+}
+let sdragging = false;
+split.addEventListener('pointerdown', e => { sdragging = true; split.setPointerCapture(e.pointerId); e.preventDefault(); });
+split.addEventListener('pointermove', e => {
+  if (!sdragging) return;
+  const r = document.querySelector('.work').getBoundingClientRect();
+  rst.w = r.right - e.clientX - 4; applyRail(); requestAnimationFrame(resize);
+});
+split.addEventListener('pointerup', () => { if (sdragging) { sdragging = false; saveRail(); } });
+split.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') { rst.w += 20; applyRail(); saveRail(); }
+  if (e.key === 'ArrowRight') { rst.w -= 20; applyRail(); saveRail(); }
+});
+$('bDetach').addEventListener('click', () => { rst.det = !rst.det; applyRail(); saveRail(); requestAnimationFrame(resize); });
+let rdrag = null;
+railbar.addEventListener('pointerdown', e => {
+  if (e.target.id === 'bDetach') return;
+  rdrag = { x:e.clientX - rst.x, y:e.clientY - rst.y };
+  railbar.setPointerCapture(e.pointerId);
+});
+railbar.addEventListener('pointermove', e => {
+  if (!rdrag) return;
+  rst.x = e.clientX - rdrag.x; rst.y = e.clientY - rdrag.y; applyRail();
+});
+railbar.addEventListener('pointerup', () => { if (rdrag) { rdrag = null; saveRail(); } });
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if ($('lightbox').classList.contains('on')) { $('lightbox').classList.remove('on'); return; }
+    if (rst.det) { rst.det = false; applyRail(); saveRail(); requestAnimationFrame(resize); }
+    $('guide').classList.remove('on');
+  }
+});
+
+/* ================= はじめての案内 ================= */
+const GKEY = 'mri-guide-v1';
+const coarse = matchMedia('(pointer:coarse)').matches || innerWidth <= 900;
+$('gTip').innerHTML =
+  '画面は3つで1組です。<br>' +
+  '<b>① 3D</b>　体の中のプロトンが、いまどうなっているか<br>' +
+  '<b>② パルスシーケンス</b>　いつ、どんな力をかけているか<br>' +
+  '<b>③ 緩和曲線</b>　その結果、組織の差がどこで開くか<br><br>' +
+  'まず右の<b>「シーケンス」</b>で「T1強調」と「T2強調」を押し比べてみてください。3つとも同時に変わります。<br><br>' +
+  (coarse
+    ? '3Dは<b>1本指でドラッグ</b>で回転、<b>2本指</b>で拡大縮小、<b>ダブルタップ</b>で元に戻ります。'
+    : '3Dは<b>ドラッグ</b>で回転、<b>ホイール</b>で拡大縮小、<b>ダブルクリック</b>で元に戻ります。');
+$('bGuide').addEventListener('click', () => $('guide').classList.add('on'));
+$('gClose').addEventListener('click', () => {
+  $('guide').classList.remove('on');
+  try { localStorage.setItem(GKEY, '1'); } catch (e) { }
+});
+{
+  let seen = false;
+  try { seen = localStorage.getItem(GKEY) === '1'; } catch (e) { }
+  if (!seen) $('guide').classList.add('on');
+}
+
+/* ================= 大きさ・ループ ================= */
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  layoutImg(); drawSeq(); drawRel();
+}
+new ResizeObserver(resize).observe(stage);
+new ResizeObserver(() => { drawSeq(); drawRel(); }).observe(document.querySelector('.panels'));
+addEventListener('resize', () => { applyRail(); resize(); });
+
+let last = performance.now(), acc = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+  advance(dt);
+  updateScene(dt);
+  renderer.render(scene, camera);
+  if (auto && mode === 1) {
+    autoT += dt;
+    if (autoT > 12) { autoT = 0; if (stepI >= STEPS.length - 1) { auto = false; $('bAuto').textContent = '順に再生'; } else gotoStep(stepI + 1); }
+  }
+  acc += dt;
+  if (acc > 0.08) {
+    acc = 0;
+    const m = netM();
+    $('hudNow').textContent = R.phase;
+    $('hudT').textContent = Math.round(R.t);
+    $('hudMz').textContent = m[2].toFixed(2);
+    $('hudMxy').textContent = Math.hypot(m[0], m[1]).toFixed(2);
+    drawSeq();
+  }
+}
+
+/* 緩和曲線をなぞると、その時刻の画像になる。指を離す／外に出ると、ふだんの画像に戻る */
+function relAt(ev) {
+  if (!relGeo) return null;
+  const cv = $('relCv'), b = cv.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top, g = relGeo;
+  if (x < g.L || x > g.Rr) return null;
+  const panel = y < g.mid ? 1 : 2, tmax = panel === 1 ? g.tmax1 : g.tmax2;
+  return { panel, t: (x - g.L) / (g.Rr - g.L) * tmax };
+}
+let relPlay = null;
+function relShow(v) { relT = v; drawImage(); drawRel(); if (!v) { $('imgSeq').textContent = weightName(); $('imgPar').textContent = parText(); } }
+$('relCv').addEventListener('pointermove', ev => { if (relPlay) return; const v = relAt(ev); if (v || relT) relShow(v); });
+$('relCv').addEventListener('pointerleave', () => { if (!relPlay && relT) relShow(null); });
+$('bRelPlay').addEventListener('click', () => {
+  if (relPlay) { cancelAnimationFrame(relPlay.id); relPlay = null; $('bRelPlay').textContent = '▶ 時間を追って画像を見る'; relShow(null); return; }
+  const D1 = 4000, D2 = 3000, HOLD = 1500, t0 = performance.now();
+  $('bRelPlay').textContent = '■ 止める';
+  const step = now => {
+    const e = now - t0, g = relGeo;
+    if (!g) return;
+    if (e < D1) relShow({ panel: 1, t: g.tmax1 * e / D1 });
+    else if (e < D1 + D2) relShow({ panel: 2, t: Math.min(g.tmax2, P.TE * 1.6) * (e - D1) / D2 });
+    else if (e < D1 + D2 + HOLD) relShow({ panel: 2, t: P.TE });
+    else { relPlay = null; $('bRelPlay').textContent = '▶ 時間を追って画像を見る'; relShow(null); return; }
+    relPlay.id = requestAnimationFrame(step);
+  };
+  relPlay = { id: requestAnimationFrame(step) };
+});
+
+/* ================= 起動 ================= */
+buildSpins(P.nDisp);
+setInhomo(P.T2p);
+equilibrium();
+loadExam();
+applyRail();
+setTissue('wm');
+placeHead();
+gotoStep(0, false);
+applySet(Object.assign({ manual:false, quantum:false }, PRE[0].s), true);
+refresh(false);
+resize();
+homeCam();
+renderStrip();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
