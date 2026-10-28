@@ -64,8 +64,10 @@ three.js は CDN から読まずに同梱しているので、外部への通信
 
 ## 画像について
 
-画像は**実写ではありません**。頭部の軸位断を数式で組み立てたファントム（皮下脂肪・側頭筋・頭蓋骨・くも膜下腔・脳溝・
-皮質＝灰白質・白質・側脳室・基底核・白質病変）に、画素ごとの組織の T1・T2・プロトン密度から信号の式で濃度を与えています。
+画像は**実写ではありません**。頭部の組織の地図は、公開のデジタル脳ファントム [BrainWeb](https://brainweb.bic.mni.mcgill.ca/brainweb/)（正常脳の離散モデル）の軸位断
+（側脳室の体部の高さ）を使い、画素ごとの組織の T1・T2・プロトン密度から信号の式で濃度を与えています。
+BrainWeb の正常脳には病変がないので、側脳室のまわりの白質に病変（浮腫）を 3 つ描き足しています。
+断面の取り出し方は `tools/brainweb_slice.py`。
 
 **画像をクリックすると、その組織のプロトンが 3D に出ます。** 脳室をクリックして T1強調にすると、
 「T1が4000msもあるから TR 500ms ではほとんど戻れず、暗い」ことがそのまま見えます。
@@ -144,5 +146,11 @@ T2 は磁場依存が小さいので固定です。
 
 ## 同梱物とライセンス
 
+- 頭部の組織の地図 — BrainWeb（McConnell Brain Imaging Centre, Montreal Neurological Institute）。BrainWeb は、使った成果を公表するときに次の文献を引用するよう求めています。
+  - Collins DL, et al. Design and construction of a realistic digital brain phantom. IEEE Trans Med Imaging. 1998;17(3):463-468.
+  - Cocosco CA, et al. BrainWeb: Online interface to a 3D MRI simulated brain database. NeuroImage. 1997;5(4):S425.
+  - Kwan RK-S, et al. MRI simulation-based evaluation of image-processing and classification methods. IEEE Trans Med Imaging. 1999;18(11):1085-1097.
+  - Kwan RK-S, et al. An extensible MRI simulator for post-processing evaluation. Visualization in Biomedical Computing (VBC'96). 1996:135-140.
+
 - `three.min.js` — [three.js](https://threejs.org/) r128（MIT License, Copyright 2010-2021 Three.js Authors）。ファイル先頭のライセンス表示はそのまま残しています。
-- 練習問題・ファントム・説明文はこのリポジトリで作成したものです。試験問題からの引用は含みません。
+- 練習問題・説明文はこのリポジトリで作成したものです。試験問題からの引用は含みません。頭部の組織の地図は上の BrainWeb によるもので、病変だけをこのリポジトリで描き足しています。
