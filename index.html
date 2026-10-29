@@ -483,6 +483,10 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
             <button type="button" data-v="1" aria-pressed="true">3D + 画像</button>
             <button type="button" data-v="2">画像だけ</button>
           </div>
+          <div class="seg" id="scaleSeg">
+            <button type="button" data-sc="vox" aria-pressed="true">1つのボクセル</button>
+            <button type="button" data-sc="brain">脳全体</button>
+          </div>
           <div class="seg" id="frameSeg">
             <button type="button" data-f="rot" aria-pressed="true">回転座標系</button>
             <button type="button" data-f="lab">静止座標系</button>
@@ -686,7 +690,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <button type="button" data-s="2.5">速い</button>
       </div>
       <div class="toggles" style="margin-top:11px">
-        <label class="tg"><input type="checkbox" id="tBody">体（ボクセルの位置）を出す</label>
+        <label class="tg"><input type="checkbox" id="tBody">脳全体と部位ごとの矢印を出す</label>
         <label class="tg"><input type="checkbox" id="tComp" checked>Mz と Mxy に分けて見せる</label>
         <label class="tg"><input type="checkbox" id="tTrail" checked>合成ベクトルの軌跡</label>
         <label class="tg"><input type="checkbox" id="tLab" checked>3D のラベル</label>
@@ -722,6 +726,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 </div>
 
 <script src="three.min.js"></script>
+<script src="brain3d.js"></script>
 <script>
 "use strict";
 /* =====================================================================
@@ -786,18 +791,30 @@ const TPV = [5,10,15,20,30,40,60,90,150,300,600,Infinity];
 const near = (arr, v) => { if (!isFinite(v)) { const j = arr.indexOf(Infinity); if (j >= 0) return j; } let k = 0; for (let i = 1; i < arr.length; i++) if (Math.abs(arr[i] - v) < Math.abs(arr[k] - v)) k = i; return k; };
 
 /* ================= 信号の式 =================
-   SE  : S = ρ(1-e^(-TR/T1)) e^(-TE/T2)
+   SE  : S = ρ(1-2e^(-(TR-TE/2)/T1)+e^(-TR/T1)) e^(-TE/T2)
    GRE : S = ρ sinα (1-E1)/(1-cosα E1) e^(-TE/T2*)
-   IR  : S = ρ|1-2e^(-TI/T1)+e^(-TR/T1)| e^(-TE/T2)                  */
+   IR  : S = ρ|1-(1+Mz)e^(-TI/T1)| e^(-TE/T2)、Mz = 1-2e^(-(TR-TI-TE/2)/T1)+e^(-(TR-TI)/T1)
+   SE と IR は、180°パルスを TE/2（IR は TI+TE/2）に入れ、TR の終わりで横磁化を消すときのくり返しの定常状態の式。
+   3D の矢印（アイソクロマット）を同じ条件で何周期も動かしたときのエコーの高さと一致する（0.5・1.5・3.0 T、6 組織、
+   4 条件の計 72 条件で確認）。教科書の S = ρ(1-e^(-TR/T1))e^(-TE/T2) は、TE が TR より十分短いときの近似。 */
 function sigOf(T1, T2, PD, p) {
   const E1 = Math.exp(-p.TR / T1);
   if (p.seq === 'GRE') {
     const a = p.FA * Math.PI / 180;
-    const T2s = 1 / (1 / T2 + (isFinite(p.T2p) ? 1 / p.T2p : 0));
-    return PD * Math.sin(a) * (1 - E1) / (1 - Math.cos(a) * E1) * Math.exp(-p.TE / T2s);
+    return PD * Math.sin(a) * (1 - E1) / (1 - Math.cos(a) * E1) * Math.exp(-p.TE / T2) * dephase(p.TE);
   }
-  if (p.seq === 'IR') return PD * Math.abs(1 - 2 * Math.exp(-p.TI / T1) + E1) * Math.exp(-p.TE / T2);
-  return PD * (1 - E1) * Math.exp(-p.TE / T2);
+  if (p.seq === 'IR') {
+    const mz = 1 - 2 * Math.exp(-(p.TR - p.TI - p.TE / 2) / T1) + Math.exp(-(p.TR - p.TI) / T1);
+    return PD * Math.abs(1 - (1 + mz) * Math.exp(-p.TI / T1)) * Math.exp(-p.TE / T2);
+  }
+  return PD * (1 - 2 * Math.exp(-(p.TR - p.TE / 2) / T1) + E1) * Math.exp(-p.TE / T2);
+}
+/* 静磁場の不均一による減り方（T2'）：3D の矢印と同じアイソクロマットの周波数のずれ dw から、位相のそろい具合を平均する。
+   ローレンツ分布なら e^(-t/T2') だが、アプリでは分布の裾を切っているので少しだけ違う（TE が短いところで数 %） */
+function dephase(t) {
+  if (!isFinite(P.T2p)) return 1;
+  let c = 0; for (let i = 0; i < NISO; i++) c += Math.cos(dw[i] * t);
+  return c / NISO;
 }
 function sigTis(t, p) { return sigOf(T1of(t, p.B0), T2of(t), t.PD, p); }
 
@@ -856,41 +873,61 @@ function setDisp(n) {
     dispIx.push(Math.min(NISO - 1, Math.max(0, Math.round(u * NISO - 0.5))));
   }
 }
-function equilibrium() { for (let i = 0; i < NISO; i++) { mx[i] = 0; my[i] = 0; mz[i] = 1; } }
-function freeStep(dt, T1, T2) {
+/* 組織ごとの磁化（脳全体の表示用）：選んでいる組織（mx, my, mz）とは別に、画像の組織ごとに同じアイソクロマットの組を持ち、
+   同じパルス・同じ時間の進み方で、それぞれの T1・T2 で動かす。断面の明るさと部位ごとの矢印はここから作る */
+const BANK_IDS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les'];
+const BANKS = BANK_IDS.map(id => ({ id, x:new Float64Array(NISO), y:new Float64Array(NISO), z:new Float64Array(NISO), T1:1000, T2:100, echo:0 }));
+function bankParams() { for (const b of BANKS) { const t = TIS[TIX[b.id]]; b.T1 = T1of(t, P.B0); b.T2 = T2of(t); } }
+const _cs = new Float64Array(NISO), _sn = new Float64Array(NISO);
+function freeArr(X, Y, Z, dt, T1, T2) {
   const E1 = Math.exp(-dt / T1), E2 = Math.exp(-dt / T2);
   for (let i = 0; i < NISO; i++) {
-    const a = dw[i] * dt, c = Math.cos(a), s = Math.sin(a);
-    const x = mx[i], y = my[i];
-    mx[i] = (x * c - y * s) * E2;
-    my[i] = (x * s + y * c) * E2;
-    mz[i] = 1 - (1 - mz[i]) * E1;
+    const c = _cs[i], s = _sn[i], x = X[i], y = Y[i];
+    X[i] = (x * c - y * s) * E2;
+    Y[i] = (x * s + y * c) * E2;
+    Z[i] = 1 - (1 - Z[i]) * E1;
   }
+}
+function equilibrium() {
+  for (let i = 0; i < NISO; i++) { mx[i] = 0; my[i] = 0; mz[i] = 1; }
+  for (const b of BANKS) { b.x.fill(0); b.y.fill(0); b.z.fill(1); b.echo = 0; }
+}
+function freeStep(dt, T1, T2) {
+  for (let i = 0; i < NISO; i++) { const a = dw[i] * dt; _cs[i] = Math.cos(a); _sn[i] = Math.sin(a); }
+  freeArr(mx, my, mz, dt, T1, T2);
+  for (const b of BANKS) freeArr(b.x, b.y, b.z, dt, b.T1, b.T2);
 }
 /* x' 軸まわり: (0,0,1) は α=90° で +y へ倒れる。y' 軸まわりの180°は位相を折り返す */
+function pulseArr(X, Y, Z, c, s, ax) {
+  if (ax === 'x') {
+    for (let i = 0; i < NISO; i++) { const y = Y[i], z = Z[i]; Y[i] = y * c + z * s; Z[i] = -y * s + z * c; }
+  } else {
+    for (let i = 0; i < NISO; i++) { const x = X[i], z = Z[i]; X[i] = x * c + z * s; Z[i] = -x * s + z * c; }
+  }
+}
 function pulse(aDeg, ax) {
   const a = aDeg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
-  if (ax === 'x') {
-    for (let i = 0; i < NISO; i++) { const y = my[i], z = mz[i]; my[i] = y * c + z * s; mz[i] = -y * s + z * c; }
-  } else {
-    for (let i = 0; i < NISO; i++) { const x = mx[i], z = mz[i]; mx[i] = x * c + z * s; mz[i] = -x * s + z * c; }
-  }
+  pulseArr(mx, my, mz, c, s, ax);
+  for (const b of BANKS) pulseArr(b.x, b.y, b.z, c, s, ax);
 }
-function spoil() {   // 傾斜磁場で位相をばらす（大きさは変えない）
+function spoilArr(X, Y) {   // 傾斜磁場で位相をばらす（大きさは変えない）
   for (let i = 0; i < NISO; i++) {
     const a = (i / NISO - 0.5) * Math.PI * 16, c = Math.cos(a), s = Math.sin(a);
-    const x = mx[i], y = my[i];
-    mx[i] = x * c - y * s; my[i] = x * s + y * c;
+    const x = X[i], y = Y[i];
+    X[i] = x * c - y * s; Y[i] = x * s + y * c;
   }
 }
+function spoil() { spoilArr(mx, my); for (const b of BANKS) spoilArr(b.x, b.y); }
 /* クラッシャー（SE・IR の TR の終わり）：残った横磁化を 0 にする。spoil() のように毎回同じ位相のばらし方にすると、
    180°パルスで位相が折り返されたあと次の周期の spoil() で打ち消され、前の横磁化がエコーに戻ってくるため */
-function crush() { for (let i = 0; i < NISO; i++) { mx[i] = 0; my[i] = 0; } }
-function netM() {
+function crush() { mx.fill(0); my.fill(0); for (const b of BANKS) { b.x.fill(0); b.y.fill(0); } }
+function netArr(X, Y, Z) {
   let sx = 0, sy = 0, sz = 0;
-  for (let i = 0; i < NISO; i++) { sx += mx[i]; sy += my[i]; sz += mz[i]; }
+  for (let i = 0; i < NISO; i++) { sx += X[i]; sy += Y[i]; sz += Z[i]; }
   return [sx / NISO, sy / NISO, sz / NISO];
 }
+function netM() { return netArr(mx, my, mz); }
+function bankM(b) { return netArr(b.x, b.y, b.z); }
 
 /* ================= 走行状態 ================= */
 const R = {
@@ -901,6 +938,7 @@ const R = {
 };
 function rebuildSeq(keep) {
   clampTimes();
+  bankParams();
   R.evs = events(P);
   if (!keep) { R.t = 0; R.ei = 0; R.trace.length = 0; equilibrium(); R.phase = '熱平衡：まだ何もしていない（縦磁化だけ）'; R.cycles = 0; }
   else { R.ei = 0; while (R.ei < R.evs.length && R.evs[R.ei].t <= R.t) R.ei++; }
@@ -976,10 +1014,14 @@ function autoPhase() {
   else R.phase = '自由歳差：位相がばらけて信号が減っていく';
 }
 function fire(e) {
-  if (e.k === 'spoil') { spoil(); R.phase = 'スポイラ：位相をばらして横磁化を消す'; return; }
+  if (e.k === 'spoil') {   // 位相をばらして見せたうえで、残りの横磁化を消す（RF スポイリングを含めた完全なスポイリング。
+                           // ばらすだけだと T2 の長い組織で前の TR の横磁化が残り、画像の式 S = ρ sinα (1-E1)/(1-cosα E1) e^(-TE/T2*) と合わない）
+    spoil(); crush(); R.phase = 'スポイラ：位相をばらして横磁化を消す'; return;
+  }
   if (e.k === 'crush') { crush(); R.phase = 'クラッシャー：残った横磁化を消す'; return; }
   if (e.k === 'echo') {
     const m = netM(); R.echoPeak = Math.hypot(m[0], m[1]);
+    for (const b of BANKS) { const n = bankM(b); b.echo = Math.hypot(n[0], n[1]); }
     echoFlash = 0.55;
     R.phase = 'エコー：ここで信号を読む'; return;
   }
@@ -1314,26 +1356,86 @@ const cons = [];
   }
 })();
 
-/* ---- 体（ボクセルの位置） ---- */
+/* ---- 脳全体：Colin 27 の頭皮・脳・脳室、画像と同じ高さの断面、部位ごとの矢印 ----
+   断面の明るさは、その場所の組織の横磁化（部位ごとの矢印の横向きの長さ）× プロトン密度を、画像と同じ物差しで描いたもの。
+   エコーの瞬間に、断面は右下の画像と同じ明暗になる。面のデータは brain3d.js（tools/colin27_mesh.py で作成） */
 const headGrp = new THREE.Group(); scene.add(headGrp); headGrp.visible = false;
-{
+function b64arr(b64, T) { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new T(u.buffer); }
+function brainMesh(m, color, op) {
+  const q = b64arr(m.p, Int16Array), f = b64arr(m.i, m.n32 ? Uint32Array : Uint16Array);
+  const pos = new Float32Array(q.length); for (let i = 0; i < q.length; i++) pos[i] = q[i] / 500;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(new THREE.BufferAttribute(f, 1)); g.computeVertexNormals();
+  return new THREE.Mesh(g, new THREE.MeshPhongMaterial({ color, transparent:true, opacity:op, shininess:14, side:THREE.DoubleSide, depthWrite:false }));
+}
+let headFront = FOVY * 0.93 / 2 / U;
+if (typeof BRAIN3D !== 'undefined') {
+  const hm = brainMesh(BRAIN3D.head, 0xC9B6A8, 0.06);
+  hm.geometry.computeBoundingBox(); headFront = hm.geometry.boundingBox.max.y;
+  headGrp.add(hm, brainMesh(BRAIN3D.brain, 0xE2CDD4, 0.17), brainMesh(BRAIN3D.vent, 0x4F9CCB, 0.6));
+} else {
   const sk = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28),
     new THREE.MeshPhongMaterial({ color:0x9FB4C4, transparent:true, opacity:0.10, shininess:8, side:THREE.DoubleSide, depthWrite:false }));
   sk.scale.set(FOVX * 0.84 / 2 / U, FOVY * 0.93 / 2 / U, 23);
   headGrp.add(sk);
-  const br = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 22),
-    new THREE.MeshPhongMaterial({ color:0xC2CFDA, transparent:true, opacity:0.13, shininess:10, depthWrite:false }));
-  br.scale.set(FOVX * 0.72 / 2 / U, FOVY * 0.78 / 2 / U, 17);
-  headGrp.add(br);
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(2.2, 4.4, 12),
+}
+{
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(1.4, 2.8, 12),
     new THREE.MeshPhongMaterial({ color:0xFFA94D, emissive:0x4a2c0a }));
-  nose.position.set(0, FOVY * 0.93 / 2 / U + 1.4, 0); nose.rotation.x = -Math.PI / 2;
+  nose.position.set(0, headFront + 1.6, 0); nose.rotation.x = -Math.PI / 2;
   headGrp.add(nose);
-  const pl = new THREE.Mesh(new THREE.PlaneGeometry(FOVX / U, FOVY / U),
-    new THREE.MeshBasicMaterial({ color:0x2E7A8C, transparent:true, opacity:0.16, side:THREE.DoubleSide, depthWrite:false }));
-  headGrp.add(pl);
   headGrp.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(FOVX / U, FOVY / U)),
     new THREE.LineBasicMaterial({ color:0x3E8FA3, transparent:true, opacity:.5 })));
+}
+const sliceCv = document.createElement('canvas'); sliceCv.width = IW; sliceCv.height = IH;
+const sliceCx = sliceCv.getContext('2d'), sliceImg = sliceCx.createImageData(IW, IH);
+const sliceTex = new THREE.CanvasTexture(sliceCv);
+const slicePl = new THREE.Mesh(new THREE.PlaneGeometry(FOVX / U, FOVY / U),
+  new THREE.MeshBasicMaterial({ map:sliceTex, transparent:true, side:THREE.DoubleSide, depthWrite:false }));
+headGrp.add(slicePl);
+const TA_IDS = ['fat', 'wm', 'gm', 'csf', 'les'];
+const TA_LEN = 6.5;                 // 部位ごとの矢印の長さ（M0 のとき、シーン単位）
+const tisArr = TA_IDS.map(id => {
+  const hold = new THREE.Group(), col = TIS[TIX[id]].col;
+  const a = mkArrow(col, 0.13, 0.42, 1.1);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.62, 24), new THREE.MeshBasicMaterial({ color:col, side:THREE.DoubleSide }));
+  hold.add(a.grp, ring); headGrp.add(hold);
+  return { id, a, hold };
+});
+function sitePos(px) { return [((px[0] + .5) / IW - .5) * FOVX / U, (.5 - (px[1] + .5) / IH) * FOVY / U]; }
+/* 矢印を立てる場所：重ならないように、組織ごとに目安の位置（画像の幅・高さに対する割合）にいちばん近いその組織の画素 */
+const TA_AT = { fat:[0.80, 0.16], wm:[0.30, 0.30], gm:[0.84, 0.52], csf:[0.52, 0.47], les:null };
+const taSite = {};
+function placeTisArr() {
+  for (const t of tisArr) {
+    let p = REP[t.id], at = TA_AT[t.id];
+    if (at && p) {
+      let bd = 1e9; const tx = at[0] * IW, ty = at[1] * IH;
+      for (let j = 0; j < IH; j++) for (let i = 0; i < IW; i++) {
+        if (LABM[j * IW + i] !== TIX[t.id] + 1) continue;
+        const d = (i - tx) * (i - tx) + (j - ty) * (j - ty); if (d < bd) { bd = d; p = [i, j]; }
+      }
+    }
+    taSite[t.id] = p; t.hold.visible = !!p;
+    if (p) { const q = sitePos(p); t.hold.position.set(q[0], q[1], 0.02); }
+  }
+}
+/* 断面の明るさ：組織ごとの横磁化 × プロトン密度 × 画像と同じ正規化（いまの条件のエコーで最も明るい組織を 1） */
+let sliceN = 0;
+function drawSlice() {
+  let mxs = 1e-6;
+  for (const t of TIS) if (INIMG[t.id]) { const v = sigTis(t, P); if (v > mxs) mxs = v; }
+  const norm = 1 / (mxs * 1.04), lut = new Uint8ClampedArray(TIS.length + 1);
+  for (const b of BANKS) {
+    const n = bankM(b), t = TIS[TIX[b.id]];
+    lut[TIX[b.id] + 1] = Math.round(255 * Math.pow(Math.min(1, t.PD * Math.hypot(n[0], n[1]) * norm), 0.92));
+  }
+  const d = sliceImg.data;
+  for (let i = 0; i < IW * IH; i++) {
+    const l = LABM[i], g = lut[l];
+    d[i * 4] = g; d[i * 4 + 1] = g; d[i * 4 + 2] = g; d[i * 4 + 3] = l ? 235 : 0;
+  }
+  sliceCx.putImageData(sliceImg, 0, 0); sliceTex.needsUpdate = true;
 }
 const voxel = new THREE.Group(); scene.add(voxel); voxel.visible = false;
 {
@@ -1347,9 +1449,10 @@ function voxelWorld() {
   const px = xhairPx || REP[P.tissue] || [IW / 2, IH / 2];
   return new THREE.Vector3(((px[0] + .5) / IW - .5) * FOVX / U, (.5 - (px[1] + .5) / IH) * FOVY / U, 0);
 }
-function placeHead() {
+const headAt = new THREE.Vector3();
+function placeHead() {   // 近くで見るときは選んだボクセルを原点に、離れて脳全体を見るときは断面の中心を原点に置く
   const v = voxelWorld();
-  headGrp.position.set(-v.x, -v.y, 0);
+  if (ctrl.want > 45) headAt.set(0, 0, 0); else headAt.set(-v.x, -v.y, 0);
 }
 
 /* ---- カメラ操作 ---- */
@@ -1359,7 +1462,7 @@ function applyCam() {
   camera.position.set(ctrl.dist * sp * Math.cos(ctrl.th), ctrl.dist * sp * Math.sin(ctrl.th), ctrl.dist * cp);
   camera.lookAt(0, 0, 0);
 }
-function homeCam() { ctrl.th = -1.05; ctrl.phi = 1.15; ctrl.want = P.showBody ? 96 : 23; applyCam(); }
+function homeCam() { ctrl.th = -1.05; ctrl.phi = P.showBody ? 0.8 : 1.15; ctrl.want = P.showBody ? 82 : 23; applyCam(); }
 let drag = null, pinch = 0;
 canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); drag = { x:e.clientX, y:e.clientY }; });
 canvas.addEventListener('pointermove', e => {
@@ -1396,7 +1499,8 @@ function mkLab(key, cls) {
 }
 ['z', 'x', 'y'].forEach(k => mkLab(k, 'axis'));
 mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
-mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf');
+mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
+['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm'));
 const _p = new THREE.Vector3();
 function place(key, x, y, z, txt, on) {
   const el = LABS[key];
@@ -1451,7 +1555,7 @@ function updateScene(dt) {
     _m.set(m[0] * ML, m[1] * ML, m[2] * ML).applyAxisAngle(ZAX, spinGrp.rotation.z);
     pushTrail(_m.x, _m.y, _m.z);
   }
-  trail.visible = P.showTrail && showSpin;
+  trail.visible = P.showTrail && showSpin && !(P.showBody && ctrl.dist >= 45);
 
   /* --- B1（RFをかけている最中だけ） --- */
   const onRF = !!R.nut;
@@ -1473,8 +1577,22 @@ function updateScene(dt) {
       a.grp.position.set(a.rx, a.ry, a.rz);
     }
   }
-  /* --- 体 --- */
-  headGrp.visible = P.showBody; voxel.visible = P.showBody;
+  /* --- 脳全体（部位ごとの矢印と断面） --- */
+  const far = P.showBody && ctrl.dist >= 45;
+  headGrp.visible = P.showBody; voxel.visible = P.showBody && !far;
+  if (P.showBody) {
+    placeHead(); headGrp.position.lerp(headAt, 1 - Math.exp(-dt * 5));
+    voxel.position.copy(voxelWorld()).add(headGrp.position);
+    for (const t of tisArr) {
+      const n = bankM(BANKS[BANK_IDS.indexOf(t.id)]);
+      t.hold.rotation.z = spinGrp.rotation.z;
+      t.a.grp.visible = far;
+      if (far) setArrow(t.a, n[0], n[1], n[2], TA_LEN);
+      if (far && echoFlash > 0) t.a.mat.emissive.setRGB(0.3 + echoFlash, 0.45, 0.45); else t.a.mat.emissive.copy(new THREE.Color(TIS[TIX[t.id]].col)).multiplyScalar(0.2);
+    }
+    if (++sliceN % 2 === 0) drawSlice();
+  }
+  spinGrp.visible = !far;
   axGrp.visible = !P.showBody || ctrl.dist < 45;
   planeXY.visible = !P.showBody && showSpin;
 
@@ -1502,7 +1620,14 @@ function updateScene(dt) {
     const b = new THREE.Vector3(ax[0] * 3.3, ax[1] * 3.3, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('b1', b.x, b.y, 0.5, 'B₁', on);
   } else place('b1', 0, 0, 0, '', false);
-  place('vox', 0, 0, 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40);
+  place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
+  for (const t of tisArr) {
+    const n = bankM(BANKS[BANK_IDS.indexOf(t.id)]), w = t.hold.position;
+    place('ta_' + t.id, w.x + headGrp.position.x, w.y + headGrp.position.y, -1.6,
+      TIS[TIX[t.id]].nm.replace(/（.*）/, '') + ' ' + Math.hypot(n[0], n[1]).toFixed(2), P.showLab && far && t.hold.visible);
+  }
+  place('slice', headGrp.position.x, headGrp.position.y - FOVY / U * 0.56, 0, echoFlash > 0 ? 'エコー：この瞬間の断面の明るさが画像になる' : '断面の明るさ＝その組織の横磁化',
+    P.showLab && far);
 }
 
 /* ================= グラフ ================= */
@@ -2066,7 +2191,7 @@ function refresh(keep) {
   $('wTI').style.display = P.seq === 'IR' ? '' : 'none';
   $('wFA').style.display = (P.seq === 'GRE' || P.manual) ? '' : 'none';
   segSet($('seqSeg'), P.seq, 'q'); segSet($('b0Seg'), P.B0, 'b'); segSet($('phSeg'), phantomKind, 'ph');
-  segSet($('viewSeg'), P.view, 'v'); segSet($('frameSeg'), P.frame, 'f');
+  segSet($('viewSeg'), P.view, 'v'); segSet($('frameSeg'), P.frame, 'f'); segSet($('scaleSeg'), P.showBody ? 'brain' : 'vox', 'sc');
   segSet($('nSeg'), P.nDisp, 'n'); segSet($('spdSeg'), P.spd, 's');
   const pr = presetOf();
   [...$('preGrid').children].forEach(b => b.setAttribute('aria-pressed', !!pr && b.dataset.k === pr.k));
@@ -2159,7 +2284,7 @@ $('phSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || b.dataset.ph === phantomKind) return;
   phantomKind = b.dataset.ph;
   try { localStorage.setItem(PKEY, phantomKind); } catch (e) { }
-  buildPhantom(); computeRep(); xhairPx = null; refresh(true);
+  buildPhantom(); computeRep(); placeTisArr(); xhairPx = null; refresh(true);
 });
 $('b0Seg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -2202,7 +2327,12 @@ $('frameSeg').addEventListener('click', e => { const b = e.target.closest('butto
 $('nSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.nDisp = +b.dataset.n; buildSpins(P.nDisp); refresh(); });
 $('spdSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.spd = +b.dataset.s; refresh(); });
 const chk = (id, key, after) => $(id).addEventListener('change', e => { P[key] = e.target.checked; if (after) after(); refresh(); });
-chk('tBody', 'showBody', () => { placeHead(); ctrl.want = P.showBody ? 96 : 23; });
+function setScale(brain) {
+  P.showBody = brain; $('tBody').checked = brain;
+  homeCam(); placeHead(); segSet($('scaleSeg'), brain ? 'brain' : 'vox', 'sc');
+}
+chk('tBody', 'showBody', () => setScale(P.showBody));
+$('scaleSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setScale(b.dataset.sc === 'brain'); });
 chk('tComp', 'showComp'); chk('tTrail', 'showTrail', clearTrail); chk('tLab', 'showLab');
 chk('tSlow', 'slowPulse'); chk('tNoise', 'noise');
 $('bHome').addEventListener('click', homeCam);
@@ -2442,6 +2572,7 @@ equilibrium();
 loadExam();
 applyRail();
 setTissue('wm');
+placeTisArr();
 placeHead();
 gotoStep(0, false);
 applySet(Object.assign({ manual:false, quantum:false }, PRE[0].s), true);
