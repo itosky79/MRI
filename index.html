@@ -453,6 +453,10 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
   #imgbox .if{display:none}
 }
 #b0Seg button small{display:block; font-size:10px; opacity:.72; letter-spacing:.02em}
+.numin{width:70px; font:inherit; color:inherit; background:transparent; border:1px solid #2a3a48; border-radius:3px; padding:1px 4px; text-align:right}
+.stopat{display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--mut, #8aa0b2)}
+.stopat input{width:64px; font:inherit; color:inherit; background:transparent; border:1px solid #2a3a48; border-radius:3px; padding:2px 4px}
+.stopat button{margin-left:2px}
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:.01ms !important}
 }
@@ -513,6 +517,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
       <div class="playbar">
         <button type="button" id="bStep">最初から</button>
         <button type="button" id="bPause">一時停止</button>
+        <label class="stopat">t =<input type="number" id="nStop" min="0" step="1" value="300" inputmode="numeric">ms<button type="button" id="bStop">で止める</button></label>
       </div>
     </div>
 
@@ -690,8 +695,8 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
       <p class="grp-h">3D で見ている組織 <b id="tisSub"></b></p>
       <div class="chips" id="tisChips"></div>
       <div id="cusBox" style="display:none; margin-top:8px">
-        <div class="sld"><div class="sld-h"><span>T1</span><b id="vCT1">500 ms</b></div><input type="range" id="sCT1" min="0" max="1" value="0"></div>
-        <div class="sld"><div class="sld-h"><span>T2</span><b id="vCT2">100 ms</b></div><input type="range" id="sCT2" min="0" max="1" value="0"></div>
+        <div class="sld"><div class="sld-h"><span>T1</span><b><input type="number" id="nCT1" class="numin" min="10" max="6000" step="1" value="500"> ms <i id="vCT1" style="font-style:normal"></i></b></div><input type="range" id="sCT1" min="0" max="1" value="0"></div>
+        <div class="sld"><div class="sld-h"><span>T2</span><b><input type="number" id="nCT2" class="numin" min="1" max="3000" step="0.1" value="100"> ms <i id="vCT2" style="font-style:normal"></i></b></div><input type="range" id="sCT2" min="0" max="1" value="0"></div>
         <div class="sld"><div class="sld-h"><span>プロトン密度</span><b id="vCPD">1.00</b></div><input type="range" id="sCPD" min="5" max="100" step="5" value="100"></div>
         <p class="tiny">自由な組織は 3D の矢印だけで見られます（画像には出ません）。T1 は静磁場を変えても変わりません。</p>
       </div>
@@ -1012,7 +1017,8 @@ function advance(wall) {
   while (budget > 1e-4 && guard++ < 400) {
     const rate = rateAt(R.t);                     // ms（シミュレーション）/ 秒（実時間）
     const nextT = R.ei < R.evs.length ? R.evs[R.ei].t : P.TR;
-    let dtSim = Math.min(rate * budget, nextT - R.t, 4 + rate * 0.02);
+    const stopT = P.stopAt != null && R.cycles >= P.stopCyc && P.stopAt > R.t + 1e-9 ? P.stopAt : Infinity;   // 「t = ◯ ms で止める」（押した次の周期から）
+    let dtSim = Math.min(rate * budget, Math.min(nextT, stopT) - R.t, 4 + rate * 0.02);
     if (dtSim <= 1e-6) dtSim = Math.min(nextT - R.t, 1e-4);
     freeStep(dtSim, T1, T2);
     R.t += dtSim;
@@ -1020,6 +1026,9 @@ function advance(wall) {
     const m = netM();
     R.trace.push([R.t, Math.hypot(m[0], m[1])]);
     if (R.trace.length > 4000) R.trace.shift();
+    if (R.t >= stopT - 1e-6) {                    // 指定した時刻：その時刻のパルスより前で止める（例：TI で止めると 90°の直前の縦磁化が読める）
+      P.stopAt = null; P.paused = true; stopNote(); return;
+    }
     if (R.ei < R.evs.length && R.t >= R.evs[R.ei].t - 1e-6) {
       fire(R.evs[R.ei]); R.ei++;
       if (R.nut) return;
@@ -2153,6 +2162,21 @@ const BUILTIN = [
 { src:'第73回 午前 第74問', q:'静磁場の磁束密度が 1.5 T のとき、¹H 核は 63.9 MHz で磁気共鳴を起こす。磁束密度が 3.0 T のときの共鳴周波数［MHz］はどれか。', c:['32.0','63.9','95.9','127.8','191.7'], a:[3],
   e:'共鳴周波数（ラーモア周波数）は静磁場に比例するので、3.0 T では 1.5 T の 2 倍の 127.8 MHz。',
   s:{ B0:3 } },
+{ src:'第62回 午前 第23問', q:'ラーモア周波数と比例関係にあるのはどれか。', c:['静磁場強度','縦緩和時間','横緩和時間','フリップ角','繰り返し時間'], a:[0],
+  e:'ラーモア周波数は f = γB₀ で、静磁場の強さだけに比例する（水素の γ ≒ 42.58 MHz/T）。組織の T1・T2 や、撮像条件のフリップ角・TR を変えても共鳴周波数は変わらない。静磁場のボタンの下の周波数で確かめられる。',
+  s:{ seq:'SE', TR:500, TE:15, B0:1.5 } },
+{ src:'第63回 午前 第19問', q:'1.5 T MRI 装置でプロトンのラーモア周波数［MHz］はどれか。', c:['42.6','56.8','63.9','85.2','127.8'], a:[2],
+  e:'f = γB₀ = 42.58 MHz/T × 1.5 T ≒ 63.9 MHz。',
+  s:{ B0:1.5 } },
+{ src:'第68回 午後 第74問', q:'核磁気共鳴現象において、90 度 RF パルス印加後に 300 ms で縦磁化が 50％まで回復する組織の縦緩和時間［ms］はどれか。ただし、logₑ2 ＝ 0.693 とする。', c:['111','150','189','433','600'], a:[3],
+  e:'90°パルスのあと縦磁化は Mz = M0(1 − e^(−t/T1)) で戻る。50％になるのは t = T1 ln2 なので、T1 = 300 ÷ 0.693 ≒ 433 ms。「自由な組織」で T1 を選択肢の値にし、90°のあと t = 300 ms で止めて縦磁化を読むと確かめられる（TR を十分長くする）。',
+  s:{ seq:'GRE', FA:90, TR:3000, TE:10, tissue:'cus' } },
+{ src:'第69回 午後 第74問', q:'90 度 RF パルス照射 100 ms 後に横磁化が 50％まで減衰する核磁気共鳴現象を起こす試料がある。この試料の横緩和時間［ms］に最も近いのはどれか。ただし、logₑ2 ＝ 0.693 とする。', c:['34.7','69.3','72.2','144.3','288.6'], a:[3],
+  e:'横磁化は Mxy = M0 e^(−t/T2) で減る。50％になるのは t = T2 ln2 なので、T2 = 100 ÷ 0.693 ≒ 144.3 ms。「自由な組織」で T2 を選択肢の値にし、磁場を均一（T2′ = ∞）にして、90°のあと t = 100 ms で止めて横磁化を読むと確かめられる。',
+  s:{ seq:'GRE', FA:90, TR:3000, TE:10, T2p:Infinity, tissue:'cus' } },
+{ src:'第75回 午後 第11問', q:'SE 法と比較した GRE 法の MRI の特徴で正しいのはどれか。', c:['横磁化が大きい。','出血の検出に劣る。','血流を画像化できない。','T2＊強調像が撮影可能である。','磁化率アーチファクトの影響が小さい。'], a:[3],
+  e:'GRE は 180°パルスで位相を戻さないので、信号は T2* で減り、TE を長くすると T2* 強調像になる（そのため出血や磁化率の差に敏感）。小さいフリップ角で倒すので横磁化は SE より小さい。磁場の不均一（T2′）のスライダを動かすと、SE のエコーは変わらず、GRE の信号だけが変わる。',
+  s:{ seq:'GRE', TR:500, TE:15, FA:30 } },
 ];
 
 /* ================= 画面まわりの部品 ================= */
@@ -2180,7 +2204,11 @@ function weightName() {
   const pr = presetOf();
   if (pr) return pr.nm;
   if (P.seq === 'IR') return '反転回復';
-  if (P.seq === 'GRE') return 'GRE';
+  if (P.seq === 'GRE') {   // 小さい α・長い TR で T1 の差が消え、短い TE でプロトン密度、長い TE で T2*。大きい α・短い TR で T1
+    if (P.FA >= 45 && P.TR < 300) return 'GRE（T1強調ぎみ）';
+    if (P.FA <= 30 && P.TR >= 300) return P.TE >= 15 ? 'GRE（T2*強調ぎみ）' : 'GRE（プロトン密度ぎみ）';
+    return 'GRE（混ざった重みづけ）';
+  }
   const longTR = P.TR >= 1800, longTE = P.TE >= 60;
   if (!longTR && !longTE) return 'T1強調ぎみ';
   if (longTR && !longTE) return 'プロトン密度ぎみ';
@@ -2203,12 +2231,22 @@ const CT2V = [5,10,20,30,40,50,60,70,80,90,100,120,150,200,300,500,1000,1500,200
 {
   const t = TIS[TIX.cus], s1 = $('sCT1'), s2 = $('sCT2'), sp = $('sCPD');
   s1.max = CT1V.length - 1; s1.value = CT1V.indexOf(t.T1); s2.max = CT2V.length - 1; s2.value = CT2V.indexOf(t.T2);
-  const upd = () => {
-    t.T1 = CT1V[+s1.value]; t.T2 = Math.min(CT2V[+s2.value], t.T1); t.PD = +sp.value / 100;   // T2 は T1 より長くならない
-    $('vCT1').textContent = t.T1 + ' ms'; $('vCT2').textContent = t.T2 + ' ms' + (CT2V[+s2.value] > t.T1 ? '（T1 まで）' : ''); $('vCPD').textContent = t.PD.toFixed(2);
-    refresh();
+  const n1 = $('nCT1'), n2 = $('nCT2');
+  const nearIx = (arr, v) => arr.reduce((b, x, i) => Math.abs(x - v) < Math.abs(arr[b] - v) ? i : b, 0);
+  const show = () => {
+    n1.value = t.T1; n2.value = t.T2; $('vCT2').textContent = t.T2 >= t.T1 ? '（T1 まで）' : ''; $('vCPD').textContent = t.PD.toFixed(2);
+    s1.value = nearIx(CT1V, t.T1); s2.value = nearIx(CT2V, t.T2);
   };
-  [s1, s2, sp].forEach(el => el.addEventListener('input', upd));
+  const fromSld = () => { t.T1 = CT1V[+s1.value]; t.T2 = Math.min(CT2V[+s2.value], t.T1); t.PD = +sp.value / 100; show(); refresh(); };
+  const fromNum = () => {   // 数字で入れる（T2 は T1 より長くならない）
+    const a = +n1.value, b = +n2.value;
+    if (a > 0) t.T1 = Math.min(6000, Math.max(10, a));
+    if (b > 0) t.T2 = Math.min(t.T1, Math.max(1, b));
+    show(); refresh();
+  };
+  [s1, s2, sp].forEach(el => el.addEventListener('input', fromSld));
+  [n1, n2].forEach(el => el.addEventListener('change', fromNum));
+  show();
 }
 function eqText() {
   return P.seq === 'IR' ? 'S = ρ|1 − 2e^(−TI/T1) + e^(−TR/T1)|·e^(−TE/T2)'
@@ -2460,7 +2498,17 @@ $('scaleSeg').addEventListener('click', e => { const b = e.target.closest('butto
 chk('tComp', 'showComp'); chk('tTrail', 'showTrail', clearTrail); chk('tLab', 'showLab');
 chk('tSlow', 'slowPulse'); chk('tNoise', 'noise'); chk('tSpoil', 'spoil', () => refresh());
 $('bHome').addEventListener('click', homeCam);
-$('bPause').addEventListener('click', () => { P.paused = !P.paused; refresh(); });
+$('bPause').addEventListener('click', () => { P.paused = !P.paused; P.stopAt = null; refresh(); });
+/* 指定した時刻で止める：押した周期は条件を変える前のパルスで始まっていることがあるので、次の周期のその時刻で止める */
+function stopNote() {
+  $('bPause').textContent = '再生'; $('bPause').setAttribute('aria-pressed', true);
+  const m = netM();
+  R.phase = 't = ' + Math.round(R.t) + ' ms で止めた：縦 Mz ' + m[2].toFixed(3) + '、横 Mxy ' + Math.hypot(m[0], m[1]).toFixed(3) + '（M0 = 1）';
+}
+$('bStop').addEventListener('click', () => {
+  const t = +$('nStop').value; if (!(t >= 0) || t > P.TR) { $('nStop').value = Math.min(P.TR, Math.max(0, t || 0)); return; }
+  P.stopAt = t; P.stopCyc = R.cycles + 1; P.manual = false; P.paused = false; $('bPause').textContent = '一時停止'; $('bPause').setAttribute('aria-pressed', false);
+});
 $('bStep').addEventListener('click', () => {      // いまの周期の頭に戻す
   R.t = 0; R.ei = 0; R.trace.length = 0; equilibrium(); clearTrail(); R.phase = '熱平衡：まだ何もしていない（縦磁化だけ）'; P.paused = false; refresh(true);
 });
