@@ -64,12 +64,13 @@ three.js は CDN から読まずに同梱しているので、外部への通信
 
 ## 画像について
 
-画像は**実写ではありません**。頭部の組織の地図は、公開のデジタル脳ファントム [BrainWeb](https://brainweb.bic.mni.mcgill.ca/brainweb/)（正常脳の離散モデル）の軸位断
+画像は**実写ではありません**。頭部の組織の地図は、公開のデジタル脳ファントム [Colin 27 の高解像度版（2008）](https://www.bic.mni.mcgill.ca/ServicesAtlases/Colin27Highres)（離散の組織分類、0.5 mm）の軸位断
 （側脳室の体部の高さ）を使い、画素ごとの組織の T1・T2・プロトン密度から信号の式で濃度を与えています。
-BrainWeb の正常脳には病変がないので、側脳室のまわりの白質に病変（浮腫）を 3 つ描き足しています。
-断面の取り出し方は `tools/brainweb_slice.py`。
+Colin 27 は、BrainWeb の脳ファントムの元になった、同じ健康な成人を何度も撮影して平均した脳です。
+正常脳なので病変がなく、側脳室のまわりの白質に病変（浮腫）を 3 つ描き足しています。
+断面の取り出し方は `tools/colin27_slice.py`。
 
-「詳細」タブの**頭部の画像**で、以前の簡易図形（頭部の軸位断を数式で組み立てたもの）にいつでも戻せます。選んだものはブラウザに保存されます。URL の最後に `?phantom=simple`（または `?phantom=brainweb`）を付けても選べます。
+「詳細」タブの**頭部の画像**で、以前の簡易図形（頭部の軸位断を数式で組み立てたもの）にいつでも戻せます。選んだものはブラウザに保存されます。URL の最後に `?phantom=simple`（または `?phantom=colin27`）を付けても選べます。
 
 **画像をクリックすると、その組織のプロトンが 3D に出ます。** 脳室をクリックして T1強調にすると、
 「T1が4000msもあるから TR 500ms ではほとんど戻れず、暗い」ことがそのまま見えます。
@@ -148,11 +149,13 @@ T2 は磁場依存が小さいので固定です。
 
 ## 同梱物とライセンス
 
-- 頭部の組織の地図 — BrainWeb（McConnell Brain Imaging Centre, Montreal Neurological Institute）。BrainWeb は、使った成果を公表するときに次の文献を引用するよう求めています。
-  - Collins DL, et al. Design and construction of a realistic digital brain phantom. IEEE Trans Med Imaging. 1998;17(3):463-468.
-  - Cocosco CA, et al. BrainWeb: Online interface to a 3D MRI simulated brain database. NeuroImage. 1997;5(4):S425.
-  - Kwan RK-S, et al. MRI simulation-based evaluation of image-processing and classification methods. IEEE Trans Med Imaging. 1999;18(11):1085-1097.
-  - Kwan RK-S, et al. An extensible MRI simulator for post-processing evaluation. Visualization in Biomedical Computing (VBC'96). 1996:135-140.
+- 頭部の組織の地図 — Colin 27 Average Brain, high-resolution version 2008（McConnell Brain Imaging Centre, Montreal Neurological Institute）。
+  次のライセンスで使用、改変、再配布が認められています。
+
+  > Copyright (C) 1993-2009 Louis Collins, McConnell Brain Imaging Centre, Montreal Neurological Institute, McGill University. Permission to use, copy, modify, and distribute this software and its documentation for any purpose and without fee is hereby granted, provided that the above copyright notice appear in all copies. The authors and McGill University make no representations about the suitability of this software for any purpose. It is provided "as is" without express or implied warranty.
+
+  - Holmes CJ, et al. Enhancement of MR images using registration for signal averaging. J Comput Assist Tomogr. 1998;22(2):324-333.
+  - Aubert-Broche B, et al. A new improved version of the realistic digital brain phantom. NeuroImage. 2006;32(1):138-145.
 
 - `three.min.js` — [three.js](https://threejs.org/) r128（MIT License, Copyright 2010-2021 Three.js Authors）。ファイル先頭のライセンス表示はそのまま残しています。
-- 練習問題・説明文はこのリポジトリで作成したものです。試験問題からの引用は含みません。頭部の組織の地図は上の BrainWeb によるもので、病変だけをこのリポジトリで描き足しています。
+- 練習問題・説明文はこのリポジトリで作成したものです。試験問題からの引用は含みません。頭部の組織の地図は上の Colin 27 によるもので、病変だけをこのリポジトリで描き足しています。
