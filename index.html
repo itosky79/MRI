@@ -455,7 +455,12 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 #b0Seg button small{display:block; font-size:10px; opacity:.72; letter-spacing:.02em}
 .numin{width:70px; font:inherit; color:inherit; background:transparent; border:1px solid #2a3a48; border-radius:3px; padding:1px 4px; text-align:right}
 .stopat{display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--mut, #8aa0b2)}
-.stopat input[type=checkbox]{width:auto; margin:0 3px 0 0}
+.echotg{display:inline-flex; align-items:center; cursor:pointer}
+.echotg input{position:absolute; opacity:0; pointer-events:none}
+.echotg span{font-size:12px; padding:5px 10px; border-radius:4px; border:1px solid #3E8FA3; color:#9fc7d3; background:rgba(62,143,163,.08)}
+.echotg input:checked + span{background:#3E8FA3; color:#071219; font-weight:600}
+.echotg input:checked + span::before{content:'● '}
+.echotg input:not(:checked) + span::before{content:'○ '}
 .stopat input{width:64px; font:inherit; color:inherit; background:transparent; border:1px solid #2a3a48; border-radius:3px; padding:2px 4px}
 .stopat button{margin-left:2px}
 @media (prefers-reduced-motion:reduce){
@@ -518,7 +523,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
       <div class="playbar">
         <button type="button" id="bStep">最初から</button>
         <button type="button" id="bPause">一時停止</button>
-        <label class="stopat"><input type="checkbox" id="tEcho" checked>エコーで止める</label>
+        <label class="echotg"><input type="checkbox" id="tEcho" checked><span>エコーで止める</span></label>
         <label class="stopat">t =<input type="number" id="nStop" min="0" step="1" value="300" inputmode="numeric">ms<button type="button" id="bStop">で止める</button></label>
       </div>
     </div>
@@ -2355,7 +2360,7 @@ function refresh(keep) {
   setInhomo(P.T2p);
   const cu = TIS[TIX.cus];
   const sig = [P.seq, P.TR, P.TE, P.TI, P.FA, P.B0, P.T2p, P.spoil, P.tissue, cu.T1, cu.T2, P.manual].join('|');
-  if (sig !== seqSig) { seqSig = sig; warmup(); }   // 撮像条件が変わったら定常状態から始める
+  if (sig !== seqSig || keep === false) { seqSig = sig; warmup(); }   // 撮像条件が変わったとき、最初からやり直すときは定常状態から始める
   $('hudTis').textContent = TIS[TIX[P.tissue]].nm;
   $('imgSeq').textContent = weightName();
   $('imgPar').textContent = parText();
