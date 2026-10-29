@@ -1876,8 +1876,11 @@ function drawSeq() {
 /* ---- 緩和曲線 ---- */
 const CURVE0 = ['fat', 'wm', 'gm', 'csf', 'les'];
 let CURVE = CURVE0;
+/* IR の反転パルスの直前の縦磁化（定常状態）。前の周期の 90°・180°のあと TR までに戻りきらない分を含む。
+   TE が短ければ 1 − e^(−(TR−TI)/T1) で、反転後は Mz(t) = 1 − 2e^(−t/T1) + e^(−TR/T1)（t = TI で教科書の式） */
+function irMz0(T1, p) { return 1 - 2 * Math.exp(-(p.TR - p.TI - p.TE / 2) / T1) + Math.exp(-(p.TR - p.TI) / T1); }
 function mzCurve(T1, t, p) {
-  if (p.seq === 'IR') return 1 - 2 * Math.exp(-t / T1);
+  if (p.seq === 'IR') return 1 - (1 + irMz0(T1, p)) * Math.exp(-t / T1);
   if (p.seq === 'GRE') {
     const E1 = Math.exp(-p.TR / T1), ca = Math.cos(p.FA * Math.PI / 180);
     const mzm = (1 - E1) / (1 - ca * E1);
@@ -1887,9 +1890,9 @@ function mzCurve(T1, t, p) {
 }
 function mxy0(T1, p) {
   const E1 = Math.exp(-p.TR / T1);
-  if (p.seq === 'IR') return 1 - 2 * Math.exp(-p.TI / T1) + E1;
+  if (p.seq === 'IR') return 1 - (1 + irMz0(T1, p)) * Math.exp(-p.TI / T1);
   if (p.seq === 'GRE') return (1 - E1) / (1 - Math.cos(p.FA * Math.PI / 180) * E1) * Math.sin(p.FA * Math.PI / 180);
-  return 1 - E1;
+  return 1 - 2 * Math.exp(-(p.TR - p.TE / 2) / T1) + E1;   // SE：180°パルスによる縦磁化の反転を含めた式（画像と同じ）
 }
 /* GRE：フリップ角と信号の大きさ（いまの TR・TE）。点は選んでいる組織のエルンスト角（cos α = e^(−TR/T1)、信号が最大になる角度） */
 function drawFA() {
