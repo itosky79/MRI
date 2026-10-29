@@ -466,6 +466,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:.01ms !important}
 }
+.relnote { margin:6px 2px 0; line-height:1.6; }
 </style>
 </head>
 <body>
@@ -536,6 +537,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
       <div class="pan">
         <div class="ph2"><h2>緩和曲線とコントラスト</h2><span class="hint">組織の差がどこで開くか</span></div>
         <div class="cvwrap"><canvas id="relCv"></canvas></div>
+        <p class="tiny relnote" id="relNote"></p>
       </div>
     </div>
   </div>
@@ -1994,7 +1996,7 @@ function drawRel() {
   const X1 = t => L + (Rr - L) * t / tmax1;
   const X2 = t => L + (Rr - L) * t / tmax2;
 
-  const tags = [], ys1 = [], ys2 = [];
+  const tags = [], tags1 = [], ys1 = [], ys2 = [];
   CURVE.forEach(id => {
     const t = TIS[TIX[id]], T1 = T1of(t, P.B0);
     let T2 = T2of(t);
@@ -2016,6 +2018,7 @@ function drawRel() {
     cx.beginPath(); cx.arc(xe, ye, sel ? 3.4 : 2.4, 0, 7); cx.fill();
     ys1.push(ys); ys2.push(ye);
     tags.push({ y:ye, nm:t.nm, col:t.col });
+    tags1.push({ y:Y1(mzCurve(T1, tmax1, P)), nm:t.nm, col:t.col });
   });
   /* 読み取る瞬間の、いちばん上といちばん下の差。ここが画像の明暗になる */
   const gap = (xg, arr, nm, right) => {
@@ -2028,13 +2031,22 @@ function drawRel() {
     cx.moveTo(xg - 3, y1); cx.lineTo(xg + 3, y1); cx.stroke();
     tagBg(cx, right ? xg - 4 : xg + 4, (y0 + y1) / 2, nm, right ? 'right' : 'left', '#9FD9E8');
   };
-  /* 右端の名前が重ならないようにずらす */
-  tags.sort((a, b) => a.y - b.y);
-  for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 11) tags[i].y = tags[i - 1].y + 11;
-  const over = tags.length ? tags[tags.length - 1].y - (bot.y1 + 4) : 0;
-  if (over > 0) tags.forEach(t => t.y -= over);
-  cx.textAlign = 'left';
-  tags.forEach(t => { cx.fillStyle = t.col; cx.fillText(t.nm, Rr + 4, t.y); });
+  /* 右端の名前が重ならないようにずらす（上下どちらのグラフにも、線の色がどの組織かを書く） */
+  const place = (arr, yMax) => {
+    arr.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < arr.length; i++) if (arr[i].y - arr[i - 1].y < 11) arr[i].y = arr[i - 1].y + 11;
+    const over = arr.length ? arr[arr.length - 1].y - yMax : 0;
+    if (over > 0) arr.forEach(t => t.y -= over);
+    cx.textAlign = 'left';
+    arr.forEach(t => { cx.fillStyle = t.col; cx.fillText(t.nm, Rr + 4, t.y); });
+  };
+  place(tags1, top.y1 + 4);
+  place(tags, bot.y1 + 4);
+  /* 縦軸の目盛り */
+  cx.fillStyle = C.dim; cx.textAlign = 'right';
+  cx.fillText('+1', L - 3, Y1(1));
+  if (isIR) cx.fillText('−1', L - 3, Y1(-1));
+  cx.fillText('1', L - 3, Y2(1));
   /* 標本化の線 */
   const vline = (x, y0, y1, nm) => {
     cx.strokeStyle = C.alert; cx.setLineDash([3, 3]); cx.lineWidth = 1;
@@ -2048,6 +2060,14 @@ function drawRel() {
   cx.fillStyle = C.dim; cx.textAlign = 'right';
   cx.fillText(Math.round(tmax1) + 'ms', Rr, top.y1 + 9);
   cx.fillText(Math.round(tmax2) + 'ms', Rr, bot.y1 + 9);
+  cx.textAlign = 'left';
+  cx.fillText(isIR ? '180° パルスからの時間 →' : '90° パルスからの時間 →', L + 2, top.y1 + 9);
+  cx.fillText('90° パルスからの時間 →', L + 2, bot.y1 + 9);
+  $('relNote').innerHTML = (isIR
+    ? '<b>①</b> 縦軸＝縦磁化 Mz（+1 がもとの大きさ、−1 が 180° パルスで反転した直後）。点＝TI の瞬間の各組織の Mz。この Mz が 90° パルスで倒されて横磁化になるので、0 に近い組織ほど信号が小さい。'
+    : '<b>①</b> 縦軸＝縦磁化 Mz（+1 がもとの大きさ）。点＝TR の時点の各組織の Mz。次の 90° パルスで倒されて横磁化になる。')
+    + '<br><b>②</b> 縦軸＝横磁化 Mxy。点＝TE の瞬間の各組織の Mxy（これが信号）。線の色と組織：'
+    + CURVE.map(id => { const t = TIS[TIX[id]]; return '<span style="color:' + t.col + '">━ ' + t.nm + '</span>'; }).join('　');
 }
 
 /* ================= 学習ステップ ================= */
