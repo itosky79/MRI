@@ -2360,7 +2360,7 @@ function refresh(keep) {
   setInhomo(P.T2p);
   const cu = TIS[TIX.cus];
   const sig = [P.seq, P.TR, P.TE, P.TI, P.FA, P.B0, P.T2p, P.spoil, P.tissue, cu.T1, cu.T2, P.manual].join('|');
-  if (sig !== seqSig || keep === false) { seqSig = sig; warmup(); }   // 撮像条件が変わったとき、最初からやり直すときは定常状態から始める
+  if (sig !== seqSig || keep === false) { seqSig = sig; warmup(); if (P.echoStop) P.paused = false; }   // 撮像条件が変わったとき、最初からやり直すときは定常状態から始める（エコーで止める設定なら次のエコーまで進めて止める）
   $('hudTis').textContent = TIS[TIX[P.tissue]].nm;
   $('imgSeq').textContent = weightName();
   $('imgPar').textContent = parText();
