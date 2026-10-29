@@ -569,6 +569,8 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <div class="sld" id="wFA">
           <div class="sld-h"><span>α　どれだけ倒すか</span><b id="vFA">90°</b></div>
           <input type="range" id="sFA" min="2" max="180" value="90">
+          <canvas id="faCv" style="width:100%; height:120px; display:block; margin-top:6px"></canvas>
+          <p class="tiny" id="faNote"></p>
         </div>
       </div>
 
@@ -632,6 +634,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 
         <p class="grp-h" style="margin-top:13px">手でパルスをかける</p>
         <label class="tg"><input type="checkbox" id="tManual">シーケンスを止めて手動にする</label>
+        <label class="tg"><input type="checkbox" id="tSpoil" checked>GRE でスポイラを入れる（外すと前の TR の横磁化が残る）</label>
         <div class="acts" style="margin-top:7px">
           <button class="act rf" id="bP90" type="button">90°パルス</button>
           <button class="act rf" id="bP180" type="button">180°パルス</button>
@@ -686,6 +689,12 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
     <div class="grp">
       <p class="grp-h">3D で見ている組織 <b id="tisSub"></b></p>
       <div class="chips" id="tisChips"></div>
+      <div id="cusBox" style="display:none; margin-top:8px">
+        <div class="sld"><div class="sld-h"><span>T1</span><b id="vCT1">500 ms</b></div><input type="range" id="sCT1" min="0" max="1" value="0"></div>
+        <div class="sld"><div class="sld-h"><span>T2</span><b id="vCT2">100 ms</b></div><input type="range" id="sCT2" min="0" max="1" value="0"></div>
+        <div class="sld"><div class="sld-h"><span>プロトン密度</span><b id="vCPD">1.00</b></div><input type="range" id="sCPD" min="5" max="100" step="5" value="100"></div>
+        <p class="tiny">自由な組織は 3D の矢印だけで見られます（画像には出ません）。T1 は静磁場を変えても変わりません。</p>
+      </div>
       <p class="tiny" id="tisEq"></p>
     </div>
 
@@ -776,7 +785,8 @@ const TIS = [
   { id:'csf',  nm:'脳脊髄液',   col:'#6FA8C9', T1:4000, T2:2000, PD:1.00, e1:0.05 },
   { id:'mus',  nm:'筋肉',       col:'#B07A7A', T1:870,  T2:45,   PD:0.75, e1:0.70 },
   { id:'les',  nm:'病変（浮腫）',col:'#C4A6E8', T1:1200, T2:180,  PD:0.85, e1:0.45 },
-  { id:'bone', nm:'皮質骨',     col:'#46545F', T1:250,  T2:1,    PD:0.05, e1:0.30 }
+  { id:'bone', nm:'皮質骨',     col:'#46545F', T1:250,  T2:1,    PD:0.05, e1:0.30 },
+  { id:'cus',  nm:'自由な組織', col:'#E3D35A', T1:500,  T2:100,  PD:1.00, e1:0 }    // T1・T2・プロトン密度を自分で決める（静磁場で T1 は変えない）。画像には出ない
 ];
 const TIX = {}; TIS.forEach((t, i) => TIX[t.id] = i);
 /* 画像の中にある組織（十字カーソルを置けるもの） */
@@ -794,7 +804,7 @@ const P = {
   tissue:'wm',
   frame:'rot',     // rot=回転座標系 / lab=静止座標系
   manual:false, paused:false, spd:1,
-  nDisp:24, showBody:false, showComp:true, showTrail:true, showLab:true,
+  spoil:true, nDisp:24, showBody:false, showComp:true, showTrail:true, showLab:true,
   slowPulse:true, noise:true, quantum:false,
   view:1           // 0=3D / 1=3D+画像 / 2=画像
 };
@@ -833,6 +843,12 @@ function dephase(t) {
   return c / NISO;
 }
 function sigTis(t, p) { return sigOf(T1of(t, p.B0), T2of(t), t.PD, p); }
+/* 画像の明るさ。GRE でスポイラを外したとき（前の TR の横磁化が残る）は閉じた式がないので、組織ごとの矢印の
+   直近のエコーの高さ × プロトン密度を使う（矢印のない皮質骨は式のまま） */
+function imgSig(t) {
+  if (P.seq === 'GRE' && P.spoil === false) { const b = BANKS.find(x => x.id === t.id); if (b) return b.echo * t.PD; }
+  return sigTis(t, P);
+}
 
 /* ================= シーケンスの組み立て ================= */
 function events(p) {
@@ -846,7 +862,7 @@ function events(p) {
   } else if (p.seq === 'GRE') {
     e.push({ t:0, k:'rf', a:p.FA, ax:'x' });
     e.push({ t:p.TE, k:'echo' });
-    e.push({ t:Math.max(p.TE + 2, p.TR - 5), k:'spoil' });
+    if (p.spoil !== false) e.push({ t:Math.max(p.TE + 2, p.TR - 5), k:'spoil' });   // スポイラを外すと横磁化が次の TR に残る
   } else {
     e.push({ t:0, k:'rf', a:180, ax:'x' });
     e.push({ t:p.TI, k:'rf', a:90, ax:'x' });
@@ -1038,6 +1054,7 @@ function fire(e) {
   if (e.k === 'echo') {
     const m = netM(); R.echoPeak = Math.hypot(m[0], m[1]);
     for (const b of BANKS) { const n = bankM(b); b.echo = Math.hypot(n[0], n[1]); }
+    if (P.seq === 'GRE' && P.spoil === false) { drawImage(); updateTis(); }
     echoFlash = 0.55;
     R.phase = 'エコー：ここで信号を読む'; return;
   }
@@ -1212,7 +1229,7 @@ function drawImage() {
   const sg = new Float64Array(TIS.length + 1);
   let mxs = 1e-6;
   for (let k = 0; k < TIS.length; k++) {
-    sg[k + 1] = sigTis(TIS[k], P);
+    sg[k + 1] = imgSig(TIS[k]);
     if (INIMG[TIS[k].id] && sg[k + 1] > mxs) mxs = sg[k + 1];
   }
   const norm = 1 / (mxs * 1.04);
@@ -1478,7 +1495,7 @@ function placeTisArr() {
 let sliceN = 0;
 function drawSlice() {
   let mxs = 1e-6;
-  for (const t of TIS) if (INIMG[t.id]) { const v = sigTis(t, P); if (v > mxs) mxs = v; }
+  for (const t of TIS) if (INIMG[t.id]) { const v = imgSig(t); if (v > mxs) mxs = v; }
   const norm = 1 / (mxs * 1.04), lut = new Uint8ClampedArray(TIS.length + 1);
   for (const b of BANKS) {
     const n = bankM(b), t = TIS[TIX[b.id]];
@@ -1857,7 +1874,8 @@ function drawSeq() {
 }
 
 /* ---- 緩和曲線 ---- */
-const CURVE = ['fat', 'wm', 'gm', 'csf', 'les'];
+const CURVE0 = ['fat', 'wm', 'gm', 'csf', 'les'];
+let CURVE = CURVE0;
 function mzCurve(T1, t, p) {
   if (p.seq === 'IR') return 1 - 2 * Math.exp(-t / T1);
   if (p.seq === 'GRE') {
@@ -1873,7 +1891,32 @@ function mxy0(T1, p) {
   if (p.seq === 'GRE') return (1 - E1) / (1 - Math.cos(p.FA * Math.PI / 180) * E1) * Math.sin(p.FA * Math.PI / 180);
   return 1 - E1;
 }
+/* GRE：フリップ角と信号の大きさ（いまの TR・TE）。点は選んでいる組織のエルンスト角（cos α = e^(−TR/T1)、信号が最大になる角度） */
+function drawFA() {
+  const cv = $('faCv'); if (!cv || P.seq !== 'GRE') return;
+  const { cx, w, h } = fitCv(cv);
+  const L = 30, Rr = w - 8, T = 8, B = h - 20, A = 90;
+  cx.clearRect(0, 0, w, h); cx.font = MONO; cx.textBaseline = 'middle';
+  const ids = P.tissue === 'cus' ? ['fat', 'wm', 'gm', 'csf', 'cus'] : ['fat', 'wm', 'gm', 'csf'];
+  let mx = 1e-6; const q = Object.assign({}, P);
+  for (const id of ids) for (let a = 1; a <= A; a++) { q.FA = a; mx = Math.max(mx, sigTis(TIS[TIX[id]], q)); }
+  const X = a => L + (Rr - L) * a / A, Y = v => B - (B - T) * v / (mx * 1.08);
+  cx.strokeStyle = '#2a3a48'; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(L, T); cx.lineTo(L, B); cx.lineTo(Rr, B); cx.stroke();
+  cx.fillStyle = '#7f93a6'; cx.textAlign = 'center';
+  for (const a of [0, 30, 60, 90]) cx.fillText(a + '°', X(a), B + 10);
+  cx.save(); cx.translate(9, (T + B) / 2); cx.rotate(-Math.PI / 2); cx.fillText('信号', 0, 0); cx.restore();
+  for (const id of ids) {
+    const t = TIS[TIX[id]]; cx.strokeStyle = t.col; cx.lineWidth = id === P.tissue ? 2.4 : 1.3; cx.beginPath();
+    for (let a = 1; a <= A; a++) { q.FA = a; const y = Y(sigTis(t, q)); a === 1 ? cx.moveTo(X(a), y) : cx.lineTo(X(a), y); }
+    cx.stroke();
+  }
+  if (P.FA <= A) { cx.strokeStyle = '#F0B24B'; cx.setLineDash([3, 3]); cx.beginPath(); cx.moveTo(X(P.FA), T); cx.lineTo(X(P.FA), B); cx.stroke(); cx.setLineDash([]); }
+  const t = TIS[TIX[P.tissue]], ae = Math.acos(Math.exp(-P.TR / T1of(t, P.B0))) * 180 / Math.PI;
+  q.FA = ae; cx.fillStyle = t.col; cx.beginPath(); cx.arc(X(ae), Y(sigTis(t, q)), 3.5, 0, Math.PI * 2); cx.fill();
+  $('faNote').textContent = '線＝組織ごとの信号（いまの TR・TE）。点線＝いまの α。点＝' + t.nm + 'のエルンスト角 ' + ae.toFixed(0) + '°（信号が最大になる角度）。';
+}
 function drawRel() {
+  CURVE = P.tissue === 'cus' ? CURVE0.concat('cus') : CURVE0;
   const cv = document.getElementById('relCv');
   const { cx, w, h } = fitCv(cv);
   const L = 40, Rr = w - 62;
@@ -2143,7 +2186,7 @@ function weightName() {
 }
 
 /* ---- 組織チップ：四角の明るさが、いまの条件での画像上の明るさ ---- */
-const CHIPS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'bone'];
+const CHIPS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'bone', 'cus'];
 const tisChips = $('tisChips');
 CHIPS.forEach(id => {
   const b = document.createElement('button');
@@ -2152,6 +2195,18 @@ CHIPS.forEach(id => {
   b.addEventListener('click', () => setTissue(id));
   tisChips.appendChild(b);
 });
+const CT1V = [50,100,150,200,250,300,350,400,450,500,600,700,800,900,1000,1200,1500,2000,2500,3000,4000,5000];
+const CT2V = [5,10,20,30,40,50,60,70,80,90,100,120,150,200,300,500,1000,1500,2000,2500];
+{
+  const t = TIS[TIX.cus], s1 = $('sCT1'), s2 = $('sCT2'), sp = $('sCPD');
+  s1.max = CT1V.length - 1; s1.value = CT1V.indexOf(t.T1); s2.max = CT2V.length - 1; s2.value = CT2V.indexOf(t.T2);
+  const upd = () => {
+    t.T1 = CT1V[+s1.value]; t.T2 = Math.min(CT2V[+s2.value], t.T1); t.PD = +sp.value / 100;   // T2 は T1 より長くならない
+    $('vCT1').textContent = t.T1 + ' ms'; $('vCT2').textContent = t.T2 + ' ms' + (CT2V[+s2.value] > t.T1 ? '（T1 まで）' : ''); $('vCPD').textContent = t.PD.toFixed(2);
+    refresh();
+  };
+  [s1, s2, sp].forEach(el => el.addEventListener('input', upd));
+}
 function eqText() {
   return P.seq === 'IR' ? 'S = ρ|1 − 2e^(−TI/T1) + e^(−TR/T1)|·e^(−TE/T2)'
     : P.seq === 'GRE' ? 'S = ρ·sinα·(1−E1)/(1−cosα·E1)·e^(−TE/T2*)'
@@ -2160,7 +2215,7 @@ function eqText() {
 function updateTis() {
   const sg = {};
   let mxs = 1e-6;
-  CHIPS.forEach(id => { const v = sigTis(TIS[TIX[id]], P); sg[id] = v; if (v > mxs) mxs = v; });
+  CHIPS.forEach(id => { const v = imgSig(TIS[TIX[id]]); sg[id] = v; if (v > mxs) mxs = v; });
   [...tisChips.children].forEach(b => {
     const id = b.dataset.t;
     const g = Math.round(255 * Math.pow(Math.min(1, sg[id] / (mxs * 1.04)), 0.92));
@@ -2169,6 +2224,7 @@ function updateTis() {
   });
   const t = TIS[TIX[P.tissue]];
   const T2s = 1 / (1 / T2of(t) + (isFinite(P.T2p) ? 1 / P.T2p : 0));
+  $('cusBox').style.display = P.tissue === 'cus' ? '' : 'none';
   $('tisSub').textContent = 'T1 ' + Math.round(T1of(t, P.B0)) + ' / T2 ' + Math.round(T2of(t)) + ' / T2* ' + Math.round(T2s) + ' ms・プロトン密度 ' + t.PD.toFixed(2);
   $('tisEq').innerHTML = '四角の明るさ＝いまの条件でその組織が画像に出る明るさです。画像をクリックしても選べます。<br>' + eqText();
 }
@@ -2246,7 +2302,7 @@ function refresh(keep) {
   $('tManual').checked = P.manual;
   $('bPause').textContent = P.paused ? '再生' : '一時停止';
   $('bPause').setAttribute('aria-pressed', P.paused);
-  drawImage(); updateTis(); layoutImg(); drawRel();
+  drawImage(); updateTis(); layoutImg(); drawRel(); drawFA();
 }
 function applySet(s, hard) {
   if (!s) return;
@@ -2399,7 +2455,7 @@ function setScale(brain) {
 chk('tBody', 'showBody', () => setScale(P.showBody));
 $('scaleSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setScale(b.dataset.sc === 'brain'); });
 chk('tComp', 'showComp'); chk('tTrail', 'showTrail', clearTrail); chk('tLab', 'showLab');
-chk('tSlow', 'slowPulse'); chk('tNoise', 'noise');
+chk('tSlow', 'slowPulse'); chk('tNoise', 'noise'); chk('tSpoil', 'spoil', () => refresh());
 $('bHome').addEventListener('click', homeCam);
 $('bPause').addEventListener('click', () => { P.paused = !P.paused; refresh(); });
 $('bStep').addEventListener('click', () => {      // いまの周期の頭に戻す
