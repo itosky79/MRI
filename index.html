@@ -452,6 +452,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
   .seqnav .act,.acts .act{padding:9px 4px}
   #imgbox .if{display:none}
 }
+#b0Seg button small{display:block; font-size:10px; opacity:.72; letter-spacing:.02em}
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:.01ms !important}
 }
@@ -596,11 +597,11 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 
         <p class="grp-h" style="margin-top:13px">静磁場 B₀</p>
         <div class="seg" id="b0Seg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2)">
-          <button type="button" data-b="0.5">0.5 T</button>
-          <button type="button" data-b="1.5" aria-pressed="true">1.5 T</button>
-          <button type="button" data-b="3">3.0 T</button>
+          <button type="button" data-b="0.5">0.5 T<small>21 MHz</small></button>
+          <button type="button" data-b="1.5" aria-pressed="true">1.5 T<small>64 MHz</small></button>
+          <button type="button" data-b="3">3.0 T<small>128 MHz</small></button>
         </div>
-        <p class="tiny">強いほど T1 が長くなります（共鳴周波数も比例して上がります）。</p>
+        <p class="tiny">強いほど T1 が長くなります。ボタンの下の数字は水素の共鳴周波数（ラーモア周波数、静磁場に比例）。</p>
 
         <p class="grp-h" style="margin-top:13px">頭部の画像</p>
         <div class="seg" id="phSeg" style="display:grid; grid-template-columns:repeat(2,1fr); background:var(--ink2)">
@@ -2012,9 +2013,29 @@ const PRE = [
 ];
 
 /* ================= 練習問題 =================
-   このアプリで作成した自作問題です。国家試験の過去問ではありません。
+   はじめの 6 問は診療放射線技師国家試験の過去問（厚生労働省 公表。正答は正答値表で確認）。選択肢のすべてを
+   このアプリの組織・撮像条件・表示で確かめられる問題だけを選んだ。開くと問題の撮像条件になる（答えにあたる値は設定しない）。
+   7 問目からは、このアプリで作成した自作問題で、国家試験の過去問ではない。
    手元の過去問は「問題を入れ替える」から貼り付けて使えます。 */
 const BUILTIN = [
+{ src:'第77回 午後 第7問', q:'頭部 MRI の FLAIR 像で最も高信号を呈するのはどれか。', c:['側脳室','眼窩脂肪','頭蓋骨皮質','大脳基底核','シルビウス裂'], a:[1],
+  e:'FLAIR は反転回復法で、脳脊髄液（側脳室・シルビウス裂）の縦磁化が 0 を通る時間に 90°パルスを入れて水を消す。脂肪は T1 が短く、TI の時点で縦磁化がほぼ戻っているので消えずに明るい。基底核（灰白質）は中くらい、頭蓋骨皮質は信号がほとんどない。脳全体の表示で、エコーの瞬間の矢印の長さを比べると確かめられる（眼窩はこの断面にないので、頭皮の下の脂肪で見る）。',
+  s:{ seq:'IR', TR:9000, TE:100, TI:2400, B0:1.5 } },
+{ src:'第67回 午後 第15問', q:'1.5T MRI の高速 FLAIR 法について、TR を 10,000 ms、実効 TE を 100 ms とした場合、TI［ms］の値として適切なのはどれか。', c:['50','150','400','900','2,500'], a:[4],
+  e:'FLAIR では脳脊髄液の縦磁化が 0 を通る時間を TI にする。脳脊髄液の T1 は約 4,000 ms で、TR が十分長いと TI ≒ T1 × ln2 ≒ 2,800 ms。アプリで TI を動かすと、2,400〜2,500 ms あたりで脳脊髄液の矢印の長さと画像の明るさがほぼ 0 になる（180°パルスが TE/2 にあるぶん、式より少し短くなる）。',
+  s:{ seq:'IR', TR:10000, TE:100, TI:1100, B0:1.5 } },   // TI は答えと関係のない値から始める
+{ src:'第76回 午後 第12問', q:'3T MRI で脳白質の T1 緩和時間［s］に最も近いのはどれか。', c:['1 × 10⁻³','1 × 10⁻²','1 × 10⁻¹','1 × 10⁰','1 × 10¹'], a:[3],
+  e:'3T の白質の T1 は 0.8〜1.1 s ほど（このアプリでは 3T で約 850 ms）。静磁場が強いほど T1 は長くなる。3D で見ている組織を白質にして、静磁場を 3.0 T にすると値が出る。',
+  s:{ seq:'SE', TR:500, TE:15, B0:3 } },
+{ src:'第69回 午前 第11問', q:'3T の MRI における水素原子核の共鳴周波数［MHz］に最も近いのはどれか。ただし、1.5 T での水素原子核の共鳴周波数を 64 MHz とする。', c:['43','64','128','256','299'], a:[2],
+  e:'共鳴周波数（ラーモア周波数）は静磁場の強さに比例する（f = γB₀、水素の γ ≒ 42.58 MHz/T）。3T では 1.5T の 2 倍の約 128 MHz。静磁場のボタンを切り替えると共鳴周波数が出る。',
+  s:{ B0:3 } },
+{ src:'第71回 午後 第12問', q:'MRI において、ある物質の T1、T2、T2* の値の関係として正しいのはどれか。', c:['T1 ＞ T2 ＞ T2*','T1 ＞ T2* ＞ T2','T2 ＞ T1 ＞ T2*','T2 ＞ T2* ＞ T1','T2* ＞ T2 ＞ T1'], a:[0],
+  e:'横磁化は縦磁化が戻るより先に消える（T2 ≦ T1）。さらに静磁場の不均一で位相がばらけるぶん、T2* は T2 より短い（1/T2* = 1/T2 + 1/T2′）。どの組織を選んでも T1 ＞ T2 ＞ T2* になる。',
+  s:{ seq:'GRE', TR:500, TE:15, FA:30, B0:1.5 } },
+{ src:'第66回 午前 第24問', q:'MRI の信号強度に影響を与える組織固有の因子はどれか。', c:['フリップ角','磁場均一性','静磁場強度','プロトン密度','繰り返し時間'], a:[3],
+  e:'組織ごとに決まっているのは T1・T2・プロトン密度。フリップ角と繰り返し時間は撮像条件、静磁場強度と磁場均一性は装置の条件で、どれもスライダやボタンで変えられる。3D で見ている組織を切り替えると、変わるのは T1・T2・プロトン密度だけ。',
+  s:{ seq:'SE', TR:500, TE:15, B0:1.5 } },
 { q:'T1強調画像で最も高信号（白く）描出されるのはどれか。', c:['脂肪','脳脊髄液','皮質骨','筋肉','空気'], a:[0],
   e:'T1が短い組織ほど、次の90°パルスまでに縦磁化がよく回復するので信号が高い。脂肪のT1は1.5Tで約270msと最も短い。',
   s:{ seq:'SE', TR:500, TE:15 } },
@@ -2126,7 +2147,8 @@ function updateTis() {
     b.setAttribute('aria-pressed', id === P.tissue);
   });
   const t = TIS[TIX[P.tissue]];
-  $('tisSub').textContent = 'T1 ' + Math.round(T1of(t, P.B0)) + ' / T2 ' + Math.round(T2of(t)) + ' ms';
+  const T2s = 1 / (1 / T2of(t) + (isFinite(P.T2p) ? 1 / P.T2p : 0));
+  $('tisSub').textContent = 'T1 ' + Math.round(T1of(t, P.B0)) + ' / T2 ' + Math.round(T2of(t)) + ' / T2* ' + Math.round(T2s) + ' ms・プロトン密度 ' + t.PD.toFixed(2);
   $('tisEq').innerHTML = '四角の明るさ＝いまの条件でその組織が画像に出る明るさです。画像をクリックしても選べます。<br>' + eqText();
 }
 function setTissue(id) {
@@ -2399,7 +2421,7 @@ function showQ() {
     li.appendChild(b); ul.appendChild(li);
   });
   $('qExp').hidden = true;
-  if (q.s) applySet(Object.assign({ manual:false, quantum:false }, q.s), true);
+  if (q.s) applySet(Object.assign({ manual:false, quantum:false, B0:1.5 }, q.s), true);   // 静磁場の指定がない問題は 1.5 T
 }
 function pick(i) {
   const q = EXAM[qi];
