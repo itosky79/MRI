@@ -489,8 +489,8 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
             <button type="button" data-v="2">画像だけ</button>
           </div>
           <div class="seg" id="scaleSeg">
-            <button type="button" data-sc="vox" aria-pressed="true">1つのボクセル</button>
-            <button type="button" data-sc="brain">脳全体</button>
+            <button type="button" data-sc="brain" aria-pressed="true">脳全体</button>
+            <button type="button" data-sc="vox">1つのボクセル</button>
           </div>
           <div class="seg" id="frameSeg">
             <button type="button" data-f="rot" aria-pressed="true">回転座標系</button>
@@ -719,7 +719,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <button type="button" data-s="2.5">速い</button>
       </div>
       <div class="toggles" style="margin-top:11px">
-        <label class="tg"><input type="checkbox" id="tBody">脳全体と部位ごとの矢印を出す</label>
+        <label class="tg"><input type="checkbox" id="tBody" checked>脳全体と部位ごとの磁化ベクトルを出す</label>
         <label class="tg"><input type="checkbox" id="tComp" checked>Mz と Mxy に分けて見せる</label>
         <label class="tg"><input type="checkbox" id="tTrail" checked>合成ベクトルの軌跡</label>
         <label class="tg"><input type="checkbox" id="tLab" checked>3D のラベル</label>
@@ -809,7 +809,8 @@ const P = {
   tissue:'wm',
   frame:'rot',     // rot=回転座標系 / lab=静止座標系
   manual:false, paused:false, spd:1,
-  spoil:true, nDisp:24, showBody:false, showComp:true, showTrail:true, showLab:true,
+  spoil:true, nDisp:24, showBody:true,   // はじめから脳全体（部位ごとの磁化ベクトルと断面）を出す
+  showComp:true, showTrail:true, showLab:true,
   slowPulse:true, noise:true, quantum:false,
   view:1           // 0=3D / 1=3D+画像 / 2=画像
 };
@@ -2177,6 +2178,15 @@ const BUILTIN = [
 { src:'第75回 午後 第11問', q:'SE 法と比較した GRE 法の MRI の特徴で正しいのはどれか。', c:['横磁化が大きい。','出血の検出に劣る。','血流を画像化できない。','T2＊強調像が撮影可能である。','磁化率アーチファクトの影響が小さい。'], a:[3],
   e:'GRE は 180°パルスで位相を戻さないので、信号は T2* で減り、TE を長くすると T2* 強調像になる（そのため出血や磁化率の差に敏感）。小さいフリップ角で倒すので横磁化は SE より小さい。磁場の不均一（T2′）のスライダを動かすと、SE のエコーは変わらず、GRE の信号だけが変わる。',
   s:{ seq:'GRE', TR:500, TE:15, FA:30 } },
+{ src:'第67回 午後 第17問', q:'T1 強調像で最も高信号を呈するのはどれか。', c:['筋肉','脂肪','靱帯','骨皮質','脳脊髄液'], a:[1],
+  e:'T1 強調像（短い TR・短い TE）では、T1 の短い組織ほど次の 90°パルスまでに縦磁化が戻り、明るい。脂肪は T1 が最も短い。脳全体の表示で、エコーの瞬間の磁化ベクトルの横成分を比べると確かめられる。靱帯はこのアプリにないが、T2 がとても短く信号はほとんどない。',
+  s:{ seq:'SE', TR:500, TE:15, B0:1.5 } },
+{ src:'第65回 午前 第32問', q:'T2 強調像で最も高信号を呈するのはどれか。', c:['脂肪','心筋','肝臓','脳白質','脳脊髄液'], a:[4],
+  e:'T2 強調像（長い TR・長い TE）では、T2 の長い組織ほど TE までに横磁化が残り、明るい。脳脊髄液（水）は T2 が最も長い。脳全体の表示で、エコーの瞬間の磁化ベクトルの横成分を比べると確かめられる。心筋はこのアプリの筋肉に近い。肝臓はこのアプリにないが、T2 は筋肉と同じくらい短い。',
+  s:{ seq:'SE', TR:4000, TE:100, B0:1.5 } },
+{ src:'第76回 午後 第15問', q:'SE 法 TR 500 ms、TE 10 ms の頭部 MR 像で最も高信号を呈するのはどれか。', c:['基底核','側脳室','下垂体前葉','眼窩内脂肪','頭蓋骨皮質'], a:[3],
+  e:'TR 500 ms・TE 10 ms は T1 強調像の条件で、T1 の短い脂肪が最も明るい。基底核は灰白質、側脳室は脳脊髄液で、どちらも脂肪より暗い。頭蓋骨皮質は信号がほとんどない。下垂体前葉はこのアプリにないが、脳実質と同じくらいの明るさ。眼窩はこの断面にないので、頭皮の下の脂肪で見る。',
+  s:{ seq:'SE', TR:500, TE:10, B0:1.5 } },
 ];
 
 /* ================= 画面まわりの部品 ================= */
@@ -2756,7 +2766,7 @@ gotoStep(0, false);
 applySet(Object.assign({ manual:false, quantum:false }, PRE[0].s), true);
 refresh(false);
 resize();
-homeCam();
+homeCam(); ctrl.dist = ctrl.want; applyCam();   // 起動時は寄っていく動きなしで脳全体を見せる
 renderStrip();
 requestAnimationFrame(loop);
 })();
