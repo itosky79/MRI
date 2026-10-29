@@ -610,6 +610,20 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         </div>
         <p class="tiny">Colin 27＝公開のデジタル脳ファントム（BrainWeb と同じ人の脳。病変は描き足し）／簡易図形＝数式で組み立てた以前の画像。どちらも明暗は同じ式で計算します。</p>
 
+        <div id="sliceBox">
+          <p class="grp-h" style="margin-top:13px">断面（Colin 27）</p>
+          <div class="seg" id="oriSeg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2)">
+            <button type="button" data-o="ax" aria-pressed="true">横断</button>
+            <button type="button" data-o="cor">冠状断</button>
+            <button type="button" data-o="sag">矢状断</button>
+          </div>
+          <div class="sld" style="margin-top:8px">
+            <div class="sld-h"><span>断面の位置</span><b id="vPos">頭側 20 mm</b></div>
+            <input type="range" id="sPos" min="-60" max="80" step="1.5" value="20">
+          </div>
+          <p class="tiny">問題の画像と同じ向き・高さにしてから、撮像法や TR・TE を変えて見え方を比べます。3D の「脳全体」では、断面の板がこの位置に動きます。</p>
+        </div>
+
         <div class="sld" style="margin-top:13px">
           <div class="sld-h"><span>静磁場のムラ（T2′）</span><b id="vT2p">40 ms</b></div>
           <input type="range" id="sT2p" min="0" max="11" value="5">
@@ -728,6 +742,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 
 <script src="three.min.js"></script>
 <script src="brain3d.js"></script>
+<script src="head3d.js"></script>
 <script>
 "use strict";
 /* =====================================================================
@@ -1065,10 +1080,37 @@ let xhairPx = null;
    provided that the above copyright notice appear in all copies.
    作り方は tools/colin27_slice.py */
 const PHANTOM_RLE = 'AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wAdBQ8AnAUYAJMFIgCLBQwBBQUBAQoFDACGBQsBCAUBARAFCQCBBQgBCwUDBwEFAQcCBQQBDAUHAH0FBgEJBQMHEgUDAQgFBwB4BQYBCAUDBwkBAgcNBQIBCAUHAHQFBgEGBQMHCAERBwcFAgEHBQYAcQUFAQYFAgcHAQkHBQELBwUFAgEHBQUAbgUGAQUFAQcFAQkHBwADBwcBCAcEBQIBBgUFAGsFBQEFBQIHBAEIBwYEAgEBAAUEAgACBwQBCAcEBQIBBQUFAGgFBQEFBQEHBAEHBwgEBQAEBAEAAgQFBwcBAgcHBQIBBAUEAGcFBAEEBQIHAgECBQEBBAcFBAsABAQBAAIEBwcQBQEBBAUEAGQFBAEFBQEHAwEBBQIBAgcEBAMDAwQJAAMEAgMEBAoHBwEDBwIFAgEDBQUAYQUFAQQFAQcDAQUHAwQEAwcEBgACBAIDBwQIAwIBAwcDAQMHAwUBAQMFBQBfBQQBBAUCBwIBBQcDBAUDCQQEAAMEAgMDAgIDAwQHAwYBAQcCAQUHAQUCAQMFBABdBQQBBAUCBwMBBQcCBAYDBAIBAwUEAwACBAQDAgICAwQEAgMLBAEHAgECBQEBAgcBBQIBAwUEAFsFBAEDBQIHAwEGBwIECAMCAgQDBwQEAwQCAwMQBAEHAgECBQEBAgcCBQEBAwUEAFkFBAEDBQIHBAEFBwIECAMDAgQDCAQCAwUCAwMGAgYDAgQEBwIBAQUDAQEHAQUCAQQFAwBXBQMBAwUDBwMBBQcDBAgDAwIFAwgEAgMFAg8DAwQFBwEBAwUBAQEHAgUBAQQFAwBVBQMBBAUCBwQBBAcCBAoDAwIFAwgEAgMEAhADBAQFBwIBAQUCBwMFAQEEBQMAUwUDAQMFAgcDAQQHAwQMAwMCBQMIBAIDAwIQAwYEBQcCAQMHAwUCAQIFBABSBQMBAwUCBwIBAwcEBAcDBAQCAwICBwMHBAIDBAIQAwUEBgcDAQIHAwUBAQMFAwBRBQMBAgUDBwMBAgcDBAEDBQQCAwkCCQMFBAIDBgIPAwQEAwMDBAEHAwEBBwQFAgECBQMATwUEAQIFAgcDAQIHAwQBAwYEAQMKAgoDBAQCAwYCEAMEBAIDBAQCBwEBAQcFBQEBAwUDAE0FBAECBQIHAwECBwMEAQMMAhEDBAQBAwYCEAMEBAIDBQQCBwcFAQEDBQMASwUEAQIFAwcCAQIHAwQBAwQCAgMGAg8DBgQCAwYCEQMDBAIDBQQDBwYFAgECBQQASQUEAQIFAwcCAQIHAwQBAwQCAwMCBAEDAwINAwcEAwMFAhIDAwQCAwcEAgcGBQIBAgUDAEkFAwECBQQHAgECBwIEAgMDAgQDAgQBAwMCDQMIBAEDBQITAwMEAQMKBAEHBQUCAQMFAwBHBQMBAwUDBwMBAQcCBAIDBAIEAwIEAQMDAg0DDQIOAwQCAQMQBwYFAgEDBQMARQUDAQMFBAcCAQEHAgQCAwUCBQMBBAEDAwINAxACCgMRAgIDAwQBBwUFAwECBQMARAUEAQIFBAcCAQEHAwQCAwcCAwMFAhIDDQIJAwwCBwMDBAEHBQUDAQIFAwBDBQMBAgUFBwEBAgcCBAIDCQIDAwUCEQMNAgoDCQIJAwQHBQUEAQEFAwBCBQMBAgUFBwEBAQQBBwIEAgMKAgQDBAIPAwYEAgMIAgsDBgIHAwcEAQcFBQMBAgUDAEEFAwECBQUHAQQCBwIEAQMLAgUDAgIOAwcAAwMIAgsDBQIHAwgEAQcCAQEHAgUEAQIFAwA/BQMBAgUFBwIEAgcCBAEDCwIUAwgEAQMLAgwDAQIIAwkEAQcCAQIHAgUDAQIFBAA9BQMBAgUFBwIEAwcBBAEDCAQBAwQCEwMGAAEDDgIVAwgEAgcFBQQBAgUDADwFBAECBQQHAgEBBAIHAQQDAw4CEQMGAAIEAQMMAhgDBAQDBwMBAQcCBQQBAgUCADwFAwECBQUHAgEBBAIHAQQDAw4CEQMGBAMDBAICAwcCGAMEBAMHAgECBwEFBAECBQMAOwUCAQIFBQcCAQIEAQcBBAMDEAIPAwUAAgQBAwcCAwMEAhMDCgQEBwIBAQcCBQQBAgUDADkFAwECBQQHAwEBBAEHAQQDAwgCBAMFAg4DBgACAwkCAwMCAhIDDgQCBwIBAQcDBQQBAQUDADgFAwECBQUHAwQBBwIEAwMEAggDBgINAwwEAQMFAhYDEAQBBwUFBAECBQMANwUDAQEFBgcFBAUDBAIIAwUCDQMMBAEDBQIVAxIEAQcEBQUBAQUDADcFAgECBQUHBQQCAwoCGAMLBAIDBQIWAwICDAMEBwUFBAECBQMANQUDAQIFBQcEBAIDDAIXAwUCAwMDBAIDBQIkAwQEAQcEBQUBAgUCADQFBAEBBQUHBQQBAwQCAQMEBAEDBAIXAwECBgMDBAIDBAImAwIEAgcFBQQBAgUCADQFAwECBQUHBAQCAwMCAwMEBAEDAwIeAwMAAgMEAiYDAgQDBwQFBQEBBQMAMwUDAQEFBgcEBAIDBAIEAwUCHwMDBAEDBQIlAwMEBAcDBQUBAgUDADIFAgECBQYHBAQDAwMCJwMJAicDAwQDBwQFBAECBQMAMQUDAQIFBQcEBAUDBAIkAwQAAgMFAicDBAQCBwMFBQECBQIAMQUDAQEFBgcDBAUDBQIkAwQEAgMGAigDAwQBBwMFBQECBQIAMAUDAQIFBgcDBAIDBgImAwQEAwMFAigDAwQBBwQFBAECBQMALwUDAQIFBQcDBAMDBAIoAwQEBAMDAiYDBgQCBwMFBAEDBQIALwUDAQEFBgcDBAIDAwItAwYCJgMIBAIHAwUFAQIFAgAvBQMBAQUGBwIEAgMEAgIDAgJVAwcEAwcDBQUBAgUDAC4FAgECBQYHAgQDAwsCMwMCAhwDCgQBBwIFBQEDBQIALgUCAQIFBgcCBAMDCwIyAwMCHQMJBAEHAgUFAQMFAgAuBQIBAgUFBwMEBgMIAjEDAQQCAwECIwMEBAEHAgUFAQIFAgAuBQIBAgUFBwMEBgMHAh0DAwIRAwEEAwMBAiMDBAQBBwIFBgEBBQMALQUCAQIFBQcCBAMDAgQCAwQCIAQCAwICDwMBBAQDAgIfAwcEAQcCBQUBAgUDAC0FAgECBQUHAgQCAwQEAQMFAh8EAwMCAg0DAQQFAwMCHQMIBAEHAgUFAQIFAwAtBQIBAgUFBwMEAQMFBAIDBgIbAwEEBAMCAgoDAgQGAwICHQMHBAMHAgUFAQIFAwAtBQIBAgUFBwMEAQMPAhgDAwQEAwICCAMCBAYDAwIdAwQEBgcCBQUBAgUDAC0FAgECBQUHAwQBAwMCAgMMAhQDBQQGAwMCBAMBBAgDAwIYAwkAAQQEBwQFBAECBQMALQUCAQIFBAcEBAEDAwICAwwCFAMFBAcDAwICAwEECAMFAhYDCQACBAQHBAUFAQEFAwAsBQMBAQUFBwQEAwMDAgMDBAQDAwICFAMGBAgDAwQJAwUCFQMMBAQHBAUFAQEFAwAsBQMBAQUFBwQEAwMDAgQDCAILBgcCAgMGBAkDAgQJAwUCFAMOBAMHBAUFAQEFAwAsBQMBAQUFBwMEAQMGAgcDBAIKBgoCAQMGBAkDAgQJAwUCFAMGAgEDCgcEBQUBAgUDACsFAgECBQUHAwQBAwYCFQYKAwcECQMCBAkDBgIUAwMCAwMKBAEHAwUFAQIFAgAsBQIBAgUFBwMEAQMDAhcGDAMGBAkDAgQJAwYCGQMMBwMFBQECBQMAKwUCAQEFBgcCBAIDBAIWBgwDBQABBAkDAgQJAwYCBwYEAg0DCQIBAwIEAQcDBQYBAgUCACoFAwEBBQYHAgQCAwQCFgYMAgEDBQQJAwEECgMGAgUGCAIKAwkCAgMCBAEHAwUGAQIFAgAqBQMBAQUGBwIEAgMEAhcGCgICAwUECQMCBAkDBQIGBgkCCQMEBAEDAwICAwMEAgcDBQUBAgUCACoFCQcDBAIDBAIYBggCAwMEAAEECQMCBAkDBQIFBgoCCgMEAgQDBQQBBwMFBQECBQIAKgUJBwMEAQMFAg0DBwIGBgQCBQMEAAEECQMCBAoDBAIFBgoCEgMGBwMFBQECBQIAKgUDAQEFBQcDAwUCDgMIAg4DBAQKAwIECgMEAgUGCgISAwYEAQcCBQUBAgUCACoFAwEBBQUHAwMEAhIDBgINAwQECgMCBAQDAgQEAwQCBgYIAhQDBQQBBwIFBQECBQIAKgUDAQEFBQcCBAEDAgIDAwUCDgMEAg4DAgQLAwECAQMBBAMDAQQFAwUCBgYGAgEDAgITAwQEAQcCBQUBAgUCACoFAwEBBQUHAgQBAwICAgMHAgsDBgIOAwIECwICAwEECQMEAg0DBgIRAwMEAQcCBQUBAgUCACoFAwEBBQUHAgQBAwsCCgMHAg4DAgQKAwECAwQKAwQCDAMJAg8DAgQBBwIFBQECBQIAKgUCAQIFBAcEAwUEAgMEAgoDBwIOAwIECgIBAwICAQQKAwMCDAMKAg8DAwcCBQUBAgUCACoFAgECBQQHBAQBAwMAAgMEAgwDBwIMAwMECgIBAwICAQQEAwEEBQMDAgwDCAIKAwUCAgMDBwIFBQECBQIAKgUCAQIFBAcEBAEDCQIOAwYCCwMCBAsCAQMCAgEDAQQDAwEEBgMCAgwDBAINAwYCAgMDBwIFBQECBQIAKgUCAQIFBAcEAwkCCQMEAgQDBAILAwIEBQMBBAQDAQIBAwEEAQIBAwEEAwMCBAUDAwILAwMCDQMMBwMFBAECBQIAKgUCAQIFBAcEAwcCCwMGAgQDAgILAwIEBAMDBAMDAgQCAwECAQMBBAIDAwQFAwICCwMEAgwDAgACBAEDBgQBBwMFBAECBQIAKgUCAQIFBAcEAwMCEAMHAg8DAQQFAwMEAwIBAwEEAwIBAwEEAwMDBAQDAwIKAwQCDAMDBAMDBQcEBQQBAgUCACkFAwECBQQHBAMDAgcDAQIKAwkCCgMCBAoDAQIBBAQCAQMBBAQDAgQEAwICCwMDAg0DCgQBBwQFBAECBQIAKQUJBwQDBAISAwkCCQMBBAsCAgQEAwECAQQFAwEEBQMCAgkDAwIDAwQCCQMJBwQFBAECBQMAKAUJBwQDBAIPAwcAAgMDAggDAgQKAwECAQMBBAQDAQIBAwEECwMBAgkDAgIDAwUCDAMGBwQFBAECBQMAKAUJBwQEAQMOAgMDBwABBAEDBAIIAwEECgMBAgEDAgQBAwIEAQMCAgEDAQQKAwICCAMJAhADAwcEBQQBAgUDACgFBAEBBQQHBAQBAxACAwMKAgkDAQQKAgMDAgIDAwICAgQLAwECBwMJAhEDAwcEBQQBAwUCACgFBAEBBQUHAwQBAwoAAgMGAgMDBwIJAwEECQMBAg4DAQQKAwECBwMGAgcDCgICAwMHBAUEAQIFAwAoBQQBAQUFBwMEAQMHBAMAAgQCAwUCBAMEAgoECQMBAhAECgMBAgcDBQIFAxIHAwUFAQMFAwAnBQQBAQUFBwMEAQMLBAUDBgIOBAkDAQISAwEECQMBAgcDAwIEAxMEAQcDBQUBAwUDACcFBAEBBQUHAwQBAxcCDAMBBAgDAQIUBAoCDAMVBAEHAwUFAQIFBAAnBQQBAQUFBwMEAQMYAgoDAQQIAwECFQMBBAkDAQILAwQEAgMOBAIHAwUEAQMFBAAnBQQBAgUEBwMDGQIKAwEECAIXAwEECAMBAgsDBAQCAw4EAgcDBQQBAwUEACgFAwECBQQHAwMEAgEDDgIQBAcDAQIZAwEECAMBAgoDBAQCAw4EAgcDBQQBAwUEACcFBAECBQQHAwQBAwMCAQMKAg8GBAMBBAcDAQIKAwUCCwMBBAcDAQIMAwIEAgMOBAIHAwUEAQMFBAAoBQMBAgUEBwMDBAIZBgYEBgMBAgoDAQAEAwMCCgQHAwECDAMRBAMHAwUEAQMFAwApBQMBAgUFBwIDBAIYBgcEBQMBAgoDAwQBAAIDAwIKAwEEBgMBAg0DDwQEBwMFBAEDBQMAKQUEAQEFBQcCBAEDAwIFAwUCDgYGAwEEBQIJAwYEBgMBAgkEBgMBAhADDgQCBwMFAwEDBQQAKQUDAQIFBQcCBAEDAwIDAwkCDAYGAwEEBAMBAggDBwQEAwUCBwMBBAUDAQIRAw4EAQcCBQQBAwUEACkFBAECBQQHAwQBAwMCAQMKAgwGBgQEAg4DAgQEAwcCBwQFAwECFAMLBAEHAgUEAQMFAwAqBQQBAgUEBwMEAQMOAgwGBgQCAwICDAMEBAQDBwIHAwEEBAMBAhsDBAQBBwIFBAECBQQAKgUEAQIFBAcDBAEDCwIRBgQDAgINAwUEBAMCAg0DAQQDAwECEAMHAgUDAwQBBwIFBAECBQQAKgUEAQIFBQcDBAEDCQIkAwYAAgQCAwQCDAMBBAEDAgIPAwoCAwMDBwMFBAECBQMAKwUEAQIFBQcEBAEDBgIIAwMCGwMGAAIEAQMHAh0DCwICAwMHAwUDAQMFAwArBQQBAgUFBwQEAQMGAgYDBQIXAwECBAMFAAIEAQMIAhwDDwQBBwMFAwECBQQAKwUEAQIFBgcEAwQCBgMGAhUDBgIDAwQEBAMHAh8DDAQBBwMFAgEDBQQAKwUEAQMFBQcEAwUCBQMFAgYDAQINAwgCBAMDBAQDBgIiAwoHAwUDAQMFAwAtBQQBAwUEBwQEAQMEAgUDAQIIAwQCCgMGBAEDBAIEAwIEAwMHAgQDAgIRAwYCBwMHBAEHAwUDAQMFAwAtBQQBAwUEBwUDBAINAwUCCgMFBAMDAwIEAwIEAwMGAgMDBQIQAwoCBAMFBAEHAwUEAQIFBAAuBQQBAwUEBwQEAQMDAgUDDQIKAwUEBAMEAgIDAgQDAwUCAwMHAg8DDQIBAwQEAQcEBQMBAwUDAC8FBAEEBQMHBQMDAgIDDwIMAwQAAgQCAwkEAgMFAgIDBwIQAwUAAQMMBAEHBAUCAQQFAwAwBQQBAwUEBwQDEwINAwUAAQQCAwkEAQMFAgEDCAISAwQAAgQDAwcEAQcEBQMBBAUDADEFBAECBQQHBAQBAxECDQMIBAEDDgIBAwkCEwMPBwUFAwEDBQQAMQUEAQMFAwcFBAEDCAIVAwgEAQMWAhcDCwQBBwYFAgEDBQQAMgUEAQQFAwcFBAIDBQIWAxkEAQMEAhsDCAQBBwYFAgEDBQQAMwUEAQMFAwcFBAIDDQIPAxYEAgMEAgIDAgIQAwUCBwMEBAEHAgEBBwIFAgEDBQQANQUEAQMFAwcEBAEDDwIOAxEEAQMJAgMDAgIPAwcCBgMEBAEHAQECBwIFAgEDBQMANwUDAQQFAgcFAw4CDwMEBAYDDwIEAwMCDgMKAgMDBQcFBQIBAwUEADcFBAEDBQIHBQQBAwkCFAMCBAIDAQACBAEDDwIFAwMCDgMSBwUFAgEDBQMAOQUEAQIFAwcFAwQCGgMHAgMDDgIEAwECDwMCAgIDDQcFBQIBAwUEADkFBAEDBQIHBQQBAwUCGAMEAgYDAgQDAwoCEwMCAgMDCwcGBQIBAwUDADsFBAEDBQIHBgMGAg4DAwIFAwMCBgMEBAIDAgIDAwQCFAMDAgMDCQQBBwUFAgEDBQQAOwUEAQMFAgcGBAEDBQINAwQCBQMCAgYDBgQBAwMCGgMEAgIDCAQBBwYFAgEDBQQAPAUEAQMFAgcGBAEDAwIOAwQCDAMEAgEDAgQCAwYCFQMGAgMDAgQEBwYFAgEEBQMAPQUEAQMFAwcGAwYCBwMCAgEDBQIRAwIEBAMEAhUDBwICAwMEAgcHBQIBBAUDAD4FBAEDBQIHBgQBAwYCAwMLAhEDAgQDAwUCFAMJAgEDAwQBBwcFAgEEBQMAQAUEAQIFAgcHBAEDBQIDAwsCDgMFBAMDBQIUAwkCAQMDBAEHBwUCAQMFBABABQQBAwUCBwcEAwMCAgMDCgIQAwQEBAMCAhYDAgQCAwgEAQcHBQIBBAUDAEIFBAEDBQIHBwQCAwICAwMKAhIDAgQDAwMCEAMBAgUDAgQCAwgEAQcHBQIBAwUEAEMFAwEDBQIHCAQBAwMCCAMDAg8DBQQDAwcCDAMDAgQDAgQDAwYEAQcHBQIBAwUEAEQFBAEDBQIHBwQBAwMCCAMEAg0DBwQCAwcCDAMEAgMDCwcDAQEHAwUCAQQFBABFBQQBAwUCBwgDAwIHAwUCEQMCBAEDCAINAwQCBAMIBwMBAQcDBQIBBAUDAEgFAwEDBQMHBwQBAwcCAgMIAgcDAQIGAwEEAgMHAgcDAgIFAwUCBAMFBAIHAgECBwIFAgEEBQQASAUEAQQFAgcHBAEDBgIDAwgCBQMDAgMDAwQCAwcCBwMDAgQDBQIFAwMEAQcHBQMBAwUEAEoFBAEDBQMHBwQBAwUCAwMHAgUDBAIDAwIEAwMGAggDAwIEAwUCAwMEBAEHCAUCAQMFBABMBQQBAwUDBwgEAgMDAgEDBgIPAwEEAgMGAgkDBQICAwUCAgMFBwgFAgEEBQQATQUEAQMFAwcJAwoCDwMBBAIDBQILAwEEAQMCAgIDBQIBAwQEAQcIBQIBAwUFAE8FBAEDBQMHCgMDBAEDAgIKAwICBAMCBAMDBgIEAwICAwMCBAEDAgIBAwgEAQcJBQIBBAUEAFAFBQEDBQMHCwQCAwICAwMCAgQDBQIBAwIEBQMGAgIDBAICAw0EAQcJBQIBBAUEAFMFBAEEBQMHCwQBAwECAgMEAgQDBQAEBAIDCAICAwMCAwMHBAQHCQUCAQUFBABUBQUBAwUEBwsEAQMHAgUDAgAGBAEDCAICAwQCAwMCBAEDAwQBBwsFAgEFBQQAVwUEAQQFAwcMBAEDAgQBAwkABgQCAwICCAMIBAIHDQUCAQQFBABZBQUBBAUDBw0EBAMFAAgEAgMDAgcDCAcOBQIBBAUEAFwFBQEDBQUHDQQGBQEABQUCBAMDCwQEBw4FAgEEBQUAXgUFAQQFBAcWBQEHBgQBAwoEAQcPBQMBBAUFAGEFBQEDBQUHDwEDBwsEAQMDBAEHBgEDBwkFBAEDBQUAZAUFAQUFBQcMAQ0HCQEHBwYFBAEEBQUAZwUFAQYFBQcQAQgHAwEFBwoFAwEFBQUAagUHAQQFBgcmBQUBAwUFAG4FCQECBQ0HGgUEAQUFBgBwBQsBAQUBAQIFDwcPBQUBAgUBAQEFCAB2BQwBAQUDAQMFGAEDBQoAegUSAQEFFgEBBQoAfwUuAIUFKACRBRsAmwUBAP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AE4=';
+/* 断面：Colin 27 の 1.5 mm の立体（head3d.js、tools/colin27_volume.py）から、横断・冠状断・矢状断の好きな位置で切る。
+   画像の 1 画素は 1.25 mm、横 220 mm × 縦 260 mm。画像の左は患者の右（放射線科の表示）。
+   横断：上が前。冠状断：上が頭側。矢状断：左が前、上が頭側。位置は Talairach 座標（mm）。 */
+const SLICE = { ori:'ax', pos:{ ax:20, cor:-18, sag:0 } };
+const SL_RANGE = { ax:[-60, 80], cor:[-100, 70], sag:[-70, 70] };
+const SL_ZC = 15;                                   // 冠状断・矢状断で画像の縦の中心にする高さ（mm）
+let VOL = null;
+if (typeof HEAD3D !== 'undefined') {
+  VOL = new Uint8Array(HEAD3D.nx * HEAD3D.ny * HEAD3D.nz);
+  const bin = atob(HEAD3D.rle); let p = 0;
+  for (let k = 0; k < bin.length; k += 2) { const v = bin.charCodeAt(k), n = bin.charCodeAt(k + 1); VOL.fill(v, p, p + n); p += n; }
+}
+function pixTal(fi, fj) {   // 画像の位置（画素の単位。端が 0）→ Talairach 座標（mm）
+  const xm = (fi - IW / 2) * FOVX / IW, ym = (fj - IH / 2) * FOVY / IH, h = SLICE.pos[SLICE.ori];
+  if (SLICE.ori === 'cor') return [-xm, h, SL_ZC - ym];
+  if (SLICE.ori === 'sag') return [h, -18 - xm, SL_ZC - ym];
+  return [-xm, -18 - ym, h];
+}
+function volAt(x, y, z) {
+  const H = HEAD3D, i = Math.round((x - H.x0) / H.d), j = Math.round((y - H.y0) / H.d), k = Math.round((z - H.z0) / H.d);
+  if (i < 0 || j < 0 || k < 0 || i >= H.nx || j >= H.ny || k >= H.nz) return 0;
+  return VOL[(k * H.ny + j) * H.nx + i];
+}
 function buildPhantomColin27() {
-  const bin = atob(PHANTOM_RLE);
-  let p = 0;
-  for (let k = 0; k < bin.length; k += 2) { const v = bin.charCodeAt(k), n = bin.charCodeAt(k + 1); LABM.fill(v, p, p + n); p += n; }
+  if (!VOL) {   // 立体のデータがないときは、以前の 1 断面（横断 z = +20 mm）
+    const bin = atob(PHANTOM_RLE);
+    let p = 0;
+    for (let k = 0; k < bin.length; k += 2) { const v = bin.charCodeAt(k), n = bin.charCodeAt(k + 1); LABM.fill(v, p, p + n); p += n; }
+    return;
+  }
+  for (let j = 0; j < IH; j++) for (let i = 0; i < IW; i++) { const t = pixTal(i + .5, j + .5); LABM[j * IW + i] = volAt(t[0], t[1], t[2]); }
 }
 /* 以前の簡易画像（頭部の軸位断を数式で組み立てたもの）。詳細タブの「頭部の画像」でいつでも切り替えられる */
 function buildPhantomSimple() {
@@ -1385,15 +1427,26 @@ if (typeof BRAIN3D !== 'undefined') {
     new THREE.MeshPhongMaterial({ color:0xFFA94D, emissive:0x4a2c0a }));
   nose.position.set(0, headFront + 1.6, 0); nose.rotation.x = -Math.PI / 2;
   headGrp.add(nose);
-  headGrp.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(FOVX / U, FOVY / U)),
-    new THREE.LineBasicMaterial({ color:0x3E8FA3, transparent:true, opacity:.5 })));
 }
+const sliceEdge = new THREE.LineLoop(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3)),
+  new THREE.LineBasicMaterial({ color:0x3E8FA3, transparent:true, opacity:.6 }));
+headGrp.add(sliceEdge);
 const sliceCv = document.createElement('canvas'); sliceCv.width = IW; sliceCv.height = IH;
 const sliceCx = sliceCv.getContext('2d'), sliceImg = sliceCx.createImageData(IW, IH);
 const sliceTex = new THREE.CanvasTexture(sliceCv);
 const slicePl = new THREE.Mesh(new THREE.PlaneGeometry(FOVX / U, FOVY / U),
   new THREE.MeshBasicMaterial({ map:sliceTex, transparent:true, side:THREE.DoubleSide, depthWrite:false }));
 headGrp.add(slicePl);
+/* 断面の板と枠を、いまの断面の位置に置き直す（PlaneGeometry の頂点は左上・右上・左下・右下の順） */
+function placeSlicePlane() {
+  const c = [pixScene(0, 0), pixScene(IW, 0), pixScene(0, IH), pixScene(IW, IH)];
+  const a = slicePl.geometry.attributes.position;
+  c.forEach((v, k) => a.setXYZ(k, v.x, v.y, v.z)); a.needsUpdate = true;
+  slicePl.geometry.computeBoundingSphere();
+  const e = sliceEdge.geometry.attributes.position;
+  [c[0], c[1], c[3], c[2]].forEach((v, k) => e.setXYZ(k, v.x, v.y, v.z)); e.needsUpdate = true;
+  sliceEdge.geometry.computeBoundingSphere();
+}
 const TA_IDS = ['fat', 'wm', 'gm', 'csf', 'les'];
 const TA_LEN = 6.5;                 // 部位ごとの矢印の長さ（M0 のとき、シーン単位）
 const tisArr = TA_IDS.map(id => {
@@ -1403,7 +1456,7 @@ const tisArr = TA_IDS.map(id => {
   hold.add(a.grp, ring); headGrp.add(hold);
   return { id, a, hold };
 });
-function sitePos(px) { return [((px[0] + .5) / IW - .5) * FOVX / U, (.5 - (px[1] + .5) / IH) * FOVY / U]; }
+function sitePos(px) { return pixScene(px[0] + .5, px[1] + .5); }
 /* 矢印を立てる場所：重ならないように、組織ごとに目安の位置（画像の幅・高さに対する割合）にいちばん近いその組織の画素 */
 const TA_AT = { fat:[0.80, 0.16], wm:[0.30, 0.30], gm:[0.84, 0.52], csf:[0.52, 0.47], les:null };
 const taSite = {};
@@ -1418,7 +1471,7 @@ function placeTisArr() {
       }
     }
     taSite[t.id] = p; t.hold.visible = !!p;
-    if (p) { const q = sitePos(p); t.hold.position.set(q[0], q[1], 0.02); }
+    if (p) t.hold.position.copy(sitePos(p));
   }
 }
 /* 断面の明るさ：組織ごとの横磁化 × プロトン密度 × 画像と同じ正規化（いまの条件のエコーで最も明るい組織を 1） */
@@ -1446,14 +1499,20 @@ const voxel = new THREE.Group(); scene.add(voxel); voxel.visible = false;
   voxel.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(s, s, s)),
     new THREE.LineBasicMaterial({ color:0xF0B24B, transparent:true, opacity:.85 })));
 }
+/* 画像の位置 → 3D シーン（1 単位 = 5 mm、z が頭側＝B0 の向き。横断 z = +20 mm、画像の中心 y = −18 mm が原点） */
+function pixScene(fi, fj) {
+  if (phantomKind === 'simple' || !VOL) return new THREE.Vector3((fi / IW - .5) * FOVX / U, (.5 - fj / IH) * FOVY / U, 0);
+  const t = pixTal(fi, fj);
+  return new THREE.Vector3(-t[0] / U, (t[1] + 18) / U, (t[2] - 20) / U);
+}
 function voxelWorld() {
   const px = xhairPx || REP[P.tissue] || [IW / 2, IH / 2];
-  return new THREE.Vector3(((px[0] + .5) / IW - .5) * FOVX / U, (.5 - (px[1] + .5) / IH) * FOVY / U, 0);
+  return pixScene(px[0] + .5, px[1] + .5);
 }
 const headAt = new THREE.Vector3();
 function placeHead() {   // 近くで見るときは選んだボクセルを原点に、離れて脳全体を見るときは断面の中心を原点に置く
   const v = voxelWorld();
-  if (ctrl.want > 45) headAt.set(0, 0, 0); else headAt.set(-v.x, -v.y, 0);
+  if (ctrl.want > 45) headAt.set(0, 0, 0); else headAt.set(-v.x, -v.y, -v.z);
 }
 
 /* ---- カメラ操作 ---- */
@@ -1624,10 +1683,11 @@ function updateScene(dt) {
   place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
   for (const t of tisArr) {
     const n = bankM(BANKS[BANK_IDS.indexOf(t.id)]), w = t.hold.position;
-    place('ta_' + t.id, w.x + headGrp.position.x, w.y + headGrp.position.y, -1.6,
+    place('ta_' + t.id, w.x + headGrp.position.x, w.y + headGrp.position.y, w.z + headGrp.position.z - 1.6,
       TIS[TIX[t.id]].nm.replace(/（.*）/, '') + ' ' + Math.hypot(n[0], n[1]).toFixed(2), P.showLab && far && t.hold.visible);
   }
-  place('slice', headGrp.position.x, headGrp.position.y - FOVY / U * 0.56, 0, echoFlash > 0 ? 'エコー：この瞬間の断面の明るさが画像になる' : '断面の明るさ＝その組織の横磁化',
+  const sb = pixScene(IW / 2, IH * 1.06).add(headGrp.position);
+  place('slice', sb.x, sb.y, sb.z, echoFlash > 0 ? 'エコー：この瞬間の断面の明るさが画像になる' : '断面の明るさ＝その組織の横磁化',
     P.showLab && far);
 }
 
@@ -2267,8 +2327,30 @@ $('phSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || b.dataset.ph === phantomKind) return;
   phantomKind = b.dataset.ph;
   try { localStorage.setItem(PKEY, phantomKind); } catch (e) { }
-  buildPhantom(); computeRep(); placeTisArr(); xhairPx = null; refresh(true);
+  buildPhantom(); computeRep(); placeTisArr(); placeSlicePlane(); syncSliceUI(); xhairPx = null; refresh(true);
 });
+/* 断面の向きと位置 */
+function posText() {
+  const o = SLICE.ori, h = SLICE.pos[o], a = Math.abs(h).toFixed(h % 1 ? 1 : 0);
+  if (o === 'ax') return (h >= 0 ? '頭側 ' : '尾側 ') + a + ' mm';
+  if (o === 'cor') return (h >= 0 ? '前 ' : '後ろ ') + a + ' mm';
+  return h === 0 ? '正中' : (h > 0 ? '左 ' : '右 ') + a + ' mm';
+}
+function syncSliceUI() {
+  const on = phantomKind !== 'simple' && !!VOL;
+  $('sliceBox').style.display = on ? '' : 'none';
+  segSet($('oriSeg'), SLICE.ori, 'o');
+  const r = SL_RANGE[SLICE.ori], sp = $('sPos');
+  sp.min = r[0]; sp.max = r[1]; sp.value = SLICE.pos[SLICE.ori];
+  $('vPos').textContent = posText() + '（Talairach）';
+}
+function applySlice() {
+  buildPhantom(); computeRep(); placeTisArr(); placeSlicePlane(); syncSliceUI();
+  xhairPx = REP[P.tissue] ? REP[P.tissue].slice() : null; refresh(true);
+}
+$('oriSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.o === SLICE.ori) return; SLICE.ori = b.dataset.o; applySlice(); });
+$('sPos').addEventListener('input', e => { SLICE.pos[SLICE.ori] = +e.target.value; applySlice(); });
+
 $('b0Seg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   P.B0 = +b.dataset.b; refresh();
@@ -2560,6 +2642,8 @@ loadExam();
 applyRail();
 setTissue('wm');
 placeTisArr();
+placeSlicePlane();
+syncSliceUI();
 placeHead();
 gotoStep(0, false);
 applySet(Object.assign({ manual:false, quantum:false }, PRE[0].s), true);
