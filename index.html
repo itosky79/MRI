@@ -455,6 +455,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 #b0Seg button small{display:block; font-size:10px; opacity:.72; letter-spacing:.02em}
 .numin{width:70px; font:inherit; color:inherit; background:transparent; border:1px solid #2a3a48; border-radius:3px; padding:1px 4px; text-align:right}
 .stopat{display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--mut, #8aa0b2)}
+.stopat input[type=checkbox]{width:auto; margin:0 3px 0 0}
 .stopat input{width:64px; font:inherit; color:inherit; background:transparent; border:1px solid #2a3a48; border-radius:3px; padding:2px 4px}
 .stopat button{margin-left:2px}
 @media (prefers-reduced-motion:reduce){
@@ -517,6 +518,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
       <div class="playbar">
         <button type="button" id="bStep">最初から</button>
         <button type="button" id="bPause">一時停止</button>
+        <label class="stopat"><input type="checkbox" id="tEcho" checked>エコーで止める</label>
         <label class="stopat">t =<input type="number" id="nStop" min="0" step="1" value="300" inputmode="numeric">ms<button type="button" id="bStop">で止める</button></label>
       </div>
     </div>
@@ -809,7 +811,7 @@ const P = {
   tissue:'wm',
   frame:'rot',     // rot=回転座標系 / lab=静止座標系
   manual:false, paused:false, spd:1,
-  spoil:true, nDisp:24, showBody:true,   // はじめから脳全体（部位ごとの磁化ベクトルと断面）を出す
+  echoStop:true, spoil:true, nDisp:24, showBody:true,   // はじめから脳全体（部位ごとの磁化ベクトルと断面）を出す
   showComp:true, showTrail:true, showLab:true,
   slowPulse:true, noise:true, quantum:false,
   view:1           // 0=3D / 1=3D+画像 / 2=画像
@@ -984,6 +986,29 @@ function rebuildSeq(keep) {
 function curT1() { return T1of(TIS[TIX[P.tissue]], P.B0); }
 function curT2() { return T2of(TIS[TIX[P.tissue]]); }
 
+/* 定常状態まで一気に進める（実際の装置のダミースキャンにあたる）。撮像条件を変えたら、画面に出す前に
+   TR を何周期もくり返し、組織ごとのエコーの高さが前の周期と変わらなくなったところから表示を始める */
+function warmup() {
+  if (P.manual) return;
+  const T1 = curT1(), T2 = curT2();
+  for (let c = 0; c < 400; c++) {
+    let t = 0, steady = true;
+    for (const e of R.evs) {
+      freeStep(e.t - t, T1, T2); t = e.t;
+      if (e.k === 'rf') pulse(e.a, e.ax);
+      else if (e.k === 'spoil') { spoil(); crush(); }
+      else if (e.k === 'crush') crush();
+      else if (e.k === 'echo') {
+        const m = netM(); R.echoPeak = Math.hypot(m[0], m[1]);
+        for (const b of BANKS) { const n = bankM(b), v = Math.hypot(n[0], n[1]); if (Math.abs(v - b.echo) > 1e-5) steady = false; b.echo = v; }
+      }
+    }
+    freeStep(P.TR - t, T1, T2);
+    if (steady && c > 0) break;
+  }
+  R.t = 0; R.ei = 0; R.trace.length = 0; R.cycles = 1; R.nut = null; clearTrail();
+}
+let seqSig = '';
 /* 事件のあいだの「時間の進み方」。パルスの前後はゆっくり、
    ただ待っているだけの区間は速く進めて、TRが長くても退屈しないようにする */
 function rateAt(t) {
@@ -1032,6 +1057,7 @@ function advance(wall) {
     }
     if (R.ei < R.evs.length && R.t >= R.evs[R.ei].t - 1e-6) {
       fire(R.evs[R.ei]); R.ei++;
+      if (R.holdEcho) { R.holdEcho = false; P.paused = true; echoNote(); return; }
       if (R.nut) return;
     }
     if (R.t >= P.TR - 1e-6) {                     // 次の繰り返しへ
@@ -1063,7 +1089,9 @@ function fire(e) {
   if (e.k === 'crush') { crush(); R.phase = 'クラッシャー：残った横磁化を消す'; return; }
   if (e.k === 'echo') {
     const m = netM(); R.echoPeak = Math.hypot(m[0], m[1]);
-    for (const b of BANKS) { const n = bankM(b); b.echo = Math.hypot(n[0], n[1]); }
+    let steady = true;
+    for (const b of BANKS) { const n = bankM(b), v = Math.hypot(n[0], n[1]); if (Math.abs(v - b.echo) > 0.002 + 0.005 * v) steady = false; b.echo = v; }
+    if (P.echoStop && steady && R.cycles >= 1) R.holdEcho = true;   // エコーで自動停止：値が前の TR と変わらなくなった（定常状態）エコーで止める
     if (P.seq === 'GRE' && P.spoil === false) { drawImage(); updateTis(); }
     echoFlash = 0.55;
     R.phase = 'エコー：ここで信号を読む'; return;
@@ -1674,7 +1702,8 @@ function updateScene(dt) {
       const n = bankM(BANKS[BANK_IDS.indexOf(t.id)]);
       t.hold.rotation.z = spinGrp.rotation.z;
       t.a.grp.visible = far;
-      if (far) setArrow(t.a, n[0], n[1], n[2], TA_LEN);
+      const pd = TIS[TIX[t.id]].PD;   // 熱平衡の磁化はプロトン密度に比例するので、脳全体の磁化ベクトルはプロトン密度をかけた長さにする
+      if (far) setArrow(t.a, n[0] * pd, n[1] * pd, n[2] * pd, TA_LEN);
       if (far && echoFlash > 0) t.a.mat.emissive.setRGB(0.3 + echoFlash, 0.45, 0.45); else t.a.mat.emissive.copy(new THREE.Color(TIS[TIX[t.id]].col)).multiplyScalar(0.2);
     }
     if (++sliceN % 2 === 0) drawSlice();
@@ -1711,7 +1740,7 @@ function updateScene(dt) {
   for (const t of tisArr) {
     const n = bankM(BANKS[BANK_IDS.indexOf(t.id)]), w = t.hold.position;
     place('ta_' + t.id, w.x + headGrp.position.x, w.y + headGrp.position.y, w.z + headGrp.position.z - 1.6,
-      TIS[TIX[t.id]].nm.replace(/（.*）/, '') + ' ' + Math.hypot(n[0], n[1]).toFixed(2), P.showLab && far && t.hold.visible);
+      TIS[TIX[t.id]].nm.replace(/（.*）/, '') + ' ' + (Math.hypot(n[0], n[1]) * TIS[TIX[t.id]].PD).toFixed(2), P.showLab && far && t.hold.visible);
   }
   const sb = pixScene(IW / 2, IH * 1.06).add(headGrp.position);
   place('slice', sb.x, sb.y, sb.z, echoFlash > 0 ? 'エコー：この瞬間の断面の明るさが画像になる' : '断面の明るさ＝その組織の横磁化',
@@ -2324,6 +2353,9 @@ function refresh(keep) {
   clampTimes();
   rebuildSeq(keep === undefined ? true : keep);
   setInhomo(P.T2p);
+  const cu = TIS[TIX.cus];
+  const sig = [P.seq, P.TR, P.TE, P.TI, P.FA, P.B0, P.T2p, P.spoil, P.tissue, cu.T1, cu.T2, P.manual].join('|');
+  if (sig !== seqSig) { seqSig = sig; warmup(); }   // 撮像条件が変わったら定常状態から始める
   $('hudTis').textContent = TIS[TIX[P.tissue]].nm;
   $('imgSeq').textContent = weightName();
   $('imgPar').textContent = parText();
@@ -2359,8 +2391,8 @@ function applySet(s, hard) {
   if (!s) return;
   for (const k in s) P[k] = s[k];
   if (s.nDisp) buildSpins(s.nDisp);
+  if (hard) { equilibrium(); clearTrail(); seqSig = ''; }
   refresh(!hard);
-  if (hard) { equilibrium(); clearTrail(); }
 }
 
 /* ================= タブ ================= */
@@ -2506,9 +2538,16 @@ function setScale(brain) {
 chk('tBody', 'showBody', () => setScale(P.showBody));
 $('scaleSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setScale(b.dataset.sc === 'brain'); });
 chk('tComp', 'showComp'); chk('tTrail', 'showTrail', clearTrail); chk('tLab', 'showLab');
-chk('tSlow', 'slowPulse'); chk('tNoise', 'noise'); chk('tSpoil', 'spoil', () => refresh());
+chk('tEcho', 'echoStop'); chk('tSlow', 'slowPulse'); chk('tNoise', 'noise'); chk('tSpoil', 'spoil', () => refresh());
 $('bHome').addEventListener('click', homeCam);
 $('bPause').addEventListener('click', () => { P.paused = !P.paused; P.stopAt = null; refresh(); });
+/* エコーで自動停止したときの案内 */
+function echoNote() {
+  $('bPause').textContent = '再生'; $('bPause').setAttribute('aria-pressed', true);
+  const m = netM();
+  const t = TIS[TIX[P.tissue]];
+  R.phase = 'エコー（t = ' + Math.round(R.t) + ' ms）で止めた：この瞬間の横磁化 × プロトン密度が画像の明るさ。' + t.nm + ' ' + (Math.hypot(m[0], m[1]) * t.PD).toFixed(3) + '（再生で次のエコーへ）';
+}
 /* 指定した時刻で止める：押した周期は条件を変える前のパルスで始まっていることがあるので、次の周期のその時刻で止める */
 function stopNote() {
   $('bPause').textContent = '再生'; $('bPause').setAttribute('aria-pressed', true);
