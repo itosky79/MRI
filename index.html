@@ -151,6 +151,9 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 }
 .lab.axis{color:var(--dim); background:none; border:none; font-family:var(--mono); font-size:9.5px; letter-spacing:.14em}
 .lab.m{color:var(--selT); border-color:var(--labMline); background:var(--labMbg)}
+.lab i{font-style:normal; font-size:9.5px; color:var(--muted); margin-right:5px}
+.lab b{font-weight:700; font-size:12px; letter-spacing:.02em}
+.key[hidden]{display:none}
 .lab.rf{color:var(--rfText2); border-color:var(--rfLine); background:var(--rfLabBg)}
 
 /* ---------- 画像パネル ---------- */
@@ -578,10 +581,10 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
       </div>
 
       <p class="key" id="key3d">
-        <span><i style="background:linear-gradient(90deg,var(--grass),var(--amber),var(--violet))"></i>細い矢印＝スピン1本ずつ（色＝位相）</span>
-        <span><i style="background:var(--sig)"></i>太い矢印＝合計の磁化 M</span>
-        <span><i style="background:var(--grass)"></i>Mz（縦・信号にならない）</span>
-        <span><i style="background:var(--alert)"></i>Mxy（横・これが信号）</span>
+        <span><i style="background:linear-gradient(90deg,var(--grass),var(--amber),var(--violet))"></i>細い矢印＝スピン（色＝位相）</span>
+        <span><i style="background:var(--sig)"></i>太い矢印＝合計 M</span>
+        <span><i style="background:var(--grass)"></i>Mz（縦）</span>
+        <span><i style="background:var(--alert)"></i><b>Mxy（横）＝信号</b></span>
       </p>
 
       <div class="playbar">
@@ -1746,7 +1749,7 @@ function place(key, x, y, z, txt, on) {
   _p.set(x, y, z).project(camera);
   if (_p.z > 1) { el.style.display = 'none'; return; }
   el.style.display = '';
-  el.textContent = txt;
+  if (txt.indexOf('<') >= 0) el.innerHTML = txt; else el.textContent = txt;
   el.style.transform = 'translate(-50%,-50%) translate(' +
     ((_p.x * .5 + .5) * stage.clientWidth).toFixed(1) + 'px,' +
     ((-_p.y * .5 + .5) * stage.clientHeight).toFixed(1) + 'px)';
@@ -1832,6 +1835,7 @@ function updateScene(dt) {
     if (++sliceN % 2 === 0) drawSlice();
   }
   spinGrp.visible = !far;
+  $('key3d').hidden = far;      // 脳全体では細い矢印を出していないので凡例もしまう
   axGrp.visible = !P.showBody || ctrl.dist < 45;
   planeXY.visible = !P.showBody && showSpin;
 
@@ -1863,10 +1867,11 @@ function updateScene(dt) {
   for (const t of tisArr) {
     const n = bankM(BANKS[BANK_IDS.indexOf(t.id)]), w = t.hold.position;
     place('ta_' + t.id, w.x + headGrp.position.x, w.y + headGrp.position.y, w.z + headGrp.position.z - 1.6,
-      TIS[TIX[t.id]].nm.replace(/（.*）/, '') + ' ' + (Math.hypot(n[0], n[1]) * TIS[TIX[t.id]].PD).toFixed(2), P.showLab && far && t.hold.visible);
+      '<i>' + TIS[TIX[t.id]].nm.replace(/（.*）/, '') + '</i><b>' +
+      (Math.hypot(n[0], n[1]) * TIS[TIX[t.id]].PD).toFixed(2) + '</b>', P.showLab && far && t.hold.visible);
   }
   const sb = pixScene(IW / 2, IH * 1.06).add(headGrp.position);
-  place('slice', sb.x, sb.y, sb.z, echoFlash > 0 ? 'エコー：この瞬間の断面の明るさが画像になる' : '断面の明るさ＝その組織の横磁化',
+  place('slice', sb.x, sb.y, sb.z, echoFlash > 0 ? 'エコー＝この明るさが画像になる' : '明るさ＝横磁化',
     P.showLab && far);
 }
 
@@ -2033,7 +2038,7 @@ function drawSeq() {
   dim(0, P.TR, h * 0.045, 'TR ' + Math.round(P.TR));
   cx.textAlign = 'right';
   if (P.manual) { cx.fillStyle = C.rf; cx.fillText('手動：パルスは自分で撃ちます', Rr, h * 0.115); }
-  else if (brk) { cx.fillStyle = C.dim; cx.fillText('// より右は時間の目盛が変わります', Rr, h * 0.115); }
+  else if (brk) { cx.fillStyle = C.dim; cx.fillText('// 以降は目盛が変わる', Rr, h * 0.115); }
   /* いまの時刻 */
   const xc = X(R.t);
   cx.strokeStyle = C.alert; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xc, h * 0.08); cx.lineTo(xc, h * 0.88); cx.stroke();
@@ -2184,11 +2189,8 @@ function drawRel() {
   cx.textAlign = 'left';
   cx.fillText(isIR ? '180° パルスからの時間 →' : '90° パルスからの時間 →', L + 2, top.y1 + 9);
   cx.fillText('90° パルスからの時間 →', L + 2, bot.y1 + 9);
-  $('relNote').innerHTML = (isIR
-    ? '<b>①</b> 縦軸＝縦磁化 Mz（+1 がもとの大きさ、−1 が 180° パルスで反転した直後）。点＝TI の瞬間の各組織の Mz。この Mz が 90° パルスで倒されて横磁化になるので、0 に近い組織ほど信号が小さい。'
-    : '<b>①</b> 縦軸＝縦磁化 Mz（+1 がもとの大きさ）。点＝TR の時点の各組織の Mz。次の 90° パルスで倒されて横磁化になる。')
-    + '<br><b>②</b> 縦軸＝横磁化 Mxy。点＝TE の瞬間の各組織の Mxy（これが信号）。線の色と組織：'
-    + CURVE.map(id => { const t = TIS[TIX[id]]; return '<span style="color:' + tcol(t) + '">━ ' + t.nm + '</span>'; }).join('　');
+  $('relNote').innerHTML = (isIR ? '<b>①</b>の点（TI）で倒せる縦磁化が決まり、' : '<b>①</b>の点（TR）で次に倒せる縦磁化が決まり、')
+    + '<b>②</b>の点（TE）の高さが<b>画像の明るさ</b>になる。';
 }
 
 /* ================= 学習ステップ ================= */
@@ -2279,28 +2281,28 @@ const STEPS = [
 const PRE = [
 { k:'t1',  nm:'T1強調 SE',   ruby:'T1W SE',  s:{ seq:'SE', TR:500, TE:15 },
   lede:'短い TR で T1 の差を出し、短い TE で T2 の差を消す → 脂肪が白・水が黒',
-  note:`脂肪が白く、水（CSF）が黒い。解剖の形を見るのに向いています。<b>右のグラフ①</b>で、TR の線のところに組織の差が大きく開いているのを確かめてください。` },
+  note:`脂肪が白く、水（CSF）が黒い。解剖の形を見るのに向く。` },
 { k:'t2',  nm:'T2強調 SE',   ruby:'T2W SE',  s:{ seq:'SE', TR:4000, TE:100 },
   lede:'長い TR で T1 の差を消し、長い TE で T2 の差を出す → 水と病変が白',
-  note:`水が白いのが目印。浮腫をともなう病変が白く光るので、病変さがしの基本になります。<b>グラフ②</b>で、TE の線のところに差が開きます。` },
+  note:`水が白い。浮腫をともなう病変が白く光るので、病変さがしの基本。` },
 { k:'pd',  nm:'プロトン密度', ruby:'PD SE',   s:{ seq:'SE', TR:2500, TE:15 },
   lede:'長い TR・短い TE で T1 も T2 も効かせない → 水素の量そのもの',
-  note:`全体にのっぺりと明るく、灰白質が白質よりわずかに明るくなります。グラフ①でも②でも、線がほとんど重なっているのが分かります。` },
+  note:`のっぺりと明るく、灰白質が白質よりわずかに明るい。` },
 { k:'t2s', nm:'T2*強調 GRE', ruby:'GRE',     s:{ seq:'GRE', TR:500, TE:25, FA:20 },
   lede:'180° を使わないので T2 ではなく T2* で減る → 出血や石灰化が黒く抜ける',
-  note:`傾斜磁場の反転でエコーを作るため、磁場のムラによる位相のずれが戻りません。「詳細」タブの<b>静磁場のムラ</b>を動かすと、画像が大きく変わります。` },
+  note:`磁場のムラによる位相のずれが戻らない。「詳細」の<b>静磁場のムラ</b>で大きく変わる。` },
 { k:'t1g', nm:'T1強調 GRE',  ruby:'GRE',     s:{ seq:'GRE', TR:150, TE:4, FA:70 },
   lede:'TR がとても短くても、大きく倒せば T1 の差が出る',
-  note:`息止めで撮る腹部などに使います。α（どれだけ倒すか）を動かすと信号の大きさが変わります。` },
+  note:`息止めで撮る腹部など。α を変えると信号の大きさが変わる。` },
 { k:'stir',nm:'STIR（脂肪抑制）', ruby:'IR', s:{ seq:'IR', TR:4000, TE:60, TI:180 },
   lede:'TI ≒ 0.69 × T1（脂肪）→ 脂肪の T1 に合わせて黒くする',
-  note:`脂肪が黒くなり、脂肪に埋もれていた病変が見えるようになります。グラフ①で、脂肪の線がちょうど 0 を横切るところに TI があります。消えるかどうかは T1 だけで決まるので、脂肪と同じくらい T1 の短い組織も一緒に黒くなります。` },
+  note:`脂肪が黒くなる。消えるかは T1 だけで決まるので、T1 の近い組織も一緒に黒くなる。` },
 { k:'flair',nm:'FLAIR（水抑制）', ruby:'IR', s:{ seq:'IR', TR:9000, TE:100, TI:2400 },
   lede:'TI ≒ 0.69 × T1（水）→ 脳室の水を黒くして、そのふちの病変を見せる',
-  note:`脳室の水が黒くなり、そのすぐ脇の白質病変が見やすくなります。T2強調では水と病変がどちらも白くて紛れるところを、分けられます。` },
+  note:`脳室の水が黒くなり、そのすぐ脇の白質病変が見える。T2強調では水と紛れるところ。` },
 { k:'t2h',  nm:'強いT2強調', ruby:'HEAVY T2', s:{ seq:'SE', TR:6000, TE:200 },
   lede:'TE をさらに伸ばす → T2 の長い水以外はほとんど消える',
-  note:`MRCP や内耳の撮影の考え方です。信号そのものは小さくなるので、実際にはノイズとの兼ね合いになります。` }
+  note:`MRCP や内耳の考え方。信号は小さくなるのでノイズとの兼ね合いになる。` }
 ];
 
 /* ================= 練習問題 =================
@@ -2715,13 +2717,14 @@ function echoNote() {
   $('bPause').textContent = '再生'; $('bPause').setAttribute('aria-pressed', true);
   const m = netM();
   const t = TIS[TIX[P.tissue]];
-  R.phase = 'エコー（t = ' + Math.round(R.t) + ' ms）で止めた：この瞬間の横磁化 × プロトン密度が画像の明るさ。' + t.nm + ' ' + (Math.hypot(m[0], m[1]) * t.PD).toFixed(3) + '（再生で次のエコーへ）';
+  R.phase = 'エコー（TE = ' + Math.round(R.t) + ' ms）で停止。いまの横磁化が画像の明るさ：'
+    + t.nm.replace(/（.*）/, '') + ' ' + (Math.hypot(m[0], m[1]) * t.PD).toFixed(3);
 }
 /* 指定した時刻で止める：押した周期は条件を変える前のパルスで始まっていることがあるので、次の周期のその時刻で止める */
 function stopNote() {
   $('bPause').textContent = '再生'; $('bPause').setAttribute('aria-pressed', true);
   const m = netM();
-  R.phase = 't = ' + Math.round(R.t) + ' ms で止めた：縦 Mz ' + m[2].toFixed(3) + '、横 Mxy ' + Math.hypot(m[0], m[1]).toFixed(3) + '（M0 = 1）';
+  R.phase = 't = ' + Math.round(R.t) + ' ms で停止';
 }
 $('bStop').addEventListener('click', () => {
   const t = +$('nStop').value; if (!(t >= 0) || t > P.TR) { $('nStop').value = Math.min(P.TR, Math.max(0, t || 0)); return; }

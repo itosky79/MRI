@@ -37,7 +37,7 @@ keep = cc == 1 + int(np.argmin(score))
 keep = ndi.binary_dilation(keep, iterations=3, mask=csf)
 vent = down(keep)
 
-def mesh(vol, sigma, target):
+def mesh(vol, sigma, target, trim=False):
     vol = ndi.gaussian_filter(np.pad(vol, 2), sigma)
     verts, faces, _, _ = measure.marching_cubes(vol, 0.5)
     verts -= 2
@@ -49,11 +49,25 @@ def mesh(vol, sigma, target):
     zt = 0.5 * (F * k + (F - 1) / 2) - 72.25
     p = np.stack([-xt / U, (yt + 18) / U, (zt - 20) / U], 1)
     faces = faces[:, [0, 2, 1]]                                       # x の反転で裏返った面の向きを戻す
+    if trim: p, faces = trim_scalp(p, faces)
     q = np.round(p * 500).astype(np.int16)
     return {'p': base64.b64encode(q.tobytes()).decode(), 'i': base64.b64encode(faces.astype(np.uint16 if len(p) < 65536 else np.uint32).tobytes()).decode(),
             'n32': bool(len(p) >= 65536), 'nv': int(len(p)), 'nf': int(len(faces))}
 
-out = {'head': mesh(head, 1.2, 9000), 'brain': mesh(brain, 0.9, 30000), 'vent': mesh(vent, 0.8, 4000)}
+def trim_scalp(p, faces, z0=11.0, r0=14.5, h=5.0):
+    """頭皮の面から、頭の丸みより外にあるものを落とす。
+    Colin 27 の組織分類は頭頂より上にも非ゼロの画素を持っていて、そのままだと
+    頭の上に板のようなものが浮いて見える。z0 より上は、z0 での半径 r0 から
+    閉じていく楕円の帽子の中だけを残す。"""
+    z = p[:, 2]
+    rad = np.hypot(p[:, 0], p[:, 1])
+    lim = np.where(z <= z0, np.inf, r0 * np.sqrt(np.clip(1 - ((z - z0) / h) ** 2, 0, None)))
+    ok = rad <= lim
+    faces = faces[ok[faces].all(1)]
+    used, faces = np.unique(faces, return_inverse=True)
+    return p[used], faces.reshape(-1, 3)
+
+out = {'head': mesh(head, 1.2, 9000, trim=True), 'brain': mesh(brain, 0.9, 30000), 'vent': mesh(vent, 0.8, 4000)}
 for k, m in out.items(): print(k, m['nv'], m['nf'])
 with open(sys.argv[2], 'w') as f:
     f.write('/* Colin 27 Average Brain, high-resolution version 2008 の組織分類から作った頭皮・脳・脳室の面（tools/colin27_mesh.py）。\n'
