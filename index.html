@@ -53,7 +53,7 @@ try {
   --knob1:#9FB4C4; --knob2:#5E7386; --knobLine:#3C5265; --knobSolid:#8FA5B6;
   --swLine:rgba(255,255,255,.22);
   --shadow:rgba(0,0,0,.6); --shadow2:rgba(0,0,0,.72); --shadow3:rgba(0,0,0,.75); --shadow4:rgba(0,0,0,.95);
-  --modal:rgba(4,7,10,.82); --modal2:rgba(4,7,10,.93); --glerr:rgba(10,15,20,.95);
+  --modal:rgba(4,7,10,.82); --modal2:rgba(4,7,10,.93); --glerr:rgba(10,15,20,.95); --tutMask:rgba(4,7,10,.72);
   --mincho:"Zen Maru Gothic",'Hiragino Maru Gothic ProN','Yu Gothic',system-ui,sans-serif;
   --gothic:"Zen Kaku Gothic New",'Hiragino Sans','Yu Gothic',system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,'SFMono-Regular',monospace;
@@ -83,7 +83,7 @@ html[data-theme="light"]{
   --knob1:#FFFFFF; --knob2:#B9C8D2; --knobLine:#8CA2B0; --knobSolid:#C3D2DB;
   --swLine:rgba(0,0,0,.38);
   --shadow:rgba(40,60,75,.18); --shadow2:rgba(40,60,75,.22); --shadow3:rgba(40,60,75,.25); --shadow4:rgba(40,60,75,.3);
-  --modal:rgba(225,233,239,.86); --modal2:rgba(232,238,243,.95); --glerr:rgba(243,246,249,.96);
+  --modal:rgba(225,233,239,.86); --modal2:rgba(232,238,243,.95); --glerr:rgba(243,246,249,.96); --tutMask:rgba(18,34,46,.52);
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%; -webkit-tap-highlight-color:transparent}
@@ -443,6 +443,42 @@ details.fold summary::before{content:"+ "; color:var(--teal)}
 details.fold[open] summary::before{content:"− "}
 details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1.8}
 
+/* ---------- 画面の番号 ---------- */
+.pan h2 em{font-style:normal; color:var(--teal); margin-right:4px}
+.stno{flex:none; font-size:13px; color:var(--teal); line-height:1; padding:0 2px 0 0; pointer-events:none}
+
+/* ---------- はじめてのチュートリアル ---------- */
+#tut{position:fixed; inset:0; z-index:70; pointer-events:none}
+#tut[hidden]{display:none}
+#tutHole{
+  position:absolute; left:50%; top:50%; width:0; height:0; border-radius:7px;
+  box-shadow:0 0 0 9999px var(--tutMask); pointer-events:none;
+  transition:left .32s cubic-bezier(.4,0,.2,1), top .32s cubic-bezier(.4,0,.2,1),
+             width .32s cubic-bezier(.4,0,.2,1), height .32s cubic-bezier(.4,0,.2,1);
+}
+#tutHole.ring{outline:2px solid var(--teal); outline-offset:1px}
+#tutHole.tap{animation:tutTap 1.3s ease-in-out infinite}
+@keyframes tutTap{0%,100%{outline-color:var(--teal)} 50%{outline-color:var(--amber)}}
+#tutCard{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(340px,calc(100vw - 28px)); pointer-events:auto;
+  background:var(--panel); border:1px solid var(--line2); border-radius:6px;
+  padding:14px 16px 12px; box-shadow:0 18px 50px var(--shadow3);
+  transition:left .32s cubic-bezier(.4,0,.2,1), top .32s cubic-bezier(.4,0,.2,1);
+}
+#tutCard.anchored{transform:none}
+.tstep{margin:0 0 5px; font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; color:var(--dim)}
+.ttext{margin:0 0 12px; font-size:13px; line-height:1.8; color:var(--text)}
+.ttext b{color:var(--selT); font-weight:700}
+.ttext .big{display:block; font-family:var(--mincho); font-size:15px; font-weight:700; color:var(--head); margin-bottom:6px}
+.tnav{display:flex; gap:8px; align-items:center}
+#tutSkip{flex:none; padding:7px 12px; background:transparent; border:1px solid var(--line); border-radius:3px;
+  color:var(--dim); font-family:var(--gothic); font-size:11.5px; cursor:pointer}
+#tutSkip:hover{color:var(--text); border-color:var(--line2)}
+#tutNext{flex:1; padding:8px; background:var(--sel); border:1px solid var(--teal); border-radius:3px;
+  color:var(--selT); font-family:var(--gothic); font-size:12.5px; cursor:pointer}
+#tutNext:hover{background:var(--hoverBg)}
+
 /* ---------- ガイド・ライトボックス ---------- */
 #guide{position:fixed; inset:0; z-index:60; background:var(--modal); display:none;
   align-items:center; justify-content:center; padding:20px}
@@ -537,9 +573,9 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 <body>
 <div class="wrap">
 <header>
-  <h1>MRI スピン3Dシミュレーター<small>T1 / T2 CONTRAST — SPIN VIEWER</small></h1>
+  <h1>MRI スピン3Dシミュレーター<small>TR と TE を変えると、体の中で何が起きて、どんな画像になるか</small></h1>
   <button class="hbtn" id="bTheme" type="button" aria-label="配色を切り替える">ライト</button>
-  <button class="hbtn" id="bGuide" type="button">使い方</button>
+  <button class="hbtn" id="bGuide" type="button">使い方をもう一度</button>
 </header>
 
 <div class="work">
@@ -556,6 +592,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 
       <div class="bar">
         <div class="barL">
+          <span class="stno">①</span>
           <div class="seg" id="viewSeg">
             <button type="button" data-v="0">3Dだけ</button>
             <button type="button" data-v="1" aria-pressed="true">3D + 画像</button>
@@ -595,12 +632,12 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
     </div>
 
     <div class="panels">
-      <div class="pan">
-        <div class="ph2"><h2>パルスシーケンス</h2><span class="hint">いつ、どんな力をかけているか</span></div>
+      <div class="pan" id="panSeq">
+        <div class="ph2"><h2><em>②</em>パルスシーケンス</h2><span class="hint">いつ、どんな力をかけているか</span></div>
         <div class="cvwrap"><canvas id="seqCv"></canvas></div>
       </div>
-      <div class="pan">
-        <div class="ph2"><h2>緩和曲線とコントラスト</h2><span class="hint">組織の差がどこで開くか</span></div>
+      <div class="pan" id="panRel">
+        <div class="ph2"><h2><em>③</em>緩和曲線とコントラスト</h2><span class="hint">組織の差がどこで開くか</span></div>
         <div class="cvwrap"><canvas id="relCv"></canvas></div>
         <p class="tiny relnote" id="relNote"></p>
       </div>
@@ -816,11 +853,17 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
   <div class="strip" id="strip"><p class="empty">「撮影」を押すと、そのときの条件で撮った画像がここに並びます。<br>T1強調・T2強調・プロトン密度と続けて撮ると、同じ断面の見え方の違いを並べて比べられます。</p></div>
 </div>
 
-<div id="guide"><div class="gcard">
-  <p class="ghead"><b>このシミュレーターの見方</b></p>
-  <p class="gtip" id="gTip"></p>
-  <button type="button" id="gClose">はじめる</button>
-</div></div>
+<div id="tut" hidden>
+  <div id="tutHole"></div>
+  <div id="tutCard">
+    <p class="tstep" id="tutStep"></p>
+    <p class="ttext" id="tutText"></p>
+    <div class="tnav">
+      <button type="button" id="tutSkip">スキップ</button>
+      <button type="button" id="tutNext">次へ</button>
+    </div>
+  </div>
+</div>
 
 <div id="lightbox">
   <img id="lbImg" alt="拡大表示した画像">
@@ -2526,10 +2569,9 @@ function applySet(s, hard) {
 
 /* ================= タブ ================= */
 let mode = 0;
-$('modeTabs').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  mode = +b.dataset.m;
-  [...$('modeTabs').children].forEach(x => x.setAttribute('aria-pressed', x === b));
+function setMode(m) {
+  mode = m;
+  [...$('modeTabs').children].forEach(x => x.setAttribute('aria-pressed', +x.dataset.m === m));
   for (let i = 0; i < 4; i++) $('pane' + i).hidden = i !== mode;
   document.body.classList.toggle('quiz', mode === 3);
   if (mode !== 1) {            // 学習モード用の特別な表示（量子描像・手動）は持ち越さない
@@ -2539,6 +2581,10 @@ $('modeTabs').addEventListener('click', e => {
   if (mode === 1) gotoStep(stepI);
   if (mode === 3) showQ();
   requestAnimationFrame(resize);
+}
+$('modeTabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  setMode(+b.dataset.m);
 });
 
 /* ================= 学習 ================= */
@@ -2879,33 +2925,118 @@ railbar.addEventListener('pointermove', e => {
 railbar.addEventListener('pointerup', () => { if (rdrag) { rdrag = null; saveRail(); } });
 addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    if (!$('tut').hidden) { tutEnd(); return; }             // チュートリアル中は Esc で抜ける
     if ($('lightbox').classList.contains('on')) { $('lightbox').classList.remove('on'); return; }
     if (rst.det) { rst.det = false; applyRail(); saveRail(); requestAnimationFrame(resize); }
-    $('guide').classList.remove('on');
   }
 });
 
-/* ================= はじめての案内 ================= */
-const GKEY = 'mri-guide-v1';
+/* ================= はじめてのチュートリアル =================
+   読ませるより押させる。6手で「T1強調 → T2強調 で白黒が入れ替わる」まで連れていく。
+   スポットライトは穴の空いた影（box-shadow の広がり）で作る。
+   当たり判定は持たせないので、光っているボタンはそのまま押せる。 */
+const GKEY = 'mri-tutorial-v1';
 const coarse = matchMedia('(pointer:coarse)').matches || innerWidth <= 900;
-$('gTip').innerHTML =
-  '画面は3つで1組です。<br>' +
-  '<b>① 3D</b>　体の中のプロトンが、いまどうなっているか<br>' +
-  '<b>② パルスシーケンス</b>　いつ、どんな力をかけているか<br>' +
-  '<b>③ 緩和曲線</b>　その結果、組織の差がどこで開くか<br><br>' +
-  'まず右の<b>「シーケンス」</b>で「T1強調」と「T2強調」を押し比べてみてください。3つとも同時に変わります。<br><br>' +
-  (coarse
-    ? '3Dは<b>1本指でドラッグ</b>で回転、<b>2本指</b>で拡大縮小、<b>ダブルタップ</b>で元に戻ります。'
-    : '3Dは<b>ドラッグ</b>で回転、<b>ホイール</b>で拡大縮小、<b>ダブルクリック</b>で元に戻ります。');
-$('bGuide').addEventListener('click', () => $('guide').classList.add('on'));
-$('gClose').addEventListener('click', () => {
-  $('guide').classList.remove('on');
+const tap = coarse ? 'タップ' : 'クリック';
+const TUT = [
+  { text:'<span class="big">30秒でさわってみます</span>TR と TE を変えると、体の中のスピンがどう動き、' +
+         'どんな画像になるか。実際に押しながら見ていきます。', next:'さわってみる' },
+  { sel:'#preGrid button[data-k="t1"]', wait:true, scroll:'#rail',
+    text:'まず<b>撮り方</b>をえらびます。<b>「T1強調 SE」</b>を' + tap + 'してみてください。' },
+  { sel:'#imgbox',
+    text:'これが <b>T1強調</b>。<b>脂肪が白く、水（脳室）が黒い</b>。解剖の形を見るのに使います。' },
+  { sel:'#preGrid button[data-k="t2"]', wait:true, scroll:'#rail',
+    text:'同じ断面のまま、<b>TR と TE を変えるだけ</b>。<b>「T2強調 SE」</b>を' + tap + 'してみてください。' },
+  { sel:'#imgbox',
+    text:'<b>白黒が入れ替わりました。</b>水が白い。<br>なぜ変わったのか — が下の2つの図です。' },
+  { sel:'#panRel', scroll:'#panRel',
+    text:'<b>③ 緩和曲線。</b>②で決めた <b>TE</b> の線のところで、組織の差がいちばん開きます。' +
+         '<b>この差がそのまま画像の明暗</b>になります。' },
+  { sel:'#stage', scroll:'#stage',
+    text:'<b>① 3D。</b>その差が、体の中で何が起きた結果か。<b>矢印の長さが、その組織のいまの信号</b>です。' },
+  { text:'<span class="big">これだけです</span>あとは右の <b>TR・TE のつまみ</b>を動かすだけ。' +
+         '順を追って学ぶなら<b>「学習」</b>タブへ。この案内は題字の横の<b>「使い方をもう一度」</b>から呼べます。',
+    next:'はじめる' }
+];
+let tutI = -1, tutWaiting = null;
+const tutEl = $('tut'), tutHole = $('tutHole'), tutCard = $('tutCard');
+
+function tutPlace(el) {
+  if (!el) {                                   // 対象なしのカードは真ん中に
+    tutHole.style.width = tutHole.style.height = '0px';
+    tutHole.style.left = '50%'; tutHole.style.top = '50%';
+    tutHole.className = '';
+    tutCard.className = '';
+    tutCard.style.left = '50%'; tutCard.style.top = '50%';
+    return;
+  }
+  const r = el.getBoundingClientRect(), pad = 6;
+  tutHole.style.left = (r.left - pad) + 'px';
+  tutHole.style.top = (r.top - pad) + 'px';
+  tutHole.style.width = (r.width + pad * 2) + 'px';
+  tutHole.style.height = (r.height + pad * 2) + 'px';
+  tutHole.className = TUT[tutI].wait ? 'ring tap' : 'ring';
+  /* カードは対象の反対側に置く。光らせたものをカードで隠しては意味がない */
+  tutCard.className = 'anchored';
+  const cw = tutCard.offsetWidth || 340, ch = tutCard.offsetHeight || 150;
+  const below = r.bottom + 14, above = r.top - ch - 14;
+  const fitsBelow = below + ch <= innerHeight - 10, fitsAbove = above >= 10;
+  let y;
+  if (fitsBelow && fitsAbove) y = r.top + r.height / 2 > innerHeight * 0.55 ? above : below;
+  else if (fitsBelow) y = below;
+  else if (fitsAbove) y = above;
+  else y = Math.max(10, Math.min(innerHeight - ch - 10, below));
+  const x = r.left + r.width / 2 - cw / 2;
+  tutCard.style.left = Math.max(10, Math.min(innerWidth - cw - 10, x)) + 'px';
+  tutCard.style.top = y + 'px';
+}
+function tutShow() {
+  const st = TUT[tutI];
+  tutEl.hidden = false;
+  $('tutStep').textContent = tutI === 0 ? 'はじめに'
+    : tutI === TUT.length - 1 ? 'おしまい' : tutI + ' / ' + (TUT.length - 2);
+  $('tutText').innerHTML = st.text;
+  $('tutNext').textContent = st.next || (st.wait ? '押さずに次へ' : '次へ');
+  const el = st.sel ? document.querySelector(st.sel) : null;
+  /* 先に対象を画面の真ん中へ運んでから測る。なめらかスクロールだと
+     測り終える前に位置が変わるので、ここでは一息に動かす */
+  if (el) el.scrollIntoView({ block:'center', inline:'nearest', behavior:'auto' });
+  tutPlace(el);
+  requestAnimationFrame(() => tutPlace(el));
+  setTimeout(() => tutPlace(el), 160);
+  if (tutWaiting) { tutWaiting.el.removeEventListener('click', tutWaiting.fn); tutWaiting = null; }
+  if (st.wait && el) {
+    const fn = () => setTimeout(tutNext, 420);   // 押した結果が画面に出てから進む
+    el.addEventListener('click', fn, { once:true });
+    tutWaiting = { el:el, fn:fn };
+  }
+}
+function tutNext() { tutI++; if (tutI >= TUT.length) tutEnd(); else tutShow(); }
+function tutEnd() {
+  if (tutWaiting) { tutWaiting.el.removeEventListener('click', tutWaiting.fn); tutWaiting = null; }
+  tutI = -1; tutEl.hidden = true;
   try { localStorage.setItem(GKEY, '1'); } catch (e) { }
-});
+}
+function tutStart() {
+  /* どこから呼ばれても同じ所から始められるように、画面をそろえる */
+  setMode(0);
+  applySet(Object.assign({ manual:false, quantum:false, view:1, showBody:true }, PRE[0].s), true);
+  tutI = 0; tutShow();
+}
+function tutSync() {
+  if (tutI < 0) return;
+  const st = TUT[tutI];
+  tutPlace(st.sel ? document.querySelector(st.sel) : null);
+}
+$('tutNext').addEventListener('click', tutNext);
+$('tutSkip').addEventListener('click', tutEnd);
+$('bGuide').addEventListener('click', tutStart);
+addEventListener('resize', tutSync);
+addEventListener('scroll', tutSync, true);       // 中の枠をスクロールしても追いかける
 {
   let seen = false;
   try { seen = localStorage.getItem(GKEY) === '1'; } catch (e) { }
-  if (!seen) $('guide').classList.add('on');
+  if (!seen) setTimeout(tutStart, 600);        // 3D が出てから始める
 }
 
 /* ================= 大きさ・ループ ================= */
