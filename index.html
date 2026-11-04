@@ -1407,7 +1407,7 @@ const GLT = {
     plane:0x123240, planeOp:0.30, m:0x52B8CE, mz:0x7ED9A7, mxy:0xE0645C, comp:0x5b7387,
     rf:0xF0B24B, conePar:0x8FC8D8, coneAnti:0xB07A7A,
     skull:0xC9B6A8, skullOp:0.06, brain:0xE2CDD4, brainOp:0.17, vent:0x4F9CCB, ventOp:0.6,
-    skin:0x9FB4C4, skinOp:0.10, nose:0xFFA94D, edge:0x3E8FA3, vox:0xF0B24B, voxOp:0.10,
+    skin:0x9FB4C4, skinOp:0.10, edge:0x3E8FA3, vox:0xF0B24B, voxOp:0.10,
     amb:0.62, dir:0.72, dir2:0.30, emis:0.20, spinL:0.58, spinE:0.12,
     mE:[0.06, 0.14, 0.17], trail:[0.18, 0.45, 0.55, 0.30, 0.40, 0.35]
   },
@@ -1416,7 +1416,7 @@ const GLT = {
     plane:0xA2C8D6, planeOp:0.42, m:0x0E6B83, mz:0x1A8456, mxy:0xB4332A, comp:0x8CA2B0,
     rf:0xA3700F, conePar:0x2E7A94, coneAnti:0x9A4A4A,
     skull:0x9A8A7E, skullOp:0.10, brain:0xA98E96, brainOp:0.18, vent:0x2C7AAC, ventOp:0.55,
-    skin:0x6E8598, skinOp:0.13, nose:0xC4660F, edge:0x2E7A8C, vox:0xB5781A, voxOp:0.14,
+    skin:0x6E8598, skinOp:0.13, edge:0x2E7A8C, vox:0xB5781A, voxOp:0.14,
     amb:0.92, dir:0.42, dir2:0.18, emis:0.04, spinL:0.40, spinE:0.00,
     mE:[0.0, 0.0, 0.0], trail:[0.05, 0.32, 0.42, 0.20, 0.26, 0.26]
   }
@@ -1588,10 +1588,8 @@ function brainMesh(m, color, op) {
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(new THREE.BufferAttribute(f, 1)); g.computeVertexNormals();
   return new THREE.Mesh(g, new THREE.MeshPhongMaterial({ color, transparent:true, opacity:op, shininess:14, side:THREE.DoubleSide, depthWrite:false }));
 }
-let headFront = FOVY * 0.93 / 2 / U;
 if (typeof BRAIN3D !== 'undefined') {
   const hm = tint(brainMesh(BRAIN3D.head, 0xC9B6A8, 0.06), 'skull', 'skullOp');
-  hm.geometry.computeBoundingBox(); headFront = hm.geometry.boundingBox.max.y;
   headGrp.add(hm,
     tint(brainMesh(BRAIN3D.brain, 0xE2CDD4, 0.17), 'brain', 'brainOp'),
     tint(brainMesh(BRAIN3D.vent, 0x4F9CCB, 0.6), 'vent', 'ventOp'));
@@ -1600,13 +1598,6 @@ if (typeof BRAIN3D !== 'undefined') {
     new THREE.MeshPhongMaterial({ color:0x9FB4C4, transparent:true, opacity:0.10, shininess:8, side:THREE.DoubleSide, depthWrite:false }));
   sk.scale.set(FOVX * 0.84 / 2 / U, FOVY * 0.93 / 2 / U, 23);
   headGrp.add(tint(sk, 'skin', 'skinOp'));
-}
-{
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(1.4, 2.8, 12),
-    new THREE.MeshPhongMaterial({ color:0xFFA94D, emissive:0x4a2c0a }));
-  tint(nose, 'nose');
-  nose.position.set(0, headFront + 1.6, 0); nose.rotation.x = -Math.PI / 2;
-  headGrp.add(nose);
 }
 const sliceEdge = new THREE.LineLoop(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3)),
   new THREE.LineBasicMaterial({ color:0x3E8FA3, transparent:true, opacity:.6 }));
