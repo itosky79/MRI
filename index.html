@@ -2333,96 +2333,102 @@ function drawRel() {
 const LBASE = { back:true, quit:'やめる' };
 const L = (o) => Object.assign({}, LBASE, o);
 const pre = k => Object.assign({ manual:false, quantum:false }, PRE.find(x => x.k === k).s);
+/* 学習の手を始めるときの「まっさら」。前の手で撃ったパルスがまだ倒している途中だったり、
+   遅らせて撃つ予約が残っていたりすると、熱平衡に戻したはずの M が勝手に倒れていくので、両方とも止める */
+let learnTm = [];
+function calm() {
+  learnTm.forEach(clearTimeout); learnTm = [];
+  R.nut = null; equilibrium(); clearTrail();
+}
+const later = (fn, ms) => { learnTm.push(setTimeout(fn, ms)); };
 
-/* ---------- A 原理：なぜ信号が出て、なぜ消えるか ----------
-   どのカードも 2 行まで。読ませるのではなく、押して画面が動くのを見てもらう。 */
+/* ---------- 原理：なぜ信号が出て、なぜ消えるか ----------
+   どのカードも 2 行まで。ただし切り詰めすぎて意味が通らなくなるのは本末転倒なので、
+   「何が・どうなる・だから何」が初学者に通じる文にすること（CLAUDE.md） */
 const PRIN = [
 L({ nm:'静磁場の中のプロトン', tg:'B₀ と M₀', sel:'#stage',
   set:{ quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
-  text:'水素は小さな磁石。B₀ の中では、首を振りながら回ります。<br>' +
-       '水色が赤より<b>少しだけ多く</b>、その差が縦磁化 <b>M₀</b>。' +
-       '<span class="eq">ω₀ = γ·B₀　1.5T で約 64 MHz</span>' }),
+  text:'水素の原子核は小さな磁石で、強い磁場 B₀ の中ではコマのように首を振って回ります。<br>' +
+       '磁場と<b>同じ向き（水色）</b>がわずかに多く、その<b>差の合計</b>が磁化 <b>M₀</b> です。' }),
 
 L({ nm:'合成すると1本の矢印', tg:'M と回転座標系', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm' },
-  text:'1本ずつ追わず、<b>全部の和 M</b> だけを見ます。<br>' +
-       'いまは z を向いて止まったまま＝<b>信号はゼロ</b>。' }),
+  text:'ここからは、全部を足した<b>1本の矢印 M</b> だけを見ます。<br>' +
+       'M は縦を向いて止まっています。止まった磁石からは<b>信号は出ません</b>。' }),
 
 L({ nm:'RFパルスで倒す', tg:'α = γ·B₁·τ', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm', T2p:40 },
-  act:{ label:'ゆっくり 90°パルスを撃つ', fn:() => { equilibrium(); clearTrail(); manualPulse(90, 'x', 3.2); } },
-  text:'RF を当てると<b>共鳴</b>して倒れます。倒れる角は<b>強さ × 時間</b>。<br>' +
-       'オレンジの <b>B₁</b> のまわりを回りながら倒れていきます。' +
-       '<span class="eq">α = γ·B₁·τ</span>' }),
+  act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
+  text:'水素と<b>同じ周波数の電波（RF）</b>を当てると<b>共鳴</b>し、M が横へ倒れます。<br>' +
+       'オレンジの <b>B₁</b> が電波の磁場です。倒れる角度は<b>強さ × 当てる時間</b>で決まります。' }),
 
 L({ nm:'どうやって信号になるのか', tg:'電磁誘導 V = −dΦ/dt', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
-  act:{ label:'もう一度 倒す', fn:() => { equilibrium(); clearTrail(); manualPulse(90, 'x', 1.2); } },
-  on:() => { equilibrium(); clearTrail(); manualPulse(90, 'x', 1.2); },
-  text:'体を<b>受信コイル</b>（輪）が囲んでいます。輪を<b>貫く分</b>（紫）は、回るたびに<b>増えたり減ったり</b>。<br>' +
-       'その<b>変化</b>が電圧になります。<b>コイルの光が信号の大きさ。</b>' +
-       '<span class="eq">V = −dΦ/dt</span>' }),
+  act:{ label:'もう一度 倒す', fn:() => { calm(); manualPulse(90, 'x', 1.2); } },
+  on:() => { calm(); manualPulse(90, 'x', 1.2); },
+  text:'回る M のうち、体を囲む<b>受信コイル</b>（輪）を<b>突き抜ける分（紫）</b>が増えたり減ったりします。<br>' +
+       'この<b>変化</b>でコイルに電圧が生まれます（電磁誘導）。これが MRI の信号です。' }),
 
 L({ nm:'縦磁化だけでは信号は出ない', tg:'だから一度倒す', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
-  on:() => { equilibrium(); clearTrail(); },
-  act:{ label:'待ってみる → 倒す', fn:() => {
-    equilibrium(); clearTrail();
-    setTimeout(() => manualPulse(90, 'x', 1.2), 2200);
+  on:() => { calm(); },
+  act:{ label:'ここで倒してみる', fn:() => {
+    calm();
+    later(() => manualPulse(90, 'x', 1.0), 500);
   } },
-  text:'倒さないと、貫く分は <b>0 のまま動かない</b>。変化なし＝信号なし。<br>' +
-       '倒して<b>回る成分</b>ができて、はじめてコイルが光ります。' }),
+  text:'倒す前の M は縦向きで動かないので、輪を突き抜ける分は<b>0 のまま</b>。コイルは光りません。<br>' +
+       '倒して横に回り出すと、はじめて光ります。<b>だから一度倒す</b>のです。' }),
 
 L({ nm:'T2：横磁化が短くなる', tg:'スピン-スピン緩和', sel:'#stage',
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
-  text:'磁場を<b>完全に均一</b>にしました。扇は開かず、矢印が<b>短くなる</b>だけ。<br>' +
-       '最初の <b>37%（1/e）</b>になるまでが T2。' }),
+  text:'磁場を完全に均一にしても、横の矢印は<b>だんだん短く</b>なります。これが <b>T2</b> の減り方です。<br>' +
+       '最初の 37% になるまでの時間を、その組織の T2 といいます。' }),
 
 L({ nm:'T2*：磁場のムラで もっと速く', tg:'1/T2* = 1/T2 + 1/T2′', sel:'#stage',
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
-  text:'実際の磁場にはムラがある。速い・遅いで位相が開いて<b>扇</b>になり、<br>' +
-       '和は T2 より<b>ずっと速く</b>消えます。<span class="eq">1/T2* = 1/T2 + 1/T2′</span>' }),
+  text:'実際の磁場には<b>ムラ</b>があり、回る速さがそろいません。矢印が<b>扇のように開いて</b>打ち消し合い、<br>' +
+       '信号は T2 より<b>ずっと速く</b>消えます。これが <b>T2*</b> です。' }),
 
 L({ nm:'スピンエコー：180°で呼びもどす', tg:'エコーの高さは T2 だけ', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
-  act:{ label:'90° → 待つ → 180° を撃つ', fn:() => {
-    equilibrium(); clearTrail(); manualPulse(90, 'x');
-    setTimeout(() => manualPulse(180, 'y'), 2000);
+  act:{ label:'90° → 少し待つ → 180°', fn:() => {
+    calm(); manualPulse(90, 'x');
+    later(() => manualPulse(180, 'y'), 2000);
   } },
-  text:'<b>180°</b>で扇を折り返すと、同じ時間で<b>ぴたりと揃う＝エコー</b>。<br>' +
-       'ムラは戻せても T2 は戻せない。だから<b>エコーの高さは T2 だけ</b>。' }),
+  text:'<b>180°</b> で扇を裏返すと、ずれた分が逆向きに戻り、少しあとで<b>ぴたりとそろいます</b>（エコー）。<br>' +
+       '戻せるのはムラの分だけ。だから<b>エコーの高さは T2 で決まります</b>。' }),
 
 L({ nm:'T1：縦磁化がもどる', tg:'スピン-格子緩和', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
-  text:'倒れた磁化は z へ戻ります。<b>戻る速さが組織ごとに違う</b>のがグラフ①。<br>' +
-       '次に倒せるのは、そのとき<b>戻っていた分だけ</b>。' }),
+  text:'倒れた M は時間がたつと<b>縦へ戻ります</b>（T1）。戻る速さは組織ごとに違います。<br>' +
+       '次に倒したとき信号になるのは、<b>それまでに戻れた分だけ</b>です。' }),
 
 L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
-  text:'信号は<b>3つの掛け算</b>。ρ ×（T1 で戻った分）×（T2 で残った分）。' +
+  text:'信号の大きさ ＝ <b>水素の量 × T1 で戻れた分 × T2 で残った分</b>。' +
        '<span class="eq">S = ρ(1 − e^(−TR/T1))·e^(−TE/T2)</span>' +
-       'この3つを<b>どう選ぶか</b>が撮像法。上の<b>「撮像法」</b>へ。' })
+       'どれを強く効かせるかを選ぶのが<b>撮像法</b>です。' })
 ];
 
-/* ---------- B 撮像法：原理を使って、どう撮るか ---------- */
+/* ---------- 撮像法：原理を使って、どう撮るか ---------- */
 const METH = [
 L({ nm:'矢印から画像へ', tg:'横の長さ × ρ ＝ 明るさ', sel:'#panBridge', blk:'nearest',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
   act:{ label:'組織ごとに塗ってみる', fn:() => paintDemo() },
-  text:'矢印の<b>横の長さ × プロトン密度</b>が、その組織の明るさ。<br>' +
-       'それを<b>その組織のある画素ぜんぶ</b>に塗ると画像になります。' }),
+  text:'信号を読む瞬間の<b>矢印の横の長さ × 水素の量</b>が、その組織の明るさです。<br>' +
+       'その明るさで、同じ組織の場所をぜんぶ塗ると MR 画像になります。' }),
 
-L({ nm:'TR：次に倒せる量を決める', tg:'T1 の差を作る', sel:'#panRel',
+L({ nm:'TR：次に倒すまでの待ち時間', tg:'T1 の差をつける', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
-  act:{ label:'TR を 2500 → 500 ms にしてみる', fn:() => applySet({ TR:500 }, true) },
-  text:'TR＝<b>次に倒すまでの待ち時間</b>。<br>' +
-       '短くすると、<b>T1 の長い水が戻りきれず暗く</b>なります。' }),
+  act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
+  text:'<b>TR</b> は次に倒すまでの待ち時間。短くすると、<b>戻るのが遅い水は戻りきれず暗く</b>なります。<br>' +
+       'こうして T1 の差が明るさの差になります（T1強調）。' }),
 
-L({ nm:'TE：読むまでに減る量を決める', tg:'T2 の差を作る', sel:'#panRel',
+L({ nm:'TE：倒してから読むまで', tg:'T2 の差をつける', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:4000, TE:15, T2p:40, tissue:'wm' },
-  act:{ label:'TE を 15 → 100 ms にしてみる', fn:() => applySet({ TE:100 }, true) },
-  text:'TE＝<b>倒してから読むまで</b>の時間。<br>' +
-       '長くすると、<b>T2 の短い組織から先に消え、水が白く</b>残ります。' }),
+  act:{ label:'TE を 15 → 100 ms に長くする', fn:() => applySet({ TE:100 }, true) },
+  text:'<b>TE</b> は倒してから信号を読むまでの時間。長くすると、<b>減るのが速い組織から暗く</b>なり、<br>' +
+       '減りにくい水が白く残ります。T2 の差が明るさの差になります（T2強調）。' }),
 
 L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
@@ -2432,38 +2438,38 @@ L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
     setTimeout(() => { applySet(pre('pd'), true); shoot(); }, 900);
     setTimeout(() => { applySet(pre('t2'), true); shoot(); }, 1800);
   } },
-  text:'<b>短TR・短TE＝T1強調</b>、<b>長TR・短TE＝プロトン密度</b>、<b>長TR・長TE＝T2強調</b>。<br>' +
-       '同じ断面で3枚撮って、並べて見くらべます。' }),
+  text:'<b>TR 短・TE 短 → T1強調</b>／<b>TR 長・TE 短 → プロトン密度</b>／<b>TR 長・TE 長 → T2強調</b>。<br>' +
+       '同じ断面で3枚撮って、並べて比べます。' }),
 
 L({ nm:'GRE：180° を使わない', tg:'T2 ではなく T2*', sel:'#panSeq',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:25, T2p:40 },
-  act:{ label:'T2*強調 GRE にしてみる', fn:() => applySet(pre('t2s'), true) },
-  text:'②の図から <b>180° が消えます</b>。扇を折り返さないので、<br>' +
-       'T2 ではなく <b>T2*</b> で減る。出血や石灰化が黒く抜けます。' }),
+  act:{ label:'T2*強調 GRE に切り替える', fn:() => applySet(pre('t2s'), true) },
+  text:'<b>GRE</b> は 180° を使わずにエコーを作ります。②の図から 180° が消えます。<br>' +
+       'ムラのずれを戻さないので <b>T2*</b> で暗くなり、出血などが黒く抜けます。' }),
 
-L({ nm:'IR：消したい組織を選ぶ', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
+L({ nm:'IR：狙った組織を消す', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
-  act:{ label:'TI を 180 ms にしてみる（STIR）', fn:() => applySet({ TI:180 }, true) },
-  text:'先に <b>180°</b> で反転させ、狙った組織が<b>0 を横切る瞬間</b>に 90°。<br>' +
-       'その組織だけ信号が出ません。<span class="eq">TI ≒ 0.69 × T1　脂肪なら 180 ms</span>' }),
+  act:{ label:'TI を 180 ms にする（STIR）', fn:() => applySet({ TI:180 }, true) },
+  text:'先に <b>180°</b> で磁化を逆向きにし、狙った組織が<b>ちょうど 0 を通る瞬間</b>に倒すと、その組織は<b>信号が出ません</b>。<br>' +
+       'その時間が <b>TI</b>。脂肪なら約 180 ms です。' }),
 
 L({ nm:'FLAIR：水を消す', tg:'STIR との違い', sel:'#imgbox',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:180, T2p:40 },
-  act:{ label:'FLAIR（TI 2400 ms）にしてみる', fn:() => applySet(pre('flair'), true) },
-  text:'水は T1 が長い（4000 ms）ので、<b>TI も長く</b>とります。<br>' +
-       '脳室が黒くなり、<b>そのふちの病変</b>が見えてきます。' })
+  act:{ label:'FLAIR（TI 2400 ms）に切り替える', fn:() => applySet(pre('flair'), true) },
+  text:'水は戻るのがとても遅い（T1 約 4000 ms）ので、<b>TI を 2400 ms と長く</b>とると水が消えます。<br>' +
+       '脳室が黒くなり、ふちの病変が見やすくなります。' })
 ];
 
 /* コースの定義。list は案内カードに渡す「本編＋おしまいの1枚」 */
 const COURSE = [
-  { nm:'原理', lede:'なぜ信号が出て、なぜ消えるか。<b>撮像法の名前は出てきません。</b>',
+  { nm:'原理', lede:'MRI の信号が<b>なぜ出て、なぜ消えるのか</b>。T1強調などの撮り方の話は、ここでは出てきません。',
     end:{ head:'おしまい', nm:'原理はここまで', next:'とじる', quit:'とじる',
-      text:'信号の大きさは <b>ρ ×（T1 で戻った分）×（T2 で残った分）</b>。<br>' +
-           'つぎは上の<b>「撮像法」</b>に切り替えて、この3つをどう選ぶと T1強調・T2強調になるかを見ます。' } },
-  { nm:'撮像法', lede:'原理を使って、<b>T1強調・T2強調…をどう作るか</b>。先に「原理」を見ておくと楽です。',
+      text:'信号の大きさは、<b>水素の量 × T1 で戻れた分 × T2 で残っている分</b>で決まります。<br>' +
+           'つぎは上の<b>「撮像法」</b>に切り替えると、この3つの効かせ方で T1強調・T2強調が作られるのを見られます。' } },
+  { nm:'撮像法', lede:'「原理」で見た仕組みを使って、<b>T1強調・T2強調などの画像をどう作り分けるか</b>。先に「原理」を見ておくと分かりやすくなります。',
     end:{ head:'おしまい', nm:'ひととおり見ました', next:'とじる', quit:'とじる',
-      text:'あとは<b>「シーケンス」</b>タブで TR・TE を自分で動かすか、<b>「問題」</b>タブで確かめてみてください。<br>' +
-           'この案内は、いつでも「学習」タブから呼び直せます。' } }
+      text:'ここからは<b>「シーケンス」</b>タブで TR・TE を自分で動かしたり、<b>「問題」</b>タブで国家試験の問題を解いて確かめたりできます。<br>' +
+           'この案内は、いつでも「学習」タブから開き直せます。' } }
 ];
 COURSE[0].steps = PRIN; COURSE[1].steps = METH;
 COURSE.forEach(c => { c.list = c.steps.concat([c.end]); });
@@ -3174,28 +3180,28 @@ addEventListener('keydown', e => {
    読ませるより押させる。6手で「T1強調 → T2強調 で白黒が入れ替わる」まで連れていく。
    スポットライトは穴の空いた影（box-shadow の広がり）で作る。
    当たり判定は持たせないので、光っているボタンはそのまま押せる。 */
-const GKEY = 'mri-tutorial-v1';
+const GKEY = 'mri-tutorial-v2';   // 案内の中身を変えたら番号を上げる（前に見た人にもう一度出す）
 const coarse = matchMedia('(pointer:coarse)').matches || innerWidth <= 900;
 const tap = coarse ? 'タップ' : 'クリック';
 const TUT = [
-  { text:'<span class="big">30秒でさわってみます</span>TR と TE を変えると、体の中のスピンがどう動き、' +
-         'どんな画像になるか。実際に押しながら見ていきます。', next:'さわってみる' },
+  { text:'<span class="big">30秒だけ さわってみましょう</span>撮り方（TR・TE）を変えると、体の中の水素がどう動き、' +
+         'どんな画像になるのか。光っているところを押しながら見ていきます。', next:'はじめる' },
   { sel:'#preGrid button[data-k="t1"]', wait:true, scroll:'#rail',
-    text:'まず<b>撮り方</b>をえらびます。<b>「T1強調 SE」</b>を' + tap + 'してみてください。' },
+    text:'まず撮り方を選びます。光っている<b>「T1強調 SE」</b>を' + tap + 'してください。' },
   { sel:'#imgbox',
-    text:'これが <b>T1強調</b>。<b>脂肪が白く、水（脳室）が黒い</b>。解剖の形を見るのに使います。' },
+    text:'これが <b>T1強調</b>の画像です。<b>脂肪が白く、水（脳室）が黒く</b>写ります。脳の形を見るのに向いています。' },
   { sel:'#preGrid button[data-k="t2"]', wait:true, scroll:'#rail',
-    text:'同じ断面のまま、<b>TR と TE を変えるだけ</b>。<b>「T2強調 SE」</b>を' + tap + 'してみてください。' },
+    text:'つぎは、同じ断面のまま<b>TR と TE だけ</b>を変えます。光っている<b>「T2強調 SE」</b>を' + tap + 'してください。' },
   { sel:'#imgbox',
-    text:'<b>白黒が入れ替わりました。</b>水が白い。<br>なぜ変わったのか — が下の2つの図です。' },
+    text:'<b>白と黒が入れ替わりました。</b>今度は水が白く写っています。<br>同じ体なのに、なぜ変わったのか。その理由が下の図にあります。' },
   { sel:'#panRel', scroll:'#panRel',
-    text:'<b>③ 緩和曲線。</b>②で決めた <b>TE</b> の線のところで、組織の差がいちばん開きます。' +
-         '<b>この差がそのまま画像の明暗</b>になります。' },
+    text:'<b>③ 緩和曲線</b>です。赤い <b>TE</b> の線（信号を読む時刻）のところで、組織ごとの線の高さに差があります。' +
+         '<b>この高さの差が、そのまま画像の明るさの差</b>になります。' },
   { sel:'#stage', scroll:'#stage',
-    text:'<b>① 3D。</b>その差が、体の中で何が起きた結果か。<b>矢印の長さが、その組織のいまの信号</b>です。' },
-  { text:'<span class="big">これだけです</span>あとは右の <b>TR・TE のつまみ</b>を動かすだけ。' +
-         '順を追って学ぶなら<b>「学習」</b>タブへ。<b>原理</b>（なぜ信号が出るか）と<b>撮像法</b>（どう撮るか）の2つのコースがあります。<br>' +
-         'この案内は題字の横の<b>「使い方をもう一度」</b>から呼べます。',
+    text:'<b>① 3D</b> は、体の中で実際に起きていることです。組織ごとに立っている矢印の<b>横向きの長さ</b>が、その組織の信号の大きさです。' },
+  { text:'<span class="big">使い方はこれだけです</span>あとは右の <b>TR・TE のつまみ</b>を動かすと、3つの図と画像が一緒に変わります。<br>' +
+         '順を追って学びたいときは<b>「学習」</b>タブへ。<b>原理</b>（信号はなぜ出るか）と<b>撮像法</b>（画像をどう作り分けるか）の2つのコースがあります。' +
+         'この案内は、題字の横の<b>「使い方をもう一度」</b>でいつでも見られます。',
     next:'はじめる' }
 ];
 let tutList = TUT, tutI = -1, tutWaiting = null, tutActDone = false, tutAfter = null;
@@ -3234,7 +3240,10 @@ function tutShow() {
   const st = tutList[tutI];
   tutEl.hidden = false;
   tutActDone = false;
-  if (st.set) applySet(Object.assign({ coil:false }, st.set), true);   // コイルは出したい手だけ coil:true で出す
+  if (st.set) {
+    learnTm.forEach(clearTimeout); learnTm = []; R.nut = null;   // 前の手のパルスの続きや予約を持ち越さない
+    applySet(Object.assign({ coil:false }, st.set), true);   // コイルは出したい手だけ coil:true で出す
+  }
   if (st.on) st.on();
   const n = tutList.filter(x => x.sel || x.act).length;
   const k = tutList.slice(0, tutI + 1).filter(x => x.sel || x.act).length;
