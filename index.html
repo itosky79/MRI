@@ -350,6 +350,26 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset
 .chip i{width:14px; height:14px; border-radius:2px; border:1px solid var(--swLine); flex:none}
 .chip:hover{color:var(--text); border-color:var(--line2)}
 .chip[aria-pressed="true"]{background:var(--sel); border-color:var(--teal); color:var(--selT)}
+
+/* ---------- ④ 矢印 → 明るさ → 画像 ---------- */
+.brows{display:flex; flex-direction:column; gap:3px; margin:3px 0 0}
+.brow{
+  display:grid; grid-template-columns:60px 1fr 32px 17px; align-items:center; gap:7px;
+  padding:4px 7px; background:var(--panel2); border:1px solid var(--line); border-radius:3px;
+  color:var(--muted); font-family:var(--gothic); font-size:11px; cursor:pointer; text-align:left;
+}
+.brow:hover{color:var(--text); border-color:var(--line2)}
+.brow[aria-pressed="true"]{background:var(--sel); border-color:var(--teal); color:var(--selT)}
+.brow.lit{border-color:var(--amber); background:var(--rfBg2); color:var(--rfText)}
+.bbar{display:block; height:7px; border-radius:2px; background:var(--ink2); overflow:hidden}
+.bbar i{display:block; height:100%; width:0; background:var(--alert); border-radius:2px}
+.bv{font-family:var(--mono); font-size:10px; color:var(--teal); text-align:right}
+.brow[aria-pressed="true"] .bv{color:var(--selT)}
+.bsw{width:17px; height:17px; border-radius:2px; border:1px solid var(--swLine)}
+.bchain{
+  display:flex; align-items:center; justify-content:space-between; gap:4px; margin:0 0 2px;
+  font-family:var(--mono); font-size:9px; letter-spacing:.06em; color:var(--dim);
+}
 .tiny{margin:7px 0 0; font-size:10.5px; line-height:1.75; color:var(--dim)}
 .tiny b{color:var(--muted); font-weight:500}
 .lede{
@@ -696,8 +716,12 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 
       <!-- ===== 学習 ===== -->
       <div class="pane" id="pane1" hidden>
-        <p class="tiny" style="margin:0 0 10px">光っているところを見ながら、<b>10手</b>でひととおり。読むより、押して見てください。</p>
-        <button class="act wide" id="bLearn" type="button" style="width:100%">① から順に学ぶ</button>
+        <div class="seg" id="courseSeg" style="display:grid; grid-template-columns:1fr 1fr; background:var(--ink2)">
+          <button type="button" data-c="0" aria-pressed="true">A 原理</button>
+          <button type="button" data-c="1">B 撮像法</button>
+        </div>
+        <p class="tiny" id="courseLede" style="margin:8px 0 10px"></p>
+        <button class="act wide" id="bLearn" type="button" style="width:100%">① から順に</button>
         <p class="grp-h" style="margin:13px 0 8px">好きなところから</p>
         <ol class="seq" id="stepList"></ol>
       </div>
@@ -812,6 +836,15 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <p class="tiny">自由な組織は 3D の矢印だけで見られます（画像には出ません）。T1 は静磁場を変えても変わりません。</p>
       </div>
       <p class="tiny" id="tisEq"></p>
+    </div>
+
+    <!-- ===== ④ 矢印 → 明るさ → 画像 ===== -->
+    <div class="grp" id="panBridge">
+      <p class="grp-h">④ 矢印から画像へ <b>いまの条件での明るさ</b></p>
+      <p class="bchain"><span>組織</span><span>エコーの高さ ＝ 横の長さ × ρ</span><span>明るさ</span></p>
+      <div class="brows" id="bRows"></div>
+      <button class="act wide" id="bPaint" type="button" style="width:100%; margin-top:7px">組織ごとに塗ってみる</button>
+      <p class="tiny">棒の長さは、3D の<b>矢印の横向きの長さ × プロトン密度</b>（エコーの瞬間）。これを<b>その組織のある画素ぜんぶ</b>に塗ったものが画像です。</p>
     </div>
 
     <!-- ===== 表示と操作 ===== -->
@@ -1402,7 +1435,7 @@ function drawImage() {
   const d = imgData.data;
   for (let i = 0; i < IW * IH; i++) {
     const l = LABM[i];
-    let v = l ? sg[l] * norm : 0.012;
+    let v = l && (!paintOnly || paintOnly.has(l)) ? sg[l] * norm : 0.012;   // paintOnly ＝「塗ってみる」の途中。まだ塗っていない組織は地のまま
     if (P.noise) v += noiseBuf[i] * 0.026;
     v = v < 0 ? 0 : v > 1 ? 1 : v;
     const g = Math.round(255 * Math.pow(v, 0.92));
@@ -1857,7 +1890,9 @@ function updateScene(dt) {
       t.a.grp.visible = far;
       const pd = TIS[TIX[t.id]].PD;   // 熱平衡の磁化はプロトン密度に比例するので、脳全体の磁化ベクトルはプロトン密度をかけた長さにする
       if (far) setArrow(t.a, n[0] * pd, n[1] * pd, n[2] * pd, TA_LEN);
-      if (far && echoFlash > 0) t.a.mat.emissive.setRGB(0.3 + echoFlash, 0.45, 0.45); else t.a.mat.emissive.copy(new THREE.Color(tcol(TIS[TIX[t.id]]))).multiplyScalar(TH.emis);
+      if (far && paintLit === t.id) t.a.mat.emissive.setRGB(0.9, 0.7, 0.25);
+      else if (far && echoFlash > 0) t.a.mat.emissive.setRGB(0.3 + echoFlash, 0.45, 0.45);
+      else t.a.mat.emissive.copy(new THREE.Color(tcol(TIS[TIX[t.id]]))).multiplyScalar(TH.emis);
     }
     if (++sliceN % 2 === 0) drawSlice();
   }
@@ -2220,10 +2255,16 @@ function drawRel() {
     + '<b>②</b>の点（TE）の高さが<b>画像の明るさ</b>になる。';
 }
 
-/* ================= 学習ステップ ================= */
+/* ================= 学習ステップ =================
+   「なぜ信号が出るか（原理）」と「どう撮るか（撮像法）」は別の話なので、はじめから 2 つのコースに分けている。
+   どの手も「光らせる場所・切り替える条件・その場でやってみること」を自分で持っていて、案内カードの仕組み
+   （tutRun）がそれを順に出す。読ませるのではなく、押して画面が動くのを見てもらうのが狙い。 */
 const LBASE = { back:true, quit:'やめる' };
 const L = (o) => Object.assign({}, LBASE, o);
-const STEPS = [
+const pre = k => Object.assign({ manual:false, quantum:false }, PRE.find(x => x.k === k).s);
+
+/* ---------- A 原理：なぜ信号が出て、なぜ消えるか ---------- */
+const PRIN = [
 L({ nm:'静磁場の中のプロトン', tg:'B₀ と M₀', sel:'#stage',
   set:{ quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40 },
   text:'水素の原子核は小さな磁石です。<b>B₀</b> の中では、コマのように首を振りながら回ります。<br>' +
@@ -2269,29 +2310,84 @@ L({ nm:'スピンエコー：180°で呼びもどす', tg:'エコーの高さは
        'ムラの分は戻せても、ランダムな T2 の分は戻りません。だから<b>エコーの高さは T2 だけ</b>で決まります。' }),
 
 L({ nm:'T1：縦磁化がもどる', tg:'スピン-格子緩和', sel:'#panRel',
-  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
-  text:'倒れた磁化は z 軸へ戻ります（T1）。グラフ①の <b>TR の線</b>のところで戻っている量が、' +
-       '次に使える信号の大きさです。<br>TR が短いと、<b>T1 の短い組織（脂肪）だけがよく戻って明るく</b>なります。' }),
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+  text:'倒れた磁化は z 軸へ戻ります（T1）。グラフ①で、組織ごとに<b>戻る速さが違う</b>のが見えます。<br>' +
+       '次に倒せるのは、そのとき戻っていた分だけ。<b>T1 の短い組織（脂肪）ほど速く戻ります。</b>' }),
 
-L({ nm:'TR と TE で画像が変わる', tg:'T1強調 / PD / T2強調', sel:'#imgbox',
-  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
-  act:{ label:'T2強調にしてみる', fn:() => applySet(Object.assign({ manual:false, quantum:false }, PRE[1].s), true) },
-  text:'<span class="eq">S = ρ(1 − e^(−TR/T1))·e^(−TE/T2)</span>' +
-       '短TR・短TE で <b>T1強調</b>（脂肪が白・水が黒）、長TR・長TE で <b>T2強調</b>（水が白）。押して見比べてください。' }),
-
-L({ nm:'反転回復：消したい組織を選ぶ', tg:'STIR / FLAIR', sel:'#panRel',
-  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:9000, TE:100, TI:2400, T2p:40 },
-  act:{ label:'STIR（脂肪を消す）にしてみる', fn:() => {
-    const p = PRE.find(x => x.k === 'stir');
-    applySet(Object.assign({ manual:false, quantum:false }, p.s), true);
-  } },
-  text:'先に 180° で反転させ、狙った組織の縦磁化が<b>0 を横切る瞬間</b>に 90° を撃つと、その組織は信号を出しません。' +
-       '<span class="eq">TI ≒ 0.69 × T1</span>グラフ①で、線が 0 を横切るところに赤い TI の線が来ています。' })
+L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+  text:'信号の大きさは<b>3つの掛け算</b>です。<b>ρ</b>（水素の量）×<b>どれだけ戻ったか</b>（T1）×' +
+       '<b>どれだけ残っているか</b>（T2）。<span class="eq">S = ρ(1 − e^(−TR/T1))·e^(−TE/T2)</span>' +
+       'この3つを<b>どう選ぶか</b>が撮像法です。つづきは <b>B 撮像法</b> へ。' })
 ];
-/* 最後の1枚。10手のうしろに足して使う */
-const LEARN = STEPS.concat([{ head:'おしまい', nm:'ここまでが基本です', next:'とじる', quit:'とじる',
-  text:'あとは<b>「シーケンス」</b>で TR・TE を動かすか、<b>「問題」</b>で確かめてみてください。<br>' +
-       'この10手は、いつでも「学習」タブから呼び直せます。' }]);
+
+/* ---------- B 撮像法：原理を使って、どう撮るか ---------- */
+const METH = [
+L({ nm:'矢印から画像へ', tg:'横の長さ × ρ ＝ 明るさ', sel:'#panBridge', blk:'nearest',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+  act:{ label:'組織ごとに塗ってみる', fn:() => paintDemo() },
+  text:'3D には組織ごとに矢印が1本ずつ立っています。エコーの瞬間の<b>横向きの長さ × プロトン密度</b>が、' +
+       'その組織の明るさ。<br>それを<b>その組織がある画素ぜんぶ</b>に塗ったものが画像です。押すと、塗られていくのが見えます。' }),
+
+L({ nm:'TR：次に倒せる量を決める', tg:'T1 の差を作る', sel:'#panRel',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+  act:{ label:'TR を 2500 → 500 ms にしてみる', fn:() => applySet({ TR:500 }, true) },
+  text:'TR は<b>次に倒すまでの待ち時間</b>。長く待てばどの組織も戻りきるので差は出ません。<br>' +
+       '<b>短くすると、T1 の長い組織（水）が戻りきれず暗く</b>なります。グラフ①の TR の線を見てください。' }),
+
+L({ nm:'TE：読むまでに減る量を決める', tg:'T2 の差を作る', sel:'#panRel',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:4000, TE:15, T2p:40 },
+  act:{ label:'TE を 15 → 100 ms にしてみる', fn:() => applySet({ TE:100 }, true) },
+  text:'TE は<b>倒してから信号を読むまで</b>の時間。すぐ読めばどの組織もまだ残っています。<br>' +
+       '<b>長くすると、T2 の短い組織から先に消え、T2 の長い水が白く</b>残ります。グラフ②の TE の線です。' }),
+
+L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
+  act:{ label:'3枚つづけて撮る', fn:() => {
+    const shoot = () => $('bShot').click();
+    applySet(pre('t1'), true); shoot();
+    setTimeout(() => { applySet(pre('pd'), true); shoot(); }, 900);
+    setTimeout(() => { applySet(pre('t2'), true); shoot(); }, 1800);
+  } },
+  text:'TR と TE の組み合わせは <b>4通り</b>ですが、使うのは3つ。' +
+       '<b>短TR・短TE＝T1強調</b>、<b>長TR・短TE＝プロトン密度</b>、<b>長TR・長TE＝T2強調</b>。<br>' +
+       '（長TR・長TE…ではなく短TR・長TEは、T1 と T2 が打ち消し合うので使いません。）' }),
+
+L({ nm:'GRE：180° を使わない', tg:'T2 ではなく T2*', sel:'#panSeq',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:25, T2p:40 },
+  act:{ label:'T2*強調 GRE にしてみる', fn:() => applySet(pre('t2s'), true) },
+  text:'180°パルスのかわりに傾斜磁場でエコーを作るのが <b>GRE</b>。②の図から 180° が消えます。<br>' +
+       '扇を折り返さないので<b>磁場のムラが戻らず</b>、T2 ではなく <b>T2*</b> で減ります。出血や石灰化が黒く抜けます。' }),
+
+L({ nm:'IR：消したい組織を選ぶ', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
+  act:{ label:'TI を 180 ms にしてみる（STIR）', fn:() => applySet({ TI:180 }, true) },
+  text:'先に <b>180°</b> で縦磁化をひっくり返し、狙った組織が<b>0 を横切る瞬間</b>に 90° を撃つと、' +
+       'その組織だけ信号が出ません。<span class="eq">TI ≒ 0.69 × T1</span>' +
+       '脂肪の T1 は 270 ms なので TI は 180 ms。グラフ①で赤い TI の線を見てください。' }),
+
+L({ nm:'FLAIR：水を消す', tg:'STIR との違い', sel:'#imgbox',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:180, T2p:40 },
+  act:{ label:'FLAIR（TI 2400 ms）にしてみる', fn:() => applySet(pre('flair'), true) },
+  text:'水（脳脊髄液）は T1 が 4000 ms と長いので、<b>TI も 2400 ms</b> と長くとります。<br>' +
+       '脳室が黒くなり、T2強調では水と紛れていた<b>そのふちの病変</b>が見えるようになります。' +
+       '消えるかどうかは <b>T1 だけ</b>で決まることに注意。' })
+];
+
+/* コースの定義。list は案内カードに渡す「本編＋おしまいの1枚」 */
+const COURSE = [
+  { nm:'原理', lede:'なぜ信号が出て、なぜ消えるか。<b>撮像法の名前は出てきません。</b>',
+    end:{ head:'おしまい', nm:'原理はここまで', next:'とじる', quit:'とじる',
+      text:'信号の大きさは <b>ρ ×（T1 で戻った分）×（T2 で残った分）</b>。<br>' +
+           'つぎは <b>B 撮像法</b> で、この3つをどう選ぶと T1強調・T2強調になるかを見ます。' } },
+  { nm:'撮像法', lede:'原理を使って、<b>T1強調・T2強調…をどう作るか</b>。A を先に見ておくと楽です。',
+    end:{ head:'おしまい', nm:'ひととおり見ました', next:'とじる', quit:'とじる',
+      text:'あとは<b>「シーケンス」</b>タブで TR・TE を自分で動かすか、<b>「問題」</b>タブで確かめてみてください。<br>' +
+           'この案内は、いつでも「学習」タブから呼び直せます。' } }
+];
+COURSE[0].steps = PRIN; COURSE[1].steps = METH;
+COURSE.forEach(c => { c.list = c.steps.concat([c.end]); });
+let course = 0, STEPS = COURSE[0].steps, LEARN = COURSE[0].list;
 
 
 /* ================= シーケンスのプリセット ================= */
@@ -2472,8 +2568,67 @@ function updateTis() {
   const T2s = 1 / (1 / T2of(t) + (isFinite(P.T2p) ? 1 / P.T2p : 0));
   $('cusBox').style.display = P.tissue === 'cus' ? '' : 'none';
   $('tisSub').textContent = 'T1 ' + Math.round(T1of(t, P.B0)) + ' / T2 ' + Math.round(T2of(t)) + ' / T2* ' + Math.round(T2s) + ' ms・プロトン密度 ' + t.PD.toFixed(2);
-  $('tisEq').innerHTML = '四角の明るさ＝いまの条件でその組織が画像に出る明るさです。画像をクリックしても選べます。<br>' + eqText();
+  $('tisEq').innerHTML = '画像をクリックしても選べます。<br>' + eqText();
 }
+/* ---- ④ 矢印 → 明るさ → 画像 ----
+   棒の長さ＝エコーのときの 横磁化 × プロトン密度。3D の矢印にエコーの瞬間に出ている数字と同じ値で、
+   画像の濃度を決めているのもこの値。四角の色は、その値を画像とまったく同じ正規化・同じガンマで灰色にしたもの。
+   （いまこの瞬間の長さではなく「エコーのときの長さ」を出す。信号を読むのはエコーの瞬間だけなので、
+   途中の値を見せると「棒＝明るさ」が成り立たなくなる。動いているところは 3D の矢印で見る） */
+const BR_IDS = ['fat', 'wm', 'gm', 'csf', 'les'];
+const bRows = $('bRows');
+BR_IDS.forEach(id => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'brow'; b.dataset.t = id;
+  b.innerHTML = '<span class="bn">' + TIS[TIX[id]].nm.replace(/（.*）/, '') + '</span>' +
+    '<span class="bbar"><i></i></span><span class="bv">0.00</span><span class="bsw"></span>';
+  b.addEventListener('click', () => setTissue(id));
+  bRows.appendChild(b);
+});
+let paintOnly = null, paintLit = null, paintTm = null;
+function updateBridge() {
+  let mxs = 1e-6;
+  for (const t of TIS) if (INIMG[t.id]) { const v = imgSig(t); if (v > mxs) mxs = v; }
+  for (const b of bRows.children) {
+    const id = b.dataset.t;
+    b.style.display = INIMG[id] ? '' : 'none';
+    if (!INIMG[id]) continue;
+    const v = imgSig(TIS[TIX[id]]);                           // エコーのときの 横磁化 × プロトン密度
+    const g = Math.round(255 * Math.pow(Math.min(1, Math.max(0, v / (mxs * 1.04))), 0.92));
+    b.querySelector('i').style.width = Math.min(100, Math.max(0, v) * 100) + '%';
+    b.querySelector('.bv').textContent = v.toFixed(2);
+    b.querySelector('.bsw').style.background = 'rgb(' + g + ',' + g + ',' + g + ')';
+    b.setAttribute('aria-pressed', id === P.tissue);
+  }
+}
+/* 「組織ごとに塗ってみる」：真っ黒から始めて、組織をひとつずつ塗り足していく。
+   塗っている組織の 3D の矢印と ④ の行が同時に光るので、どの矢印がどの画素になったかが見える */
+function paintDemo() {
+  if (paintTm) { clearTimeout(paintTm); paintTm = null; }
+  const ids = BR_IDS.filter(id => INIMG[id]);
+  paintOnly = new Set(); paintLit = null; drawImage();
+  let k = 0;
+  const step = () => {
+    if (k >= ids.length) {
+      paintTm = setTimeout(() => {
+        paintOnly = null; paintLit = null; paintTm = null;
+        for (const b of bRows.children) b.classList.remove('lit');
+        drawImage();
+      }, 900);
+      for (const b of bRows.children) b.classList.remove('lit');
+      paintLit = null;
+      return;
+    }
+    const id = ids[k++];
+    paintOnly.add(TIX[id] + 1); paintLit = id;
+    for (const b of bRows.children) b.classList.toggle('lit', b.dataset.t === id);
+    drawImage();
+    paintTm = setTimeout(step, 800);
+  };
+  paintTm = setTimeout(step, 500);   // はじめの一拍はまっさら。何もないところから塗っていくのを見せる
+}
+$('bPaint').addEventListener('click', paintDemo);
+
 function setTissue(id) {
   P.tissue = id;
   if (REP[id]) xhairPx = REP[id].slice();
@@ -2547,7 +2702,7 @@ function refresh(keep) {
   $('tManual').checked = P.manual;
   $('bPause').textContent = P.paused ? '再生' : '一時停止';
   $('bPause').setAttribute('aria-pressed', P.paused);
-  drawImage(); updateTis(); layoutImg(); drawRel(); drawFA();
+  drawImage(); updateTis(); updateBridge(); layoutImg(); drawRel(); drawFA();
 }
 function applySet(s, hard) {
   if (!s) return;
@@ -2578,17 +2733,30 @@ $('modeTabs').addEventListener('click', e => {
 });
 
 /* ================= 学習 ================= */
+/* 学習は案内カードそのもの。設定・光らせる場所・やることは各手が持っている */
 let stepI = 0;
 const stepList = $('stepList');
-STEPS.forEach((st, i) => {
-  const li = document.createElement('li');
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.innerHTML = '<span class="no">' + (i + 1) + '</span><span>' + st.nm + '<span class="tg2">' + st.tg + '</span></span>';
-  b.addEventListener('click', () => gotoStep(i));
-  li.appendChild(b); stepList.appendChild(li);
+function buildStepList() {
+  stepList.innerHTML = '';
+  STEPS.forEach((st, i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '<span class="no">' + (i + 1) + '</span><span>' + st.nm + '<span class="tg2">' + st.tg + '</span></span>';
+    b.addEventListener('click', () => gotoStep(i));
+    li.appendChild(b); stepList.appendChild(li);
+  });
+}
+function setCourse(c) {
+  course = c; STEPS = COURSE[c].steps; LEARN = COURSE[c].list; stepI = 0;
+  [...$('courseSeg').children].forEach(x => x.setAttribute('aria-pressed', +x.dataset.c === c));
+  $('courseLede').innerHTML = COURSE[c].lede;
+  $('bLearn').textContent = '① から順に（' + STEPS.length + '手）';
+  buildStepList(); markStep();
+}
+$('courseSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (b) setCourse(+b.dataset.c);
 });
-/* 学習は案内カードそのもの。設定・光らせる場所・やることは各手が持っている */
 function gotoStep(i) {
   stepI = Math.max(0, Math.min(STEPS.length - 1, i));
   markStep();
@@ -2939,7 +3107,8 @@ const TUT = [
   { sel:'#stage', scroll:'#stage',
     text:'<b>① 3D。</b>その差が、体の中で何が起きた結果か。<b>矢印の長さが、その組織のいまの信号</b>です。' },
   { text:'<span class="big">これだけです</span>あとは右の <b>TR・TE のつまみ</b>を動かすだけ。' +
-         '順を追って学ぶなら<b>「学習」</b>タブへ。この案内は題字の横の<b>「使い方をもう一度」</b>から呼べます。',
+         '順を追って学ぶなら<b>「学習」</b>タブへ。<b>A 原理</b>（なぜ信号が出るか）と <b>B 撮像法</b>（どう撮るか）に分かれています。<br>' +
+         'この案内は題字の横の<b>「使い方をもう一度」</b>から呼べます。',
     next:'はじめる' }
 ];
 let tutList = TUT, tutI = -1, tutWaiting = null, tutActDone = false, tutAfter = null;
@@ -2991,7 +3160,8 @@ function tutShow() {
   const el = st.sel ? document.querySelector(st.sel) : null;
   /* 先に対象を画面の真ん中へ運んでから測る。なめらかスクロールだと
      測り終える前に位置が変わるので、ここでは一息に動かす */
-  if (el) el.scrollIntoView({ block:'center', inline:'nearest', behavior:'auto' });
+  /* blk:'nearest' は「見えていれば動かさない」。3D と画像を見せたまま右の欄を光らせたいときに使う */
+  if (el) el.scrollIntoView({ block:st.blk || 'center', inline:'nearest', behavior:'auto' });
   tutPlace(el);
   requestAnimationFrame(() => tutPlace(el));
   setTimeout(() => tutPlace(el), 160);
@@ -3071,6 +3241,7 @@ function loop(now) {
     $('hudT').textContent = Math.round(R.t);
     $('hudMz').textContent = m[2].toFixed(2);
     $('hudMxy').textContent = Math.hypot(m[0], m[1]).toFixed(2);
+    updateBridge();
     drawSeq();
   }
 }
@@ -3087,7 +3258,7 @@ placeTisArr();
 placeSlicePlane();
 syncSliceUI();
 placeHead();
-markStep();
+setCourse(0);
 applySet(Object.assign({ manual:false, quantum:false }, PRE[0].s), true);
 refresh(false);
 resize();
