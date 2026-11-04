@@ -470,11 +470,15 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 .tstep{margin:0 0 5px; font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; color:var(--dim)}
 .ttext{margin:0 0 12px; font-size:13px; line-height:1.8; color:var(--text)}
 .ttext b{color:var(--selT); font-weight:700}
+.ttext .eq{display:block; margin:7px 0 3px; font-family:var(--mono); font-size:11px; color:var(--rfText); line-height:1.7}
 .ttext .big{display:block; font-family:var(--mincho); font-size:15px; font-weight:700; color:var(--head); margin-bottom:6px}
 .tnav{display:flex; gap:8px; align-items:center}
-#tutSkip{flex:none; padding:7px 12px; background:transparent; border:1px solid var(--line); border-radius:3px;
+#tutSkip,#tutBack{flex:none; padding:7px 12px; background:transparent; border:1px solid var(--line); border-radius:3px;
   color:var(--dim); font-family:var(--gothic); font-size:11.5px; cursor:pointer}
-#tutSkip:hover{color:var(--text); border-color:var(--line2)}
+#tutSkip:hover,#tutBack:hover{color:var(--text); border-color:var(--line2)}
+#tutBack[hidden]{display:none}
+#tutNext.doit{background:var(--rfBg); border-color:var(--rfLine); color:var(--rfText)}
+#tutNext.doit:hover{background:var(--rfBg3)}
 #tutNext{flex:1; padding:8px; background:var(--sel); border:1px solid var(--teal); border-radius:3px;
   color:var(--selT); font-family:var(--gothic); font-size:12.5px; cursor:pointer}
 #tutNext:hover{background:var(--hoverBg)}
@@ -692,14 +696,9 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 
       <!-- ===== 学習 ===== -->
       <div class="pane" id="pane1" hidden>
-        <div class="readout"><span class="big" id="stepName">静磁場の中のプロトン</span><span class="sm" id="stepNo">1 / 10</span></div>
-        <div class="note" id="stepNote" style="margin-top:0"></div>
-        <div class="seqnav">
-          <button class="act" id="bPrev" type="button">前へ</button>
-          <button class="act" id="bAuto" type="button">順に再生</button>
-          <button class="act" id="bNext" type="button">次へ</button>
-        </div>
-        <p class="grp-h" style="margin:12px 0 8px">すすみ方</p>
+        <p class="tiny" style="margin:0 0 10px">光っているところを見ながら、<b>10手</b>でひととおり。読むより、押して見てください。</p>
+        <button class="act wide" id="bLearn" type="button" style="width:100%">① から順に学ぶ</button>
+        <p class="grp-h" style="margin:13px 0 8px">好きなところから</p>
         <ol class="seq" id="stepList"></ol>
       </div>
 
@@ -860,6 +859,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
     <p class="ttext" id="tutText"></p>
     <div class="tnav">
       <button type="button" id="tutSkip">スキップ</button>
+      <button type="button" id="tutBack" hidden>戻る</button>
       <button type="button" id="tutNext">次へ</button>
     </div>
   </div>
@@ -2221,88 +2221,78 @@ function drawRel() {
 }
 
 /* ================= 学習ステップ ================= */
+const LBASE = { back:true, quit:'やめる' };
+const L = (o) => Object.assign({}, LBASE, o);
 const STEPS = [
-{ nm:'静磁場の中のプロトン', tg:'B₀ と M₀',
-  set:{ quantum:true, manual:true, frame:'lab', view:0, seq:'SE', TR:2000, TE:20, T2p:40 },
-  note:`体の中の水素原子核（プロトン）は、それ自体が小さな磁石です。静磁場 <b>B₀</b> の中に置くと、
-  B₀ のまわりをコマのように回ります（<b>歳差運動</b>）。その速さが<b>ラーモア周波数</b>。
-  <span class="eq">ω₀ = γ·B₀ ／ 水素は γ/2π = 42.58 MHz/T → 1.5T で約 64 MHz</span>
-  B₀ と同じ向き（水色）が逆向き（赤）よりほんの少しだけ多く、その差の合計が縦磁化 <b>M₀</b> です。
-  <span class="hl">※ 実際の歳差は毎秒6400万回。ここでは見えるように大幅に遅くしています。</span>` },
+L({ nm:'静磁場の中のプロトン', tg:'B₀ と M₀', sel:'#stage',
+  set:{ quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40 },
+  text:'水素の原子核は小さな磁石です。<b>B₀</b> の中では、コマのように首を振りながら回ります。<br>' +
+       '水色（B₀ と同じ向き）が赤より<b>少しだけ多く</b>、その差の合計が縦磁化 <b>M₀</b>。' +
+       '<span class="eq">ω₀ = γ·B₀ ／ 1.5T で約 64 MHz</span>' }),
 
-{ nm:'合成すると1本のベクトル', tg:'M と回転座標系',
-  set:{ quantum:false, manual:true, frame:'rot', view:0 },
-  note:`1本ずつ追うのは大変なので、ふつうは全部の和である磁化ベクトル <b>M</b> だけを見ます。
-  熱平衡では横向きの成分は打ち消し合い、M は z 軸（＝B₀）の向きで止まっています。
-  このままではコイルに何も起こらない＝<b>信号はゼロ</b>です。<br>
-  ここから先は<b>回転座標系</b>（ラーモア周波数で一緒に回る視点）で見ます。B₀ のまわりの回転が止まって見えるので、
-  倒れ方と減り方だけに集中できます。上の「静止座標系」に切り替えると、実際に回っているようすが見えます。` },
+L({ nm:'合成すると1本の矢印', tg:'M と回転座標系', sel:'#stage',
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false },
+  text:'1本ずつ追わず、<b>全部の和 M</b> だけを見ます。いまは z 軸を向いて止まっています。<br>' +
+       'この状態ではコイルに何も起きません＝<b>信号はゼロ</b>です。' }),
 
-{ nm:'RFパルスで倒す（共鳴）', tg:'α = γ·B₁·τ',
-  set:{ quantum:false, manual:true, frame:'rot', view:0 }, act:'p90',
-  note:`ラーモア周波数と<b>同じ周波数</b>の電波（RF）を横から当てると共鳴が起き、M が倒れます。
-  回転座標系では、この RF は x′ 軸に止まった磁場 <b>B₁</b>（オレンジ）に見え、M は B₁ のまわりを回ります。
-  <span class="eq">フリップ角 α = γ·B₁·τ　（B₁ の強さ × 当てる時間 τ）</span>
-  つまり<b>どんな力をどれだけかけるか</b>で倒れる角度が決まります。90°倒すと縦磁化がすべて横磁化になります。
-  「フリー」タブの手動ボタンで、90°・180°・任意の α を自分で撃てます。` },
+L({ nm:'RFパルスで倒す', tg:'α = γ·B₁·τ', sel:'#stage',
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false },
+  act:{ label:'90°パルスを撃つ', fn:() => { equilibrium(); clearTrail(); manualPulse(90, 'x'); } },
+  text:'ラーモア周波数と同じ電波（RF）を横から当てると<b>共鳴</b>して倒れます。' +
+       '回転座標系では、x′ 軸に立った磁場 <b>B₁</b>（オレンジ）に見えます。' +
+       '<span class="eq">倒れる角 α = γ·B₁·τ（強さ × 当てる時間）</span>' }),
 
-{ nm:'横磁化だけが信号になる', tg:'FID',
-  set:{ quantum:false, manual:true, frame:'lab', view:0 },
-  note:`回っている<b>横磁化 Mxy</b>（赤い成分）がコイルを横切ると起電力が生まれます。これが MR 信号、
-  90°直後のものを <b>FID</b>（自由誘導減衰）といいます。<br>
-  縦磁化 Mz（緑の成分）はどれだけ大きくても、それだけでは信号になりません。
-  だからいったん倒す必要があります。静止座標系にすると、Mxy がぐるぐる回りながら短くなっていくのが見えます。` },
+L({ nm:'横磁化だけが信号になる', tg:'FID', sel:'#stage',
+  set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false },
+  on:() => { equilibrium(); clearTrail(); manualPulse(90, 'x'); },
+  text:'回っている<b>横磁化 Mxy（赤）</b>がコイルを横切って信号になります。<br>' +
+       '<b>縦磁化 Mz（緑）は、それだけでは信号になりません。</b>だから一度倒すのです。' }),
 
-{ nm:'T2：横磁化が消えていく', tg:'スピン-スピン緩和',
-  set:{ quantum:false, manual:false, frame:'rot', view:0, seq:'SE', TR:2000, TE:120, T2p:Infinity },
-  note:`隣り合うスピンどうしが作るわずかな磁場のゆらぎで位相がランダムにずれ、和としての横磁化が減ります。
-  これが <b>T2 緩和（スピン-スピン緩和）</b>。横磁化が最初の <b>37%（1/e）</b> になるまでの時間が T2 です。
-  <span class="eq">Mxy(t) = Mxy(0)·e^(−t/T2)</span>
-  ここでは静磁場を完全に均一（T2′ = ∞）にしてあるので、扇は開かず長さだけが減ります。
-  <span class="hl">※ この模型では、ランダムな位相のずれを「1本ごとの矢印が短くなる」形で表しています（和としては同じ）。</span>` },
+L({ nm:'T2：横磁化が短くなる', tg:'スピン-スピン緩和', sel:'#stage',
+  set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity },
+  text:'磁場を<b>完全に均一</b>にしました。扇は開かず、矢印が<b>短くなる</b>だけ。これが T2 です。<br>' +
+       '横磁化が最初の <b>37%（1/e）</b>になるまでの時間が T2。' }),
 
-{ nm:'T2*：静磁場のムラで もっと速く', tg:'1/T2* = 1/T2 + 1/T2′',
-  set:{ quantum:false, manual:false, frame:'rot', view:0, seq:'SE', TR:2000, TE:120, T2p:40 },
-  note:`実際の静磁場には必ずムラがあり、場所によって共鳴周波数が少し違います。
-  速いスピンと遅いスピンで位相が開いて<b>扇</b>になり、和は T2 よりずっと速く消えます。これが <b>T2*</b>。
-  <span class="eq">1/T2* = 1/T2 + 1/T2′　（T2′ は磁場の不均一による分）</span>
-  FID が消えるのは T2 ではなく T2* の速さです。「フリー」タブの「静磁場の不均一さ」を動かすと扇の開き方が変わります。` },
+L({ nm:'T2*：磁場のムラで もっと速く', tg:'1/T2* = 1/T2 + 1/T2′', sel:'#stage',
+  set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40 },
+  text:'実際の磁場にはムラがあります。速いスピンと遅いスピンで位相が開いて<b>扇</b>になり、' +
+       '和は T2 より<b>ずっと速く</b>消えます。<span class="eq">1/T2* = 1/T2 + 1/T2′</span>' }),
 
-{ nm:'スピンエコー：180°で呼びもどす', tg:'エコーの高さは T2 だけ',
-  set:{ quantum:false, manual:false, frame:'rot', view:0, seq:'SE', TR:2000, TE:120, T2p:40 },
-  note:`TE/2 のところで <b>180°パルス</b>を当てると、扇が y′ 軸のまわりに折り返されます。
-  進みすぎたスピンは後ろに置かれ、遅れたスピンは前に出るので、同じだけ時間がたった <b>TE</b> でぴたりと揃います
-  — これが<b>エコー</b>です。<br>
-  磁場のムラ（T2′）は巻きもどせますが、ランダムな T2 の分は戻りません。だからエコーの高さは <b>T2 だけ</b>で決まります。
-  <span class="eq">S ∝ e^(−TE/T2)　→ TE を長くするほど T2 の差が開く</span>` },
+L({ nm:'スピンエコー：180°で呼びもどす', tg:'エコーの高さは T2 だけ', sel:'#stage',
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40 },
+  act:{ label:'90° → 待つ → 180° を撃つ', fn:() => {
+    equilibrium(); clearTrail(); manualPulse(90, 'x');
+    setTimeout(() => manualPulse(180, 'y'), 2000);
+  } },
+  text:'開いた扇は <b>180°パルス</b>で折り返せます。進みすぎたスピンが後ろに置かれ、' +
+       '同じだけ時間がたったところで<b>ぴたりと揃う＝エコー</b>。<br>' +
+       'ムラの分は戻せても、ランダムな T2 の分は戻りません。だから<b>エコーの高さは T2 だけ</b>で決まります。' }),
 
-{ nm:'T1：縦磁化がもどる', tg:'スピン-格子緩和',
-  set:{ quantum:false, manual:false, frame:'rot', view:1, seq:'SE', TR:500, TE:15, T2p:40 },
-  note:`倒された磁化は、まわり（格子）にエネルギーを渡しながら z 軸へ戻ります。これが <b>T1 緩和</b>。
-  M₀ の <b>63%</b> まで戻る時間が T1 です。
-  <span class="eq">Mz(t) = M₀(1 − e^(−t/T1))</span>
-  次の 90°パルスが来る <b>TR</b> の時点で戻っている量が、そのまま次の信号の大きさになります。
-  TR を短くすると、T1 の短い組織（脂肪）だけがよく戻って明るく、T1 の長い組織（水）は戻れず暗くなります
-  — これが <b>T1 コントラスト</b>です。` },
+L({ nm:'T1：縦磁化がもどる', tg:'スピン-格子緩和', sel:'#panRel',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
+  text:'倒れた磁化は z 軸へ戻ります（T1）。グラフ①の <b>TR の線</b>のところで戻っている量が、' +
+       '次に使える信号の大きさです。<br>TR が短いと、<b>T1 の短い組織（脂肪）だけがよく戻って明るく</b>なります。' }),
 
-{ nm:'TR と TE で画像が変わる', tg:'T1強調 / PD / T2強調',
-  set:{ quantum:false, manual:false, frame:'rot', view:1, seq:'SE', TR:500, TE:15, T2p:40 },
-  note:`信号の大きさは、結局この式で決まります。
-  <span class="eq">S = ρ·(1 − e^(−TR/T1))·e^(−TE/T2)</span>
-  ・<b>短い TR・短い TE</b> → T1 の差が出て T2 の差は消える＝<b>T1強調</b>（脂肪が白、水が黒）<br>
-  ・<b>長い TR・短い TE</b> → どちらの差も消える＝<b>プロトン密度強調</b><br>
-  ・<b>長い TR・長い TE</b> → T1 の差が消えて T2 の差が出る＝<b>T2強調</b>（水が白、病変が白）<br>
-  「シーケンス」タブで切り替えるか、「フリー」タブで TR・TE を動かしてみてください。右の画像がその場で変わります。` },
+L({ nm:'TR と TE で画像が変わる', tg:'T1強調 / PD / T2強調', sel:'#imgbox',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
+  act:{ label:'T2強調にしてみる', fn:() => applySet(Object.assign({ manual:false, quantum:false }, PRE[1].s), true) },
+  text:'<span class="eq">S = ρ(1 − e^(−TR/T1))·e^(−TE/T2)</span>' +
+       '短TR・短TE で <b>T1強調</b>（脂肪が白・水が黒）、長TR・長TE で <b>T2強調</b>（水が白）。押して見比べてください。' }),
 
-{ nm:'反転回復：消したい組織を選ぶ', tg:'STIR / FLAIR',
-  set:{ quantum:false, manual:false, frame:'rot', view:1, seq:'IR', TR:9000, TE:100, TI:2400, T2p:40 },
-  note:`先に <b>180°パルス</b>で縦磁化を −M₀ に反転させ、戻る途中で 90° を撃ちます。
-  ある組織の縦磁化がちょうど <b>0 を横切る瞬間</b>に 90° を当てると、その組織は横磁化を作れず信号が出ません。
-  <span class="eq">TI ≈ 0.69 × T1　（TR が十分長いとき）</span>
-  ・脂肪（T1≈270ms）を狙う → TI ≈ 180ms ＝ <b>STIR</b><br>
-  ・脳脊髄液（T1≈4000ms）を狙う → TI ≈ 2400ms ＝ <b>FLAIR</b>（脳室の水を黒くして、その脇の病変を見やすくする）<br>
-  上のグラフで、縦磁化の線が 0 を横切るところに赤い TI の線を合わせてみてください。` }
+L({ nm:'反転回復：消したい組織を選ぶ', tg:'STIR / FLAIR', sel:'#panRel',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:9000, TE:100, TI:2400, T2p:40 },
+  act:{ label:'STIR（脂肪を消す）にしてみる', fn:() => {
+    const p = PRE.find(x => x.k === 'stir');
+    applySet(Object.assign({ manual:false, quantum:false }, p.s), true);
+  } },
+  text:'先に 180° で反転させ、狙った組織の縦磁化が<b>0 を横切る瞬間</b>に 90° を撃つと、その組織は信号を出しません。' +
+       '<span class="eq">TI ≒ 0.69 × T1</span>グラフ①で、線が 0 を横切るところに赤い TI の線が来ています。' })
 ];
+/* 最後の1枚。10手のうしろに足して使う */
+const LEARN = STEPS.concat([{ head:'おしまい', nm:'ここまでが基本です', next:'とじる', quit:'とじる',
+  text:'あとは<b>「シーケンス」</b>で TR・TE を動かすか、<b>「問題」</b>で確かめてみてください。<br>' +
+       'この10手は、いつでも「学習」タブから呼び直せます。' }]);
+
 
 /* ================= シーケンスのプリセット ================= */
 const PRE = [
@@ -2578,7 +2568,7 @@ function setMode(m) {
     P.quantum = false; P.manual = false;
     refresh(true);
   }
-  if (mode === 1) gotoStep(stepI);
+  if (mode === 1) markStep();
   if (mode === 3) showQ();
   requestAnimationFrame(resize);
 }
@@ -2588,34 +2578,28 @@ $('modeTabs').addEventListener('click', e => {
 });
 
 /* ================= 学習 ================= */
-let stepI = 0, auto = false, autoT = 0;
+let stepI = 0;
 const stepList = $('stepList');
-STEPS.forEach((s, i) => {
+STEPS.forEach((st, i) => {
   const li = document.createElement('li');
   const b = document.createElement('button');
   b.type = 'button';
-  b.innerHTML = '<span class="no">' + (i + 1) + '</span><span>' + s.nm + '<span class="tg2">' + s.tg + '</span></span>';
-  b.addEventListener('click', () => { auto = false; $('bAuto').textContent = '順に再生'; gotoStep(i); });
+  b.innerHTML = '<span class="no">' + (i + 1) + '</span><span>' + st.nm + '<span class="tg2">' + st.tg + '</span></span>';
+  b.addEventListener('click', () => gotoStep(i));
   li.appendChild(b); stepList.appendChild(li);
 });
-function gotoStep(i, apply) {
+/* 学習は案内カードそのもの。設定・光らせる場所・やることは各手が持っている */
+function gotoStep(i) {
   stepI = Math.max(0, Math.min(STEPS.length - 1, i));
-  const s = STEPS[stepI];
-  [...stepList.querySelectorAll('button')].forEach((b, k) => k === stepI ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
-  $('stepName').textContent = s.nm;
-  $('stepNo').textContent = (stepI + 1) + ' / ' + STEPS.length;
-  $('stepNote').innerHTML = s.note;
-  if (apply === false) return;                 // 起動時は一覧を作るだけ
-  applySet(s.set, true);
-  if (s.act === 'p90') { equilibrium(); clearTrail(); manualPulse(90, 'x'); }
-  if (mode === 1) $('stepName').scrollIntoView({ block:'nearest' });   // 説明が隠れないようにする
+  markStep();
+  tutRun(LEARN, stepI, markStep);
 }
-$('bPrev').addEventListener('click', () => { auto = false; $('bAuto').textContent = '順に再生'; gotoStep(stepI - 1); });
-$('bNext').addEventListener('click', () => { auto = false; $('bAuto').textContent = '順に再生'; gotoStep(stepI + 1); });
-$('bAuto').addEventListener('click', () => {
-  auto = !auto; autoT = 0;
-  $('bAuto').textContent = auto ? '止める' : '順に再生';
-});
+function markStep() {
+  const k = tutI >= 0 && tutList === LEARN ? tutI : stepI;
+  [...stepList.querySelectorAll('button')].forEach((b, n) =>
+    n === k ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
+}
+$('bLearn').addEventListener('click', () => gotoStep(0));
 
 /* ================= シーケンスのプリセット ================= */
 const preGrid = $('preGrid');
@@ -2958,7 +2942,7 @@ const TUT = [
          '順を追って学ぶなら<b>「学習」</b>タブへ。この案内は題字の横の<b>「使い方をもう一度」</b>から呼べます。',
     next:'はじめる' }
 ];
-let tutI = -1, tutWaiting = null;
+let tutList = TUT, tutI = -1, tutWaiting = null, tutActDone = false, tutAfter = null;
 const tutEl = $('tut'), tutHole = $('tutHole'), tutCard = $('tutCard');
 
 function tutPlace(el) {
@@ -2975,7 +2959,7 @@ function tutPlace(el) {
   tutHole.style.top = (r.top - pad) + 'px';
   tutHole.style.width = (r.width + pad * 2) + 'px';
   tutHole.style.height = (r.height + pad * 2) + 'px';
-  tutHole.className = TUT[tutI].wait ? 'ring tap' : 'ring';
+  tutHole.className = tutList[tutI].wait ? 'ring tap' : 'ring';
   /* カードは対象の反対側に置く。光らせたものをカードで隠しては意味がない */
   tutCard.className = 'anchored';
   const cw = tutCard.offsetWidth || 340, ch = tutCard.offsetHeight || 150;
@@ -2991,12 +2975,19 @@ function tutPlace(el) {
   tutCard.style.top = y + 'px';
 }
 function tutShow() {
-  const st = TUT[tutI];
+  const st = tutList[tutI];
   tutEl.hidden = false;
-  $('tutStep').textContent = tutI === 0 ? 'はじめに'
-    : tutI === TUT.length - 1 ? 'おしまい' : tutI + ' / ' + (TUT.length - 2);
-  $('tutText').innerHTML = st.text;
-  $('tutNext').textContent = st.next || (st.wait ? '押さずに次へ' : '次へ');
+  tutActDone = false;
+  if (st.set) applySet(Object.assign({}, st.set), true);
+  if (st.on) st.on();
+  const n = tutList.filter(x => x.sel || x.act).length;
+  const k = tutList.slice(0, tutI + 1).filter(x => x.sel || x.act).length;
+  $('tutStep').textContent = st.head || (st.sel || st.act ? k + ' / ' + n : '');
+  $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + st.text;
+  $('tutBack').hidden = !(st.back && tutI > 0);
+  $('tutSkip').textContent = st.quit || 'スキップ';
+  tutBtn(st);
+  if (tutList === LEARN) { stepI = Math.min(tutI, STEPS.length - 1); markStep(); }
   const el = st.sel ? document.querySelector(st.sel) : null;
   /* 先に対象を画面の真ん中へ運んでから測る。なめらかスクロールだと
      測り終える前に位置が変わるので、ここでは一息に動かす */
@@ -3011,24 +3002,39 @@ function tutShow() {
     tutWaiting = { el:el, fn:fn };
   }
 }
-function tutNext() { tutI++; if (tutI >= TUT.length) tutEnd(); else tutShow(); }
+/* 進むボタン：やることがある手では、まず「やる」ボタンになる */
+function tutBtn(st) {
+  const b = $('tutNext');
+  if (st.act && !tutActDone) { b.textContent = st.act.label; b.className = 'doit'; }
+  else { b.textContent = st.next || (st.wait ? '押さずに次へ' : '次へ'); b.className = ''; }
+}
+function tutHit() {
+  const st = tutList[tutI];
+  if (st.act && !tutActDone) { tutActDone = true; st.act.fn(); tutBtn(st); return; }
+  tutNext();
+}
+function tutNext() { tutI++; if (tutI >= tutList.length) tutEnd(); else tutShow(); }
+function tutBack() { if (tutI > 0) { tutI--; tutShow(); } }
 function tutEnd() {
   if (tutWaiting) { tutWaiting.el.removeEventListener('click', tutWaiting.fn); tutWaiting = null; }
   tutI = -1; tutEl.hidden = true;
-  try { localStorage.setItem(GKEY, '1'); } catch (e) { }
+  const f = tutAfter; tutAfter = null;
+  if (f) f();
 }
+function tutRun(list, i, after) { tutList = list; tutAfter = after || null; tutI = i || 0; tutShow(); }
 function tutStart() {
   /* どこから呼ばれても同じ所から始められるように、画面をそろえる */
   setMode(0);
   applySet(Object.assign({ manual:false, quantum:false, view:1, showBody:true }, PRE[0].s), true);
-  tutI = 0; tutShow();
+  tutRun(TUT, 0, () => { try { localStorage.setItem(GKEY, '1'); } catch (e) { } });
 }
 function tutSync() {
   if (tutI < 0) return;
-  const st = TUT[tutI];
+  const st = tutList[tutI];
   tutPlace(st.sel ? document.querySelector(st.sel) : null);
 }
-$('tutNext').addEventListener('click', tutNext);
+$('tutNext').addEventListener('click', tutHit);
+$('tutBack').addEventListener('click', tutBack);
 $('tutSkip').addEventListener('click', tutEnd);
 $('bGuide').addEventListener('click', tutStart);
 addEventListener('resize', tutSync);
@@ -3057,10 +3063,6 @@ function loop(now) {
   advance(dt);
   updateScene(dt);
   renderer.render(scene, camera);
-  if (auto && mode === 1) {
-    autoT += dt;
-    if (autoT > 12) { autoT = 0; if (stepI >= STEPS.length - 1) { auto = false; $('bAuto').textContent = '順に再生'; } else gotoStep(stepI + 1); }
-  }
   acc += dt;
   if (acc > 0.08) {
     acc = 0;
@@ -3085,7 +3087,7 @@ placeTisArr();
 placeSlicePlane();
 syncSliceUI();
 placeHead();
-gotoStep(0, false);
+markStep();
 applySet(Object.assign({ manual:false, quantum:false }, PRE[0].s), true);
 refresh(false);
 resize();
