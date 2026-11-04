@@ -319,6 +319,39 @@ input[type=range]::-moz-range-thumb{width:13px; height:13px; border-radius:3px; 
 input[type=range]:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
 input[type=range]:disabled{opacity:.35; cursor:default}
 .detent{display:flex; gap:4px; margin:-2px 0 0; flex-wrap:wrap}
+
+/* ---------- 大きいスライダ（TR / TE / TI / α）----------
+   つまみを大きな丸にし、左から今の位置までを色で塗る。目盛りは実際の位置に置き、押せば飛べる。
+   両端に「動かすと何が起きるか」を一言だけ置く */
+.sld.big{margin:0 0 14px}
+.sld.big .sld-h{margin-bottom:3px}
+.sld.big .sld-h span{font-size:12px; color:var(--text)}
+.sld.big .sld-h em{font-style:normal; font-family:var(--mono); font-weight:700; color:var(--teal); margin-right:7px; font-size:13px}
+.sld.big .sld-h b{font-size:16px; font-weight:600}
+.rwrap{position:relative; padding-bottom:20px}
+.rwrap.nt{padding-bottom:0}
+.sld.big input[type=range]{height:32px}
+.sld.big input[type=range]::-webkit-slider-runnable-track{
+  height:8px; border-radius:4px; border:1px solid var(--line2);
+  background:linear-gradient(90deg,var(--teal) 0,var(--teal) var(--p,0%),var(--track) var(--p,0%),var(--track) 100%);
+}
+.sld.big input[type=range]::-webkit-slider-thumb{
+  width:26px; height:26px; margin-top:-10px; border-radius:50%;
+  background:var(--panel); border:4px solid var(--teal); box-shadow:0 2px 6px var(--shadow);
+}
+.sld.big input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+.sld.big input[type=range]::-moz-range-track{height:8px; border-radius:4px; background:var(--track); border:1px solid var(--line2)}
+.sld.big input[type=range]::-moz-range-progress{height:8px; border-radius:4px; background:var(--teal)}
+.sld.big input[type=range]::-moz-range-thumb{width:20px; height:20px; border-radius:50%; background:var(--panel); border:4px solid var(--teal)}
+.ticks{position:absolute; left:0; right:0; top:30px; height:18px}
+.ticks button{
+  position:absolute; top:0; transform:translateX(-50%); padding:3px 3px 0; background:none; border:none;
+  color:var(--dim); font-family:var(--mono); font-size:10px; cursor:pointer; line-height:1.2;
+}
+.ticks button::before{content:""; position:absolute; left:50%; top:-3px; width:1px; height:4px; background:var(--line2)}
+.ticks button:hover{color:var(--text)}
+.ticks button[aria-current="true"]{color:var(--teal); font-weight:700}
+.rends{display:flex; justify-content:space-between; gap:8px; margin-top:2px; font-size:10.5px; color:var(--dim)}
 .detent button{
   padding:2px 7px; background:var(--panel2); border:1px solid var(--line); border-radius:2px;
   color:var(--dim); font-family:var(--mono); font-size:9.5px; cursor:pointer;
@@ -695,25 +728,26 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <p class="lede" id="preLede"></p>
         <div class="pre-grid" id="preGrid"></div>
         <div class="note" id="preNote"></div>
-        <p class="grp-h" style="margin:13px 0 6px">つまみを動かす <b>すぐ反映されます</b></p>
-        <div class="sld">
-          <div class="sld-h"><span>TR　くり返す間隔</span><b id="vTR">500 ms</b></div>
-          <input type="range" id="sTR" min="0" max="10" value="0">
-          <div class="detent" id="dTR"></div>
+        <p class="grp-h" style="margin:13px 0 6px">つまみを左右に動かす <b>画像と図がすぐ変わります</b></p>
+        <div class="sld big">
+          <div class="sld-h"><span><em>TR</em>次に倒すまでの待ち時間</span><b id="vTR">500 ms</b></div>
+          <div class="rwrap"><input type="range" id="sTR" min="0" max="10" value="0" aria-label="TR"><div class="ticks" id="dTR"></div></div>
+          <div class="rends"><span>◀ 短く：水が暗くなる（T1強調）</span><span>長く ▶</span></div>
         </div>
-        <div class="sld">
-          <div class="sld-h"><span>TE　信号を読むまで</span><b id="vTE">15 ms</b></div>
-          <input type="range" id="sTE" min="0" max="10" value="0">
-          <div class="detent" id="dTE"></div>
+        <div class="sld big">
+          <div class="sld-h"><span><em>TE</em>倒してから読むまで</span><b id="vTE">15 ms</b></div>
+          <div class="rwrap"><input type="range" id="sTE" min="0" max="10" value="0" aria-label="TE"><div class="ticks" id="dTE"></div></div>
+          <div class="rends"><span>◀ 短く</span><span>長く：水が白くなる（T2強調） ▶</span></div>
         </div>
-        <div class="sld" id="wTI">
-          <div class="sld-h"><span>TI　反転してから倒すまで</span><b id="vTI">—</b></div>
-          <input type="range" id="sTI" min="0" max="10" value="0">
-          <div class="detent" id="dTI"></div>
+        <div class="sld big" id="wTI">
+          <div class="sld-h"><span><em>TI</em>反転してから倒すまで</span><b id="vTI">—</b></div>
+          <div class="rwrap"><input type="range" id="sTI" min="0" max="10" value="0" aria-label="TI"><div class="ticks" id="dTI"></div></div>
+          <div class="rends"><span>◀ 短く：脂肪が消える</span><span>長く：水が消える ▶</span></div>
         </div>
-        <div class="sld" id="wFA">
-          <div class="sld-h"><span>α　どれだけ倒すか</span><b id="vFA">90°</b></div>
-          <input type="range" id="sFA" min="2" max="180" value="90">
+        <div class="sld big" id="wFA">
+          <div class="sld-h"><span><em>α</em>どれだけ倒すか</span><b id="vFA">90°</b></div>
+          <div class="rwrap nt"><input type="range" id="sFA" min="2" max="180" value="90" aria-label="フリップ角"></div>
+          <div class="rends"><span>◀ 少しだけ倒す</span><span>大きく倒す ▶</span></div>
           <canvas id="faCv" style="width:100%; height:120px; display:block; margin-top:6px"></canvas>
           <p class="tiny" id="faNote"></p>
         </div>
@@ -2415,20 +2449,20 @@ const METH = [
 L({ nm:'矢印から画像へ', tg:'横の長さ × ρ ＝ 明るさ', sel:'#panBridge', blk:'nearest',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
   act:{ label:'組織ごとに塗ってみる', fn:() => paintDemo() },
-  text:'信号を読む瞬間の<b>矢印の横の長さ × 水素の量</b>が、その組織の明るさです。<br>' +
-       'その明るさで、同じ組織の場所をぜんぶ塗ると MR 画像になります。' }),
+  text:'3D の矢印は、組織ごとに1本ずつ立っています。信号を読む瞬間の<b>横の長さ × 水素の量（ρ）</b>が、その組織の明るさです。<br>' +
+       '同じ組織の場所をすべてその明るさで塗ると、MR 画像になります。' }),
 
 L({ nm:'TR：次に倒すまでの待ち時間', tg:'T1 の差をつける', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
-  text:'<b>TR</b> は次に倒すまでの待ち時間。短くすると、<b>戻るのが遅い水は戻りきれず暗く</b>なります。<br>' +
-       'こうして T1 の差が明るさの差になります（T1強調）。' }),
+  text:'<b>TR</b> は、倒してから次にまた倒すまでの待ち時間です。短くすると、縦へ戻るのが遅い<b>水（脳脊髄液）が戻りきれず暗く</b>なります。<br>' +
+       'このように、<b>T1 の違いを明るさの違いにした画像</b>が T1強調です。' }),
 
 L({ nm:'TE：倒してから読むまで', tg:'T2 の差をつける', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:4000, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TE を 15 → 100 ms に長くする', fn:() => applySet({ TE:100 }, true) },
-  text:'<b>TE</b> は倒してから信号を読むまでの時間。長くすると、<b>減るのが速い組織から暗く</b>なり、<br>' +
-       '減りにくい水が白く残ります。T2 の差が明るさの差になります（T2強調）。' }),
+  text:'<b>TE</b> は、倒してから信号を読むまでの時間です。長くすると、横の矢印が速く縮む組織から暗くなり、<b>縮みにくい水が白く</b>残ります。<br>' +
+       'このように、<b>T2 の違いを明るさの違いにした画像</b>が T2強調です。' }),
 
 L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
@@ -2438,26 +2472,27 @@ L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
     setTimeout(() => { applySet(pre('pd'), true); shoot(); }, 900);
     setTimeout(() => { applySet(pre('t2'), true); shoot(); }, 1800);
   } },
-  text:'<b>TR 短・TE 短 → T1強調</b>／<b>TR 長・TE 短 → プロトン密度</b>／<b>TR 長・TE 長 → T2強調</b>。<br>' +
-       '同じ断面で3枚撮って、並べて比べます。' }),
+  text:'TR と TE の長い・短いの組み合わせで、何が強調されるかが決まります。<br>' +
+       '<b>TR 短・TE 短＝T1強調</b>、<b>TR 長・TE 短＝プロトン密度強調</b>、<b>TR 長・TE 長＝T2強調</b>。3枚撮って下に並べてみましょう。' }),
 
 L({ nm:'GRE：180° を使わない', tg:'T2 ではなく T2*', sel:'#panSeq',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:25, T2p:40 },
   act:{ label:'T2*強調 GRE に切り替える', fn:() => applySet(pre('t2s'), true) },
-  text:'<b>GRE</b> は 180° を使わずにエコーを作ります。②の図から 180° が消えます。<br>' +
-       'ムラのずれを戻さないので <b>T2*</b> で暗くなり、出血などが黒く抜けます。' }),
+  text:'<b>GRE</b>（グラジエントエコー）は、180°パルスを使わずにエコーを作る撮り方です。切り替えると、②の図から 180° が消えます。<br>' +
+       '磁場のムラによるずれを戻さないので、T2 ではなく <b>T2*</b> で暗くなります。' }),
 
 L({ nm:'IR：狙った組織を消す', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
   act:{ label:'TI を 180 ms にする（STIR）', fn:() => applySet({ TI:180 }, true) },
-  text:'先に <b>180°</b> で磁化を逆向きにし、狙った組織が<b>ちょうど 0 を通る瞬間</b>に倒すと、その組織は<b>信号が出ません</b>。<br>' +
-       'その時間が <b>TI</b>。脂肪なら約 180 ms です。' }),
+  text:'<b>IR</b>（反転回復）は、まず <b>180°</b> で縦の磁化を下向きにします。戻る途中の<b>ちょうど 0 の瞬間</b>に倒すと、その組織は信号が出ません。<br>' +
+       'この時間が <b>TI</b>。脂肪に合わせた TI（約 180 ms）で脂肪を消すのが STIR です。' }),
 
 L({ nm:'FLAIR：水を消す', tg:'STIR との違い', sel:'#imgbox',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:180, T2p:40 },
+  on:() => { if (!lesOn) $('bLes').click(); },   // 文で「病変が浮かぶ」と言うので、病変を入れておく
   act:{ label:'FLAIR（TI 2400 ms）に切り替える', fn:() => applySet(pre('flair'), true) },
-  text:'水は戻るのがとても遅い（T1 約 4000 ms）ので、<b>TI を 2400 ms と長く</b>とると水が消えます。<br>' +
-       '脳室が黒くなり、ふちの病変が見やすくなります。' })
+  text:'水（脳脊髄液）は縦へ戻るのがとても遅いので、<b>TI を約 2400 ms</b> と長くすると水が消えます。これが FLAIR です。<br>' +
+       '脳室が黒くなり、すぐそばの病変（浮腫）が白く浮かび上がります。' })
 ];
 
 /* コースの定義。list は案内カードに渡す「本編＋おしまいの1枚」 */
@@ -2479,29 +2514,29 @@ let course = 0, STEPS = COURSE[0].steps, LEARN = COURSE[0].list;
 /* ================= シーケンスのプリセット ================= */
 const PRE = [
 { k:'t1',  nm:'T1強調 SE',   ruby:'T1W SE',  s:{ seq:'SE', TR:500, TE:15 },
-  lede:'短い TR で T1 の差を出し、短い TE で T2 の差を消す → 脂肪が白・水が黒',
-  note:`脂肪が白く、水（CSF）が黒い。解剖の形を見るのに向く。` },
+  lede:'TR を短くして T1 の差を出し、TE を短くして T2 の差は出さないようにした撮り方です。',
+  note:`脂肪が白く、水（脳脊髄液）が黒く写ります。脳の形を見るのに向いています。` },
 { k:'t2',  nm:'T2強調 SE',   ruby:'T2W SE',  s:{ seq:'SE', TR:4000, TE:100 },
-  lede:'長い TR で T1 の差を消し、長い TE で T2 の差を出す → 水と病変が白',
-  note:`水が白い。浮腫をともなう病変が白く光るので、病変さがしの基本。` },
+  lede:'TR を長くして T1 の差を消し、TE を長くして T2 の差を出した撮り方です。',
+  note:`水が白く写ります。むくみ（浮腫）をともなう病変も白くなるので、病変を探すときの基本になります。` },
 { k:'pd',  nm:'プロトン密度', ruby:'PD SE',   s:{ seq:'SE', TR:2500, TE:15 },
-  lede:'長い TR・短い TE で T1 も T2 も効かせない → 水素の量そのもの',
-  note:`のっぺりと明るく、灰白質が白質よりわずかに明るい。` },
+  lede:'TR を長く、TE を短くして、T1 の差も T2 の差も出さない撮り方です。明るさはほぼ水素の量で決まります。',
+  note:`全体がのっぺりと明るく、灰白質が白質よりわずかに明るく写ります。` },
 { k:'t2s', nm:'T2*強調 GRE', ruby:'GRE',     s:{ seq:'GRE', TR:500, TE:25, FA:20 },
-  lede:'180° を使わないので T2 ではなく T2* で減る → 出血や石灰化が黒く抜ける',
-  note:`磁場のムラによる位相のずれが戻らない。「詳細」の<b>静磁場のムラ</b>で大きく変わる。` },
+  lede:'180°パルスを使わない GRE で、TE を長めにとった撮り方です。T2 ではなく T2* で暗くなります。',
+  note:`磁場のムラによるずれが戻らないので、出血や石灰化のまわりが黒く抜けます。「詳細」の<b>静磁場のムラ</b>を変えると、暗くなり方が大きく変わります。` },
 { k:'t1g', nm:'T1強調 GRE',  ruby:'GRE',     s:{ seq:'GRE', TR:150, TE:4, FA:70 },
-  lede:'TR がとても短くても、大きく倒せば T1 の差が出る',
-  note:`息止めで撮る腹部など。α を変えると信号の大きさが変わる。` },
+  lede:'GRE で TR をとても短くし、そのぶん大きく倒して（α 70°）T1 の差を出す撮り方です。',
+  note:`短い時間で撮れるので、息を止めて撮る腹部などで使われます。α を動かすと、組織ごとの明るさが変わります。` },
 { k:'stir',nm:'STIR（脂肪抑制）', ruby:'IR', s:{ seq:'IR', TR:4000, TE:60, TI:180 },
-  lede:'TI ≒ 0.69 × T1（脂肪）→ 脂肪の T1 に合わせて黒くする',
-  note:`脂肪が黒くなる。消えるかは T1 だけで決まるので、T1 の近い組織も一緒に黒くなる。` },
+  lede:'IR で、脂肪の縦磁化がちょうど 0 を通る時刻（TI 約 180 ms）に倒して、脂肪を消す撮り方です。',
+  note:`脂肪が黒くなります。消えるかどうかは T1 だけで決まるので、T1 が脂肪に近い組織も一緒に暗くなります。` },
 { k:'flair',nm:'FLAIR（水抑制）', ruby:'IR', s:{ seq:'IR', TR:9000, TE:100, TI:2400 },
-  lede:'TI ≒ 0.69 × T1（水）→ 脳室の水を黒くして、そのふちの病変を見せる',
-  note:`脳室の水が黒くなり、そのすぐ脇の白質病変が見える。T2強調では水と紛れるところ。` },
+  lede:'IR で、水の縦磁化がちょうど 0 を通る時刻（TI 約 2400 ms）に倒して、水を消す撮り方です。',
+  note:`脳室の水が黒くなるので、T2強調では水と見分けにくい、脳室のすぐそばの病変が見えるようになります。` },
 { k:'t2h',  nm:'強いT2強調', ruby:'HEAVY T2', s:{ seq:'SE', TR:6000, TE:200 },
-  lede:'TE をさらに伸ばす → T2 の長い水以外はほとんど消える',
-  note:`MRCP や内耳の考え方。信号は小さくなるのでノイズとの兼ね合いになる。` }
+  lede:'TE をさらに長くして、T2 の長い水以外をほとんど消す撮り方です。',
+  note:`胆管・膵管を写す MRCP や、内耳を見るときの考え方です。全体の信号は小さくなるので、ノイズとの兼ね合いになります。` }
 ];
 
 /* ================= 練習問題 =================
@@ -2773,6 +2808,7 @@ function refresh(keep) {
   $('vT2p').textContent = isFinite(P.T2p) ? Math.round(P.T2p) + ' ms' : '均一（∞）';
   $('sTR').value = near(TRV, P.TR); $('sTE').value = near(TEV, P.TE);
   $('sTI').value = near(TIV, P.TI); $('sFA').value = P.FA; $('sT2p').value = near(TPV, P.T2p);
+  paintSliders();
   $('wTI').style.display = P.seq === 'IR' ? '' : 'none';
   $('wFA').style.display = (P.seq === 'GRE' || P.manual) ? '' : 'none';
   segSet($('seqSeg'), P.seq, 'q'); segSet($('b0Seg'), P.B0, 'b'); segSet($('phSeg'), phantomKind, 'ph');
@@ -2781,10 +2817,10 @@ function refresh(keep) {
   const pr = presetOf();
   [...$('preGrid').children].forEach(b => b.setAttribute('aria-pressed', !!pr && b.dataset.k === pr.k));
   $('preLede').textContent = pr ? pr.lede
-    : (P.TR < 1800 ? '短い' : '長い') + ' TR ＋ ' + (P.TE < 60 ? '短い' : '長い') + ' TE → ' + weightName();
+    : 'TR が' + (P.TR < 1800 ? '短く' : '長く') + '、TE が' + (P.TE < 60 ? '短い' : '長い') + '条件です（' + weightName() + '）。';
   $('preNote').innerHTML = pr ? pr.note
-    : 'TR・TE を自分で決めた条件です。右のグラフで、どの組織の差が開いているかを確かめてください。'
-      + '線のあいだが広いところが、そのまま画像の明暗の差になります。';
+    : 'TR・TE を自分で決めた条件です。③のグラフで、線と線の間が広いところほど、'
+      + '画像の明るさの差も大きくなります。';
   $('tManual').checked = P.manual;
   $('bPause').textContent = P.paused ? '再生' : '一時停止';
   $('bPause').setAttribute('aria-pressed', P.paused);
@@ -2930,13 +2966,27 @@ function wireSlider(id, arr, key) {
 wireSlider('sTR', TRV, 'TR'); wireSlider('sTE', TEV, 'TE');
 wireSlider('sTI', TIV, 'TI'); wireSlider('sT2p', TPV, 'T2p');
 $('sFA').addEventListener('input', () => { P.FA = +$('sFA').value; refresh(); });
+/* 目盛り：スライダの上の実際の位置に置く（つまみの幅 26px の半分だけ両端を内側へ） */
 function detents(boxId, arr, key, vals, unit) {
   const box = $(boxId);
   vals.forEach(v => {
+    const ix = near(arr, v), f = ix / (arr.length - 1);
     const b = document.createElement('button');
-    b.type = 'button'; b.textContent = v + (unit || '');
-    b.addEventListener('click', () => { P[key] = arr[near(arr, v)]; refresh(); });
+    b.type = 'button'; b.textContent = v + (unit || ''); b.dataset.ix = ix;
+    b.style.left = 'calc(13px + ' + f.toFixed(4) + ' * (100% - 26px))';
+    b.addEventListener('click', () => { P[key] = arr[ix]; refresh(); });
     box.appendChild(b);
+  });
+}
+/* スライダの塗り（左から今の位置まで）と、今いる目盛りの強調 */
+function paintSliders() {
+  ['sTR', 'sTE', 'sTI', 'sFA'].forEach(id => {
+    const el = $(id), f = (el.value - el.min) / (el.max - el.min);
+    el.style.setProperty('--p', 'calc(13px + ' + f.toFixed(4) + ' * (100% - 26px))');
+  });
+  [['dTR', 'sTR'], ['dTE', 'sTE'], ['dTI', 'sTI']].forEach(([d, sId]) => {
+    const v = +$(sId).value;
+    [...$(d).children].forEach(b => b.setAttribute('aria-current', +b.dataset.ix === v));
   });
 }
 detents('dTR', TRV, 'TR', [100, 500, 2000, 4000, 9000]);
