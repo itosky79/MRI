@@ -559,7 +559,6 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
           <div class="seg" id="viewSeg">
             <button type="button" data-v="0">3Dだけ</button>
             <button type="button" data-v="1" aria-pressed="true">3D + 画像</button>
-            <button type="button" data-v="2">画像だけ</button>
           </div>
           <div class="seg" id="scaleSeg">
             <button type="button" data-sc="brain" aria-pressed="true">脳全体</button>
@@ -797,7 +796,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
       <div class="toggles" style="margin-top:11px">
         <label class="tg"><input type="checkbox" id="tBody" checked>脳全体と部位ごとの磁化ベクトルを出す</label>
         <label class="tg"><input type="checkbox" id="tComp" checked>Mz と Mxy に分けて見せる</label>
-        <label class="tg"><input type="checkbox" id="tTrail" checked>合成ベクトルの軌跡</label>
+        <label class="tg"><input type="checkbox" id="tTrail">合成ベクトルの軌跡</label>
         <label class="tg"><input type="checkbox" id="tLab" checked>3D のラベル</label>
         <label class="tg"><input type="checkbox" id="tSlow" checked>パルスをゆっくり見せる</label>
         <label class="tg"><input type="checkbox" id="tNoise" checked>画像にノイズを乗せる</label>
@@ -888,7 +887,7 @@ const P = {
   frame:'rot',     // rot=回転座標系 / lab=静止座標系
   manual:false, paused:false, spd:1,
   echoStop:true, spoil:true, nDisp:24, showBody:true,   // はじめから脳全体（部位ごとの磁化ベクトルと断面）を出す
-  showComp:true, showTrail:true, showLab:true,
+  showComp:true, showTrail:false, showLab:true,
   slowPulse:true, noise:true, quantum:false,
   view:1           // 0=3D / 1=3D+画像 / 2=画像
 };
@@ -1522,18 +1521,15 @@ function buildSpins(n) {
   }
   setDisp(n);
 }
-const mArrow = mkArrow(0x52B8CE, 0.105, 0.34, 1.0); spinGrp.add(mArrow.grp); tint(mArrow, 'm');
-const mzArrow = mkArrow(0x7ED9A7, 0.055, 0.20, 0.6, 0.92); spinGrp.add(mzArrow.grp); tint(mzArrow, 'mz');
-const mxyArrow = mkArrow(0xE0645C, 0.055, 0.20, 0.6, 0.92); spinGrp.add(mxyArrow.grp); tint(mxyArrow, 'mxy');
+const mArrow = mkArrow(0x52B8CE, 0.135, 0.42, 1.2); spinGrp.add(mArrow.grp); tint(mArrow, 'm');
+const mzArrow = mkArrow(0x7ED9A7, 0.072, 0.26, 0.74, 0.92); spinGrp.add(mzArrow.grp); tint(mzArrow, 'mz');
+const mxyArrow = mkArrow(0xE0645C, 0.072, 0.26, 0.74, 0.92); spinGrp.add(mxyArrow.grp); tint(mxyArrow, 'mxy');
 const compPos = new Float32Array(12);
 const compGeo = new THREE.BufferGeometry();
 compGeo.setAttribute('position', new THREE.BufferAttribute(compPos, 3));
 const compLine = new THREE.LineSegments(compGeo, new THREE.LineBasicMaterial({ color:0x5b7387, transparent:true, opacity:.7 }));
 compLine.frustumCulled = false; spinGrp.add(tint(compLine, 'comp'));
 const b1Arrow = mkArrow(0xF0B24B, 0.075, 0.26, 0.72); spinGrp.add(b1Arrow.grp); tint(b1Arrow, 'rf');
-const b1Ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.045, 8, 40, Math.PI * 1.5),
-  new THREE.MeshBasicMaterial({ color:0xF0B24B, transparent:true, opacity:.75 }));
-spinGrp.add(tint(b1Ring, 'rf'));
 
 /* 合成ベクトルの先端の軌跡（実験室系でもそのまま見えるようワールド座標で持つ） */
 const TRN = 420;
@@ -1620,11 +1616,11 @@ function placeSlicePlane() {
   sliceEdge.geometry.computeBoundingSphere();
 }
 const TA_IDS = ['fat', 'wm', 'gm', 'csf', 'les'];
-const TA_LEN = 6.5;                 // 部位ごとの矢印の長さ（M0 のとき、シーン単位）
+const TA_LEN = 8.8;                 // 部位ごとの矢印の長さ（M0 のとき、シーン単位）
 const tisArr = TA_IDS.map(id => {
   const hold = new THREE.Group(), col = tcol(TIS[TIX[id]]);
-  const a = mkArrow(col, 0.13, 0.42, 1.1);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.62, 24), new THREE.MeshBasicMaterial({ color:col, side:THREE.DoubleSide }));
+  const a = mkArrow(col, 0.18, 0.58, 1.45);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.80, 24), new THREE.MeshBasicMaterial({ color:col, side:THREE.DoubleSide }));
   hold.add(a.grp, ring); headGrp.add(hold);
   return { id, a, ring, hold };
 });
@@ -1747,7 +1743,7 @@ function place(key, x, y, z, txt, on) {
 }
 
 /* ================= 画面の更新 ================= */
-let labPhase = 0, echoFlash = 0, b1Spin = 0;
+let labPhase = 0, echoFlash = 0;
 const _m = new THREE.Vector3(), ZAX = new THREE.Vector3(0, 0, 1);
 function updateScene(dt) {
   if (P.frame === 'lab' && !P.paused) labPhase += dt * 0.85 * P.spd;
@@ -1791,13 +1787,10 @@ function updateScene(dt) {
 
   /* --- B1（RFをかけている最中だけ） --- */
   const onRF = !!R.nut;
-  b1Arrow.grp.visible = onRF; b1Ring.visible = onRF;
+  b1Arrow.grp.visible = onRF;
   if (onRF) {
     const ax = R.nut.ax === 'x' ? [1, 0, 0] : [0, 1, 0];
     setArrow(b1Arrow, ax[0], ax[1], 0, 3.0);
-    b1Spin += dt * 6;
-    if (R.nut.ax === 'x') b1Ring.rotation.set(b1Spin, Math.PI / 2, 0);
-    else b1Ring.rotation.set(Math.PI / 2, 0, b1Spin);
   }
   /* --- 熱平衡の量子的な絵 --- */
   conGrp.visible = P.quantum;
@@ -2462,12 +2455,8 @@ function layoutImg() {
   const w = stage.clientWidth, h = stage.clientHeight;
   if (P.view === 0) { imgbox.style.display = 'none'; return; }
   imgbox.style.display = '';
-  let ih, iw;
-  if (P.view === 2) { ih = Math.min(h - 22, (w - 22) * IH / IW); }
-  else { ih = Math.min(h * 0.50, (w * 0.26) * IH / IW, h - 96); }
-  iw = ih * IW / IH;
-  if (P.view === 2) { imgbox.style.left = ((w - iw) / 2).toFixed(0) + 'px'; imgbox.style.top = ((h - ih) / 2).toFixed(0) + 'px'; }
-  else { imgbox.style.left = (w - iw - 12).toFixed(0) + 'px'; imgbox.style.top = '46px'; }
+  const ih = Math.min(h * 0.50, (w * 0.26) * IH / IW, h - 96), iw = ih * IW / IH;
+  imgbox.style.left = (w - iw - 12).toFixed(0) + 'px'; imgbox.style.top = '46px';
   imgbox.style.width = iw.toFixed(0) + 'px'; imgbox.style.height = ih.toFixed(0) + 'px';
   $('imgPar').style.display = iw < 200 ? 'none' : '';
   const px = xhairPx || REP[P.tissue];
