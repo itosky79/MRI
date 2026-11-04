@@ -641,6 +641,10 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <p class="sub"><span>t</span><b id="hudT">0</b>ms<span>縦 Mz</span><b id="hudMz">1.00</b><span>横 Mxy</span><b id="hudMxy">0.00</b><span class="tis" id="hudTis">白質</span></p>
       </div>
 
+      <p class="key" id="keyCoil" hidden>
+        <span><i style="background:var(--sig)"></i>太い矢印＝磁化 M</span>
+        <span><i style="background:#B08BE0"></i><b>紫＝輪を貫く分。この変化が信号（コイルが光る）</b></span>
+      </p>
       <p class="key" id="key3d">
         <span><i style="background:linear-gradient(90deg,var(--grass),var(--amber),var(--violet))"></i>細い矢印＝スピン（色＝位相）</span>
         <span><i style="background:var(--sig)"></i>太い矢印＝合計 M</span>
@@ -718,8 +722,8 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
       <!-- ===== 学習 ===== -->
       <div class="pane" id="pane1" hidden>
         <div class="seg" id="courseSeg" style="display:grid; grid-template-columns:1fr 1fr; background:var(--ink2)">
-          <button type="button" data-c="0" aria-pressed="true">A 原理</button>
-          <button type="button" data-c="1">B 撮像法</button>
+          <button type="button" data-c="0" aria-pressed="true">原理</button>
+          <button type="button" data-c="1">撮像法</button>
         </div>
         <p class="tiny" id="courseLede" style="margin:8px 0 10px"></p>
         <button class="act wide" id="bLearn" type="button" style="width:100%">① から順に</button>
@@ -1631,7 +1635,7 @@ const coilMat = new THREE.MeshPhongMaterial({ color:0xA9BCCB, shininess:40, emis
   coilGrp.add(lead(-0.4), lead(0.4));
 }
 /* 輪を貫いている分＝Mxy の y 成分。y 軸にのせて描くので「横磁化のうち、どれだけが輪を貫く向きか」が見える */
-const fluxArrow = mkArrow(0xB08BE0, 0.075, 0.26, 0.68, 0.96); coilGrp.add(fluxArrow.grp);
+const fluxArrow = mkArrow(0xB08BE0, 0.105, 0.34, 0.85, 0.98); coilGrp.add(fluxArrow.grp);
 const projPos = new Float32Array(6);
 const projGeo = new THREE.BufferGeometry();
 projGeo.setAttribute('position', new THREE.BufferAttribute(projPos, 3));
@@ -1870,9 +1874,13 @@ function updateScene(dt) {
 
   /* --- スピン1本ずつ --- */
   const showSpin = !P.quantum;
+  /* 受信コイルを出しているあいだは、見てほしいのは「回る磁化」と「輪を貫く分」の2本だけ。
+     細い矢印（虹色）・Mz・Mxy・軌跡は、色が増えて焦点がぼけるのでしまう */
+  const coilOn = !!P.coil && P.frame === 'lab' && !(P.showBody && ctrl.dist >= 45);
+  const showThin = showSpin && !coilOn;
   for (let k = 0; k < spins.length; k++) {
     const a = spins[k];
-    if (!showSpin) { a.grp.visible = false; continue; }
+    if (!showThin) { a.grp.visible = false; continue; }
     const i = dispIx[k];
     setArrow(a, mx[i], my[i], mz[i], ML);
     const tr = Math.hypot(mx[i], my[i]);
@@ -1888,7 +1896,7 @@ function updateScene(dt) {
   else mArrow.mat.emissive.setRGB(TH.mE[0], TH.mE[1], TH.mE[2]);
 
   const txy = Math.hypot(m[0], m[1]);
-  const comp = P.showComp && showSpin;
+  const comp = P.showComp && showSpin && !coilOn;
   setArrow(mzArrow, 0, 0, m[2], ML); mzArrow.grp.visible = comp && Math.abs(m[2]) > 0.02;
   setArrow(mxyArrow, m[0], m[1], 0, ML); mxyArrow.grp.visible = comp && txy > 0.02;
   compLine.visible = comp && txy > 0.02 && Math.abs(m[2]) > 0.02;
@@ -1898,11 +1906,11 @@ function updateScene(dt) {
     compGeo.attributes.position.needsUpdate = true;
   }
   /* --- 軌跡 --- */
-  if (P.showTrail && showSpin && !P.paused) {
+  if (P.showTrail && showSpin && !coilOn && !P.paused) {
     _m.set(m[0] * ML, m[1] * ML, m[2] * ML).applyAxisAngle(ZAX, spinGrp.rotation.z);
     pushTrail(_m.x, _m.y, _m.z);
   }
-  trail.visible = P.showTrail && showSpin && !(P.showBody && ctrl.dist >= 45);
+  trail.visible = P.showTrail && showSpin && !coilOn && !(P.showBody && ctrl.dist >= 45);
 
   /* --- B1（RFをかけている最中だけ） --- */
   const onRF = !!R.nut;
@@ -1912,7 +1920,7 @@ function updateScene(dt) {
     setArrow(b1Arrow, ax[0], ax[1], 0, 3.0);
   }
   /* --- 受信コイル：貫く磁束と、その変化（＝信号） --- */
-  coilGrp.visible = !!P.coil && P.frame === 'lab' && !(P.showBody && ctrl.dist >= 45);
+  coilGrp.visible = coilOn;
   fieldGrp.visible = !coilGrp.visible;                  // B₀ の場の線はコイルと重なって見づらいのでしまう
   if (coilGrp.visible) {
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
@@ -1922,7 +1930,7 @@ function updateScene(dt) {
     projGeo.attributes.position.needsUpdate = true;
     projLine.computeLineDistances();
     const v = Math.abs(_m.x);                           // 一定の速さで回るなら dΦ/dt ∝ Mx
-    coilMat.emissive.setRGB(0.07, 0.12 + 0.70 * v, 0.14 + 0.66 * v);   // 信号と同じ青緑で光らせる
+    coilMat.emissive.setRGB(0.12 + 0.50 * v, 0.07 + 0.18 * v, 0.20 + 0.62 * v);   // 「貫く分」と同じ紫で光らせる（色数を増やさない）
   }
 
   /* --- 熱平衡の量子的な絵 --- */
@@ -1954,9 +1962,10 @@ function updateScene(dt) {
     if (++sliceN % 2 === 0) drawSlice();
   }
   spinGrp.visible = !far;
-  $('key3d').hidden = far;      // 脳全体では細い矢印を出していないので凡例もしまう
+  $('key3d').hidden = far || coilOn;      // 脳全体では細い矢印を出していないので凡例もしまう
+  $('keyCoil').hidden = !coilOn;
   axGrp.visible = !P.showBody || ctrl.dist < 45;
-  planeXY.visible = !P.showBody && showSpin;
+  planeXY.visible = !P.showBody && !P.quantum;
 
   /* --- カメラをなめらかに追従 --- */
   ctrl.dist += (ctrl.want - ctrl.dist) * (1 - Math.exp(-dt * 4.5));
@@ -1984,7 +1993,7 @@ function updateScene(dt) {
   } else place('b1', 0, 0, 0, '', false);
   if (coilGrp.visible) {
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    place('coil', COILR * 0.80, 0, -COILR * 0.70, '受信コイル', P.showLab);
+    place('coil', COILR * 0.86, 0, COILR * 0.56, '受信コイル', P.showLab);
     place('flux', -0.3, _m.y * ML * 1.08, -2.3, '<i>輪を貫く分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab);
   } else { place('coil', 0, 0, 0, '', false); place('flux', 0, 0, 0, '', false); }
   place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
@@ -2392,7 +2401,7 @@ L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   text:'信号は<b>3つの掛け算</b>。ρ ×（T1 で戻った分）×（T2 で残った分）。' +
        '<span class="eq">S = ρ(1 − e^(−TR/T1))·e^(−TE/T2)</span>' +
-       'この3つを<b>どう選ぶか</b>が <b>B 撮像法</b>。' })
+       'この3つを<b>どう選ぶか</b>が撮像法。上の<b>「撮像法」</b>へ。' })
 ];
 
 /* ---------- B 撮像法：原理を使って、どう撮るか ---------- */
@@ -2450,8 +2459,8 @@ const COURSE = [
   { nm:'原理', lede:'なぜ信号が出て、なぜ消えるか。<b>撮像法の名前は出てきません。</b>',
     end:{ head:'おしまい', nm:'原理はここまで', next:'とじる', quit:'とじる',
       text:'信号の大きさは <b>ρ ×（T1 で戻った分）×（T2 で残った分）</b>。<br>' +
-           'つぎは <b>B 撮像法</b> で、この3つをどう選ぶと T1強調・T2強調になるかを見ます。' } },
-  { nm:'撮像法', lede:'原理を使って、<b>T1強調・T2強調…をどう作るか</b>。A を先に見ておくと楽です。',
+           'つぎは上の<b>「撮像法」</b>に切り替えて、この3つをどう選ぶと T1強調・T2強調になるかを見ます。' } },
+  { nm:'撮像法', lede:'原理を使って、<b>T1強調・T2強調…をどう作るか</b>。先に「原理」を見ておくと楽です。',
     end:{ head:'おしまい', nm:'ひととおり見ました', next:'とじる', quit:'とじる',
       text:'あとは<b>「シーケンス」</b>タブで TR・TE を自分で動かすか、<b>「問題」</b>タブで確かめてみてください。<br>' +
            'この案内は、いつでも「学習」タブから呼び直せます。' } }
@@ -3185,7 +3194,7 @@ const TUT = [
   { sel:'#stage', scroll:'#stage',
     text:'<b>① 3D。</b>その差が、体の中で何が起きた結果か。<b>矢印の長さが、その組織のいまの信号</b>です。' },
   { text:'<span class="big">これだけです</span>あとは右の <b>TR・TE のつまみ</b>を動かすだけ。' +
-         '順を追って学ぶなら<b>「学習」</b>タブへ。<b>A 原理</b>（なぜ信号が出るか）と <b>B 撮像法</b>（どう撮るか）に分かれています。<br>' +
+         '順を追って学ぶなら<b>「学習」</b>タブへ。<b>原理</b>（なぜ信号が出るか）と<b>撮像法</b>（どう撮るか）の2つのコースがあります。<br>' +
          'この案内は題字の横の<b>「使い方をもう一度」</b>から呼べます。',
     next:'はじめる' }
 ];
