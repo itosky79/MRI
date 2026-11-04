@@ -1564,6 +1564,7 @@ function dashCircle(r, n, col, op) {
 /* ---- 座標軸と静磁場 ---- */
 const AX = 6.0;
 const axGrp = new THREE.Group(); scene.add(axGrp);
+const fieldGrp = new THREE.Group(); axGrp.add(fieldGrp);
 axGrp.add(tint(line([new THREE.Vector3(-AX, 0, 0), new THREE.Vector3(AX, 0, 0)], 0x3d566b, .9), 'ax'));
 axGrp.add(tint(line([new THREE.Vector3(0, -AX, 0), new THREE.Vector3(0, AX, 0)], 0x3d566b, .9), 'ax'));
 axGrp.add(tint(line([new THREE.Vector3(0, 0, -AX * .8), new THREE.Vector3(0, 0, AX)], 0x4d6a80, .9), 'axz'));
@@ -1577,7 +1578,7 @@ axGrp.add(tint(dashCircle(ML, 72, 0x2b3f4f, .75), 'ring'));
     const a = i / 6 * Math.PI * 2, r = 7.9;
     const l = line([new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, -6.4),
                     new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 6.6)], 0x24384a, .55);
-    axGrp.add(tint(l, 'field'));
+    fieldGrp.add(tint(l, 'field'));
   }
 }
 /* 横磁化の面 */
@@ -1610,26 +1611,32 @@ compLine.frustumCulled = false; spinGrp.add(tint(compLine, 'comp'));
 const b1Arrow = mkArrow(0xF0B24B, 0.075, 0.26, 0.72); spinGrp.add(b1Arrow.grp); tint(b1Arrow, 'rf');
 
 /* ---- 受信コイル（静止座標系のときだけ）----
-   コイルは装置に固定されているので、回転座標系ではなく scene（＝静止座標系）に置く。
-   面の法線は y 軸。コイルを貫く磁束は M の y 成分だけで決まり、M が回ると増えたり減ったりする。
+   実際の受信コイルは体を囲んでいるので、ここでも輪を原点のまわりに置き、磁化が輪の中で回るようにした。
+   横に離して置くと「ベクトルと輪の関係」が見えなくなるため。コイルは装置に固定されているので、
+   回転座標系ではなく scene（＝静止座標系）に置く。面の法線は y 軸。
+   輪を貫く磁束は M の y 成分だけで決まり（紫の矢印）、M が回ると増えたり減ったりする。
    その変化の速さ（＝|dΦ/dt|、一定の速さで回るなら M の x 成分に比例）が、そのまま起電力の大きさになる。 */
-const COILY = -6.8, COILR = 2.5;
+const COILR = 6.4;
 const coilGrp = new THREE.Group(); scene.add(coilGrp); coilGrp.visible = false;
 const coilMat = new THREE.MeshPhongMaterial({ color:0xA9BCCB, shininess:40, emissive:new THREE.Color(0x202a33) });
 {
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(COILR, 0.13, 10, 48), coilMat);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(COILR, 0.16, 10, 64), coilMat);
   ring.rotation.x = Math.PI / 2;                       // x-z 面に寝かせる（法線が y）
-  ring.position.set(0, COILY, 0);
   coilGrp.add(ring);
   const lead = (x) => {                                // 引き出し線
     const g = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(x, COILY, -COILR * 0.98), new THREE.Vector3(x, COILY, -COILR - 1.5)]);
+      new THREE.Vector3(x, 0, -COILR * 0.99), new THREE.Vector3(x, 0, -COILR - 2.0)]);
     return new THREE.Line(g, new THREE.LineBasicMaterial({ color:0x8FA6B8, transparent:true, opacity:.8 }));
   };
-  coilGrp.add(lead(-0.34), lead(0.34));
+  coilGrp.add(lead(-0.4), lead(0.4));
 }
-const fluxArrow = mkArrow(0xE0645C, 0.06, 0.22, 0.6, 0.95);
-fluxArrow.grp.position.set(0, COILY, 0); coilGrp.add(fluxArrow.grp);
+/* 輪を貫いている分＝Mxy の y 成分。y 軸にのせて描くので「横磁化のうち、どれだけが輪を貫く向きか」が見える */
+const fluxArrow = mkArrow(0xB08BE0, 0.075, 0.26, 0.68, 0.96); coilGrp.add(fluxArrow.grp);
+const projPos = new Float32Array(6);
+const projGeo = new THREE.BufferGeometry();
+projGeo.setAttribute('position', new THREE.BufferAttribute(projPos, 3));
+const projLine = new THREE.Line(projGeo, new THREE.LineDashedMaterial({ color:0xB08BE0, dashSize:0.35, gapSize:0.25, transparent:true, opacity:.8 }));
+projLine.frustumCulled = false; coilGrp.add(projLine);
 
 /* 合成ベクトルの先端の軌跡（実験室系でもそのまま見えるようワールド座標で持つ） */
 const TRN = 420;
@@ -1792,10 +1799,12 @@ function applyCam() {
 }
 /* 受信コイルを出すときは、真横に近い角度から引いて見る。そうしないとコイルが画面の下に落ちて、
    横長で背の低いスマホの画面で切れてしまう */
+/* コイルを出すときは、輪を斜めから見る向きにする。輪の法線（y）に正対すると
+   「貫く分」が手前向きになって、長さが見えなくなるため */
 function homeCam() {
-  ctrl.th = -1.05;
-  ctrl.phi = P.showBody ? 0.8 : (P.coil ? 1.30 : 1.15);
-  ctrl.want = P.showBody ? 82 : (P.coil ? (smallScr ? 37 : 28) : 23);   // 画面が狭いとコイルが横にはみ出すので、そのぶん引く
+  ctrl.th = P.showBody || !P.coil ? -1.05 : -0.42;
+  ctrl.phi = P.showBody ? 0.8 : 1.15;
+  ctrl.want = P.showBody ? 82 : (P.coil ? (smallScr ? 38 : 30) : 23);
   applyCam();
 }
 let drag = null, pinch = 0;
@@ -1904,9 +1913,14 @@ function updateScene(dt) {
   }
   /* --- 受信コイル：貫く磁束と、その変化（＝信号） --- */
   coilGrp.visible = !!P.coil && P.frame === 'lab' && !(P.showBody && ctrl.dist >= 45);
+  fieldGrp.visible = !coilGrp.visible;                  // B₀ の場の線はコイルと重なって見づらいのでしまう
   if (coilGrp.visible) {
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    setArrow(fluxArrow, 0, _m.y >= 0 ? 1 : -1, 0, Math.abs(_m.y) * ML * 0.9 + 0.001);
+    setArrow(fluxArrow, 0, _m.y >= 0 ? 1 : -1, 0, Math.abs(_m.y) * ML + 0.001);
+    projPos[0] = _m.x * ML; projPos[1] = _m.y * ML; projPos[2] = 0;    // Mxy の先から y 軸へ下ろした足
+    projPos[3] = 0; projPos[4] = _m.y * ML; projPos[5] = 0;
+    projGeo.attributes.position.needsUpdate = true;
+    projLine.computeLineDistances();
     const v = Math.abs(_m.x);                           // 一定の速さで回るなら dΦ/dt ∝ Mx
     coilMat.emissive.setRGB(0.07, 0.12 + 0.70 * v, 0.14 + 0.66 * v);   // 信号と同じ青緑で光らせる
   }
@@ -1970,9 +1984,8 @@ function updateScene(dt) {
   } else place('b1', 0, 0, 0, '', false);
   if (coilGrp.visible) {
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    place('coil', -COILR - 1.7, COILY, 0, '受信コイル', P.showLab);
-    place('flux', 2.6, COILY + _m.y * ML * 0.55, 1.1,
-      '<i>コイルを貫く分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab);
+    place('coil', COILR * 0.80, 0, -COILR * 0.70, '受信コイル', P.showLab);
+    place('flux', -0.3, _m.y * ML * 1.08, -2.3, '<i>輪を貫く分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab);
   } else { place('coil', 0, 0, 0, '', false); place('flux', 0, 0, 0, '', false); }
   place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
   for (const t of tisArr) {
@@ -2312,65 +2325,53 @@ const LBASE = { back:true, quit:'やめる' };
 const L = (o) => Object.assign({}, LBASE, o);
 const pre = k => Object.assign({ manual:false, quantum:false }, PRE.find(x => x.k === k).s);
 
-/* ---------- A 原理：なぜ信号が出て、なぜ消えるか ---------- */
+/* ---------- A 原理：なぜ信号が出て、なぜ消えるか ----------
+   どのカードも 2 行まで。読ませるのではなく、押して画面が動くのを見てもらう。 */
 const PRIN = [
 L({ nm:'静磁場の中のプロトン', tg:'B₀ と M₀', sel:'#stage',
   set:{ quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
-  text:'水素の原子核は小さな磁石です。<b>B₀</b> の中では、コマのように首を振りながら回ります。<br>' +
-       '水色（B₀ と同じ向き）が赤より<b>少しだけ多く</b>、その差の合計が縦磁化 <b>M₀</b>。' +
-       '<span class="eq">ω₀ = γ·B₀ ／ 1.5T で約 64 MHz</span>' }),
+  text:'水素は小さな磁石。B₀ の中では、首を振りながら回ります。<br>' +
+       '水色が赤より<b>少しだけ多く</b>、その差が縦磁化 <b>M₀</b>。' +
+       '<span class="eq">ω₀ = γ·B₀　1.5T で約 64 MHz</span>' }),
 
 L({ nm:'合成すると1本の矢印', tg:'M と回転座標系', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm' },
-  text:'1本ずつ追わず、<b>全部の和 M</b> だけを見ます。いまは z 軸を向いて止まっています。<br>' +
-       'この状態ではコイルに何も起きません＝<b>信号はゼロ</b>です。' }),
+  text:'1本ずつ追わず、<b>全部の和 M</b> だけを見ます。<br>' +
+       'いまは z を向いて止まったまま＝<b>信号はゼロ</b>。' }),
 
-L({ nm:'RFパルスで倒す', tg:'90°パルス', sel:'#stage',
+L({ nm:'RFパルスで倒す', tg:'α = γ·B₁·τ', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm', T2p:40 },
   act:{ label:'ゆっくり 90°パルスを撃つ', fn:() => { equilibrium(); clearTrail(); manualPulse(90, 'x', 3.2); } },
-  text:'いちばん大事なのは<b>「z 軸を向いていた磁化を、横に倒す」</b>こと。倒した分だけが、あとで信号になります。<br>' +
-       'ラーモア周波数と同じ電波（RF）を当てると<b>共鳴</b>して倒れます。倒れる角 α は<b>強さ × 当てる時間</b>で決まり、' +
-       '<b>90°</b>倒すと縦磁化がぜんぶ横磁化になります。<span class="eq">α = γ·B₁·τ</span>' }),
-
-L({ nm:'どうやって倒れるのか', tg:'B₁ のまわりを回る', sel:'#stage',
-  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm', T2p:40 },
-  act:{ label:'もう一度 ゆっくり倒す', fn:() => { equilibrium(); clearTrail(); manualPulse(90, 'x', 3.2); } },
-  text:'RF を当てているあいだだけ、回転座標系の x′ 軸に<b>小さな磁場 B₁</b>（オレンジ）が立ちます。<br>' +
-       '磁化は B₁ を軸にして<b>その まわりを回りながら</b>倒れていきます。' +
-       'B₀ のまわりを回るのと同じことが、横向きの軸で起きているだけです。<br>' +
-       '実際の 90°パルスは 1 ms ほど。ここでは<b>3000 倍ほどゆっくり</b>出しています。' }),
+  text:'RF を当てると<b>共鳴</b>して倒れます。倒れる角は<b>強さ × 時間</b>。<br>' +
+       'オレンジの <b>B₁</b> のまわりを回りながら倒れていきます。' +
+       '<span class="eq">α = γ·B₁·τ</span>' }),
 
 L({ nm:'どうやって信号になるのか', tg:'電磁誘導 V = −dΦ/dt', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
   act:{ label:'もう一度 倒す', fn:() => { equilibrium(); clearTrail(); manualPulse(90, 'x', 1.2); } },
   on:() => { equilibrium(); clearTrail(); manualPulse(90, 'x', 1.2); },
-  text:'体のまわりに<b>受信コイル</b>（輪）が置いてあります。コイルを<b>貫いている分</b>（赤い矢印）は、' +
-       '磁化が回るたびに<b>増えたり減ったり</b>します。<br>' +
-       'この<b>変化</b>がコイルに電圧を生みます（電磁誘導）。これが MRI の信号です。' +
-       '<span class="eq">V = −dΦ/dt　Φ＝コイルを貫く磁束</span>' +
-       '<b>変化が速いほど</b>大きい信号。コイルの光が、いま出ている電圧の大きさです。' +
-       '<span class="eq2">※ここだけは消えにくい組織（脳脊髄液）で磁場も均一にして、回り続けるようにしています</span>' }),
+  text:'体を<b>受信コイル</b>（輪）が囲んでいます。輪を<b>貫く分</b>（紫）は、回るたびに<b>増えたり減ったり</b>。<br>' +
+       'その<b>変化</b>が電圧になります。<b>コイルの光が信号の大きさ。</b>' +
+       '<span class="eq">V = −dΦ/dt</span>' }),
 
 L({ nm:'縦磁化だけでは信号は出ない', tg:'だから一度倒す', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
   on:() => { equilibrium(); clearTrail(); },
-  act:{ label:'倒さずに待ってみる → 倒してみる', fn:() => {
+  act:{ label:'待ってみる → 倒す', fn:() => {
     equilibrium(); clearTrail();
     setTimeout(() => manualPulse(90, 'x', 1.2), 2200);
   } },
-  text:'熱平衡では磁化は z 軸を向いたまま<b>動きません</b>。コイルを貫く分はずっと 0 のまま＝<b>変化なし＝電圧 0</b>。' +
-       'どれだけ待っても信号は出ません。<br>' +
-       '倒した瞬間に、<b>回る成分（横磁化 Mxy）</b>ができて、はじめてコイルに電圧が出ます。' +
-       '<b>これが「一度倒す」理由</b>です。信号になるのは横磁化だけ。' }),
+  text:'倒さないと、貫く分は <b>0 のまま動かない</b>。変化なし＝信号なし。<br>' +
+       '倒して<b>回る成分</b>ができて、はじめてコイルが光ります。' }),
 
 L({ nm:'T2：横磁化が短くなる', tg:'スピン-スピン緩和', sel:'#stage',
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
-  text:'磁場を<b>完全に均一</b>にしました。扇は開かず、矢印が<b>短くなる</b>だけ。これが T2 です。<br>' +
-       '横磁化が最初の <b>37%（1/e）</b>になるまでの時間が T2。' }),
+  text:'磁場を<b>完全に均一</b>にしました。扇は開かず、矢印が<b>短くなる</b>だけ。<br>' +
+       '最初の <b>37%（1/e）</b>になるまでが T2。' }),
 
 L({ nm:'T2*：磁場のムラで もっと速く', tg:'1/T2* = 1/T2 + 1/T2′', sel:'#stage',
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
-  text:'実際の磁場にはムラがあります。速いスピンと遅いスピンで位相が開いて<b>扇</b>になり、' +
+  text:'実際の磁場にはムラがある。速い・遅いで位相が開いて<b>扇</b>になり、<br>' +
        '和は T2 より<b>ずっと速く</b>消えます。<span class="eq">1/T2* = 1/T2 + 1/T2′</span>' }),
 
 L({ nm:'スピンエコー：180°で呼びもどす', tg:'エコーの高さは T2 だけ', sel:'#stage',
@@ -2379,20 +2380,19 @@ L({ nm:'スピンエコー：180°で呼びもどす', tg:'エコーの高さは
     equilibrium(); clearTrail(); manualPulse(90, 'x');
     setTimeout(() => manualPulse(180, 'y'), 2000);
   } },
-  text:'開いた扇は <b>180°パルス</b>で折り返せます。進みすぎたスピンが後ろに置かれ、' +
-       '同じだけ時間がたったところで<b>ぴたりと揃う＝エコー</b>。<br>' +
-       'ムラの分は戻せても、ランダムな T2 の分は戻りません。だから<b>エコーの高さは T2 だけ</b>で決まります。' }),
+  text:'<b>180°</b>で扇を折り返すと、同じ時間で<b>ぴたりと揃う＝エコー</b>。<br>' +
+       'ムラは戻せても T2 は戻せない。だから<b>エコーの高さは T2 だけ</b>。' }),
 
 L({ nm:'T1：縦磁化がもどる', tg:'スピン-格子緩和', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
-  text:'倒れた磁化は z 軸へ戻ります（T1）。グラフ①で、組織ごとに<b>戻る速さが違う</b>のが見えます。<br>' +
-       '次に倒せるのは、そのとき戻っていた分だけ。<b>T1 の短い組織（脂肪）ほど速く戻ります。</b>' }),
+  text:'倒れた磁化は z へ戻ります。<b>戻る速さが組織ごとに違う</b>のがグラフ①。<br>' +
+       '次に倒せるのは、そのとき<b>戻っていた分だけ</b>。' }),
 
 L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
-  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
-  text:'信号の大きさは<b>3つの掛け算</b>です。<b>ρ</b>（水素の量）×<b>どれだけ戻ったか</b>（T1）×' +
-       '<b>どれだけ残っているか</b>（T2）。<span class="eq">S = ρ(1 − e^(−TR/T1))·e^(−TE/T2)</span>' +
-       'この3つを<b>どう選ぶか</b>が撮像法です。つづきは <b>B 撮像法</b> へ。' })
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
+  text:'信号は<b>3つの掛け算</b>。ρ ×（T1 で戻った分）×（T2 で残った分）。' +
+       '<span class="eq">S = ρ(1 − e^(−TR/T1))·e^(−TE/T2)</span>' +
+       'この3つを<b>どう選ぶか</b>が <b>B 撮像法</b>。' })
 ];
 
 /* ---------- B 撮像法：原理を使って、どう撮るか ---------- */
@@ -2400,20 +2400,20 @@ const METH = [
 L({ nm:'矢印から画像へ', tg:'横の長さ × ρ ＝ 明るさ', sel:'#panBridge', blk:'nearest',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
   act:{ label:'組織ごとに塗ってみる', fn:() => paintDemo() },
-  text:'3D には組織ごとに矢印が1本ずつ立っています。エコーの瞬間の<b>横向きの長さ × プロトン密度</b>が、' +
-       'その組織の明るさ。<br>それを<b>その組織がある画素ぜんぶ</b>に塗ったものが画像です。押すと、塗られていくのが見えます。' }),
+  text:'矢印の<b>横の長さ × プロトン密度</b>が、その組織の明るさ。<br>' +
+       'それを<b>その組織のある画素ぜんぶ</b>に塗ると画像になります。' }),
 
 L({ nm:'TR：次に倒せる量を決める', tg:'T1 の差を作る', sel:'#panRel',
-  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TR を 2500 → 500 ms にしてみる', fn:() => applySet({ TR:500 }, true) },
-  text:'TR は<b>次に倒すまでの待ち時間</b>。長く待てばどの組織も戻りきるので差は出ません。<br>' +
-       '<b>短くすると、T1 の長い組織（水）が戻りきれず暗く</b>なります。グラフ①の TR の線を見てください。' }),
+  text:'TR＝<b>次に倒すまでの待ち時間</b>。<br>' +
+       '短くすると、<b>T1 の長い水が戻りきれず暗く</b>なります。' }),
 
 L({ nm:'TE：読むまでに減る量を決める', tg:'T2 の差を作る', sel:'#panRel',
-  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:4000, TE:15, T2p:40 },
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:4000, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TE を 15 → 100 ms にしてみる', fn:() => applySet({ TE:100 }, true) },
-  text:'TE は<b>倒してから信号を読むまで</b>の時間。すぐ読めばどの組織もまだ残っています。<br>' +
-       '<b>長くすると、T2 の短い組織から先に消え、T2 の長い水が白く</b>残ります。グラフ②の TE の線です。' }),
+  text:'TE＝<b>倒してから読むまで</b>の時間。<br>' +
+       '長くすると、<b>T2 の短い組織から先に消え、水が白く</b>残ります。' }),
 
 L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
@@ -2423,29 +2423,26 @@ L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
     setTimeout(() => { applySet(pre('pd'), true); shoot(); }, 900);
     setTimeout(() => { applySet(pre('t2'), true); shoot(); }, 1800);
   } },
-  text:'TR と TE の組み合わせは <b>4通り</b>ですが、使うのは3つ。' +
-       '<b>短TR・短TE＝T1強調</b>、<b>長TR・短TE＝プロトン密度</b>、<b>長TR・長TE＝T2強調</b>。<br>' +
-       '（長TR・長TE…ではなく短TR・長TEは、T1 と T2 が打ち消し合うので使いません。）' }),
+  text:'<b>短TR・短TE＝T1強調</b>、<b>長TR・短TE＝プロトン密度</b>、<b>長TR・長TE＝T2強調</b>。<br>' +
+       '同じ断面で3枚撮って、並べて見くらべます。' }),
 
 L({ nm:'GRE：180° を使わない', tg:'T2 ではなく T2*', sel:'#panSeq',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:25, T2p:40 },
   act:{ label:'T2*強調 GRE にしてみる', fn:() => applySet(pre('t2s'), true) },
-  text:'180°パルスのかわりに傾斜磁場でエコーを作るのが <b>GRE</b>。②の図から 180° が消えます。<br>' +
-       '扇を折り返さないので<b>磁場のムラが戻らず</b>、T2 ではなく <b>T2*</b> で減ります。出血や石灰化が黒く抜けます。' }),
+  text:'②の図から <b>180° が消えます</b>。扇を折り返さないので、<br>' +
+       'T2 ではなく <b>T2*</b> で減る。出血や石灰化が黒く抜けます。' }),
 
 L({ nm:'IR：消したい組織を選ぶ', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
   act:{ label:'TI を 180 ms にしてみる（STIR）', fn:() => applySet({ TI:180 }, true) },
-  text:'先に <b>180°</b> で縦磁化をひっくり返し、狙った組織が<b>0 を横切る瞬間</b>に 90° を撃つと、' +
-       'その組織だけ信号が出ません。<span class="eq">TI ≒ 0.69 × T1</span>' +
-       '脂肪の T1 は 270 ms なので TI は 180 ms。グラフ①で赤い TI の線を見てください。' }),
+  text:'先に <b>180°</b> で反転させ、狙った組織が<b>0 を横切る瞬間</b>に 90°。<br>' +
+       'その組織だけ信号が出ません。<span class="eq">TI ≒ 0.69 × T1　脂肪なら 180 ms</span>' }),
 
 L({ nm:'FLAIR：水を消す', tg:'STIR との違い', sel:'#imgbox',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:180, T2p:40 },
   act:{ label:'FLAIR（TI 2400 ms）にしてみる', fn:() => applySet(pre('flair'), true) },
-  text:'水（脳脊髄液）は T1 が 4000 ms と長いので、<b>TI も 2400 ms</b> と長くとります。<br>' +
-       '脳室が黒くなり、T2強調では水と紛れていた<b>そのふちの病変</b>が見えるようになります。' +
-       '消えるかどうかは <b>T1 だけ</b>で決まることに注意。' })
+  text:'水は T1 が長い（4000 ms）ので、<b>TI も長く</b>とります。<br>' +
+       '脳室が黒くなり、<b>そのふちの病変</b>が見えてきます。' })
 ];
 
 /* コースの定義。list は案内カードに渡す「本編＋おしまいの1枚」 */
