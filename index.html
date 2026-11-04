@@ -2,6 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<script>
+/* 最初の描画より前にテーマを決める。保存がなければ端末の設定に合わせる */
+try {
+  var t0 = localStorage.getItem('mri-theme-v1');
+  if (t0 !== 'light' && t0 !== 'dark') t0 = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t0;
+} catch (e) { document.documentElement.dataset.theme = 'dark'; }
+</script>
 <title>MRI スピン3Dシミュレーター</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="MRIのT1強調・T2強調画像がどうやって決まるのかを、体内のプロトンのスピンから3Dで追えるシミュレーター。">
@@ -13,15 +21,69 @@
 <style>
 :root{
   color-scheme: dark;
+  /* 面と線 */
   --ink:#0A0F14; --ink2:#0D131A; --panel:#121A22; --panel2:#182430;
   --line:#223140; --line2:#31485C;
-  --text:#D9E4ED; --muted:#8AA0B2; --dim:#5E7386;
+  --text:#D9E4ED; --muted:#8AA0B2; --dim:#5E7386; --head:#E9F2F8;
+  --well:#0B141B; --track:#0A1117; --rowHover:rgba(24,36,48,.6); --inputLine:#2a3a48;
+  --stage1:#16222D; --stage2:#0A0F14;
+  /* 選択 */
+  --sel:#1D3040; --sel2:#1B2E3D; --selT:#EAF6FA; --hoverBg:#24425A; --stepRuby:#8FC8D8;
+  --tgLine:#3E8FA3; --tgBg:rgba(62,143,163,.08); --tgOn:#3E8FA3; --tgOnT:#071219; --tgT:#9fc7d3;
+  /* 色 */
   --teal:#52B8CE; --amber:#F0B24B; --alert:#E0645C; --grass:#7ED9A7; --violet:#A99BE8;
   --b0:#8FB6C8; --sig:#52B8CE; --rf:#F0B24B;
+  /* RF（オレンジ）まわり */
+  --rfBg:#3A2A12; --rfBg2:rgba(40,22,8,.9); --rfBg3:#4A2B10; --rfLine:#6B4A2A;
+  --rfText:#F3C173; --rfText2:#FFD79A; --rfLabBg:rgba(34,20,6,.82); --rfDim:#9A7A44;
+  /* 3D の上に浮かせるもの */
+  --scrim:rgba(10,15,20,.82); --scrim2:rgba(10,15,20,.9); --scrim0:rgba(10,15,20,0);
+  --labTxt:#E8F1F8; --labBg:rgba(10,15,20,.6); --labLine:rgba(49,72,92,.7);
+  --labMbg:rgba(9,22,27,.82); --labMline:#2E6274;
+  /* グラフ */
+  --grad:#6E8598; --grid:#1A2733; --grid2:#3B5568; --gap:#9FD9E8; --axisT:#7f93a6;
+  --tagbg:rgba(10,15,20,.85); --env:rgba(224,100,92,.8);
+  /* 画像（フィルム）は明暗どちらでも黒地のまま */
+  --filmbg:#05080B; --filmTxt:#7FA9BD; --filmTxt2:#6E93A6;
+  --filmScrim:rgba(5,8,11,.85); --filmScrim0:rgba(5,8,11,0);
+  /* 正誤 */
+  --okBg:#12291E; --okLine:#2F6B49; --okText:#9FE3BC; --okN:#4FBF88;
+  --ngBg:#2A1416; --ngLine:#6E3036; --ngText:#E9A0A0; --ngN:#D06A6A;
+  /* つまみ・影 */
+  --knob1:#9FB4C4; --knob2:#5E7386; --knobLine:#3C5265; --knobSolid:#8FA5B6;
+  --swLine:rgba(255,255,255,.22);
+  --shadow:rgba(0,0,0,.6); --shadow2:rgba(0,0,0,.72); --shadow3:rgba(0,0,0,.75); --shadow4:rgba(0,0,0,.95);
+  --modal:rgba(4,7,10,.82); --modal2:rgba(4,7,10,.93); --glerr:rgba(10,15,20,.95);
   --mincho:"Zen Maru Gothic",'Hiragino Maru Gothic ProN','Yu Gothic',system-ui,sans-serif;
   --gothic:"Zen Kaku Gothic New",'Hiragino Sans','Yu Gothic',system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,'SFMono-Regular',monospace;
   --r:4px;
+}
+/* ---------- ライトモード ---------- */
+html[data-theme="light"]{
+  color-scheme: light;
+  --ink:#F3F6F9; --ink2:#FFFFFF; --panel:#FFFFFF; --panel2:#EBF1F5;
+  --line:#D2DDE5; --line2:#A8BCC9;
+  --text:#1C2935; --muted:#465B6B; --dim:#6E8495; --head:#0F1D27;
+  --well:#EFF4F8; --track:#DFE8EE; --rowHover:rgba(230,240,246,.7); --inputLine:#BBCAD5;
+  --stage1:#FAFCFD; --stage2:#E6EDF2;
+  --sel:#D5EAF2; --sel2:#E0F0F6; --selT:#0C3441; --hoverBg:#C7E2EC; --stepRuby:#1B6B80;
+  --tgLine:#5FA3B5; --tgBg:rgba(62,143,163,.10); --tgOn:#1B6B80; --tgOnT:#FFFFFF; --tgT:#1B6B80;
+  --teal:#11788F; --amber:#A3700F; --alert:#BE3B30; --grass:#1C8A5C; --violet:#5F4FB5;
+  --b0:#4D6E7F; --sig:#11788F; --rf:#A3700F;
+  --rfBg:#F6E7CB; --rfBg2:rgba(250,240,222,.92); --rfBg3:#EFD9AF; --rfLine:#C09B5C;
+  --rfText:#7A5208; --rfText2:#5E3E04; --rfLabBg:rgba(250,238,216,.9); --rfDim:#8A6213;
+  --scrim:rgba(255,255,255,.86); --scrim2:rgba(255,255,255,.92); --scrim0:rgba(255,255,255,0);
+  --labTxt:#16303D; --labBg:rgba(255,255,255,.82); --labLine:rgba(140,165,180,.8);
+  --labMbg:rgba(214,238,245,.9); --labMline:#5FA3B5;
+  --grad:#5C7384; --grid:#E3EBF1; --grid2:#BCCBD6; --gap:#0E6C83; --axisT:#60788A;
+  --tagbg:rgba(255,255,255,.88); --env:rgba(190,59,48,.85);
+  --okBg:#DCF3E6; --okLine:#58B084; --okText:#0E6B41; --okN:#1C8A5C;
+  --ngBg:#FBE2E1; --ngLine:#D08A86; --ngText:#8E2A22; --ngN:#B03A30;
+  --knob1:#FFFFFF; --knob2:#B9C8D2; --knobLine:#8CA2B0; --knobSolid:#C3D2DB;
+  --swLine:rgba(0,0,0,.38);
+  --shadow:rgba(40,60,75,.18); --shadow2:rgba(40,60,75,.22); --shadow3:rgba(40,60,75,.25); --shadow4:rgba(40,60,75,.3);
+  --modal:rgba(225,233,239,.86); --modal2:rgba(232,238,243,.95); --glerr:rgba(243,246,249,.96);
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%; -webkit-tap-highlight-color:transparent}
@@ -65,47 +127,47 @@ body.detached .rail{
   position:fixed; z-index:40; width:348px; height:min(580px,80vh); min-width:250px; min-height:220px;
   max-width:min(560px,72vw); max-height:80vh; resize:both;
   background:var(--ink2); border:1px solid var(--line2); border-radius:6px;
-  box-shadow:0 18px 50px rgba(0,0,0,.72); padding:10px 11px 12px;
+  box-shadow:0 18px 50px var(--shadow2); padding:10px 11px 12px;
 }
 body.detached .railbar{display:flex; cursor:move; touch-action:none}
 .stage{
   position:relative; height:100%; min-height:0; border:1px solid var(--line);
   border-radius:var(--r); overflow:hidden;
-  background:radial-gradient(120% 100% at 50% 0%,#16222D 0%,#0A0F14 62%);
+  background:radial-gradient(120% 100% at 50% 0%,var(--stage1) 0%,var(--stage2) 62%);
 }
 .stage canvas#gl{display:block; width:100%; height:100%; touch-action:none; cursor:grab}
 .stage canvas#gl:active{cursor:grabbing}
 .glerr{position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; justify-content:center;
-  gap:9px; padding:24px; background:rgba(10,15,20,.95); color:var(--muted); font-size:12.5px; line-height:1.85}
+  gap:9px; padding:24px; background:var(--glerr); color:var(--muted); font-size:12.5px; line-height:1.85}
 .glerr b{color:var(--alert); font-size:14px; font-weight:700}
 .glinfo{margin:9px 0 0; font-family:var(--mono); font-size:9px; line-height:1.7; color:var(--dim); word-break:break-all}
 #labels{position:absolute; inset:0; pointer-events:none}
 .lab{
   position:absolute; top:0; left:0; white-space:nowrap;
   font-size:10px; font-weight:500; letter-spacing:.04em;
-  color:#E8F1F8; background:rgba(10,15,20,.6); border:1px solid rgba(49,72,92,.7);
+  color:var(--labTxt); background:var(--labBg); border:1px solid var(--labLine);
   padding:0 5px; border-radius:2px; transition:opacity .18s;
   text-shadow:0 1px 3px #000;
 }
 .lab.axis{color:var(--dim); background:none; border:none; font-family:var(--mono); font-size:9.5px; letter-spacing:.14em}
-.lab.m{color:#EAF6FA; border-color:#2E6274; background:rgba(9,22,27,.82)}
-.lab.rf{color:#FFD79A; border-color:#6B4A2A; background:rgba(34,20,6,.82)}
+.lab.m{color:var(--selT); border-color:var(--labMline); background:var(--labMbg)}
+.lab.rf{color:var(--rfText2); border-color:var(--rfLine); background:var(--rfLabBg)}
 
 /* ---------- 画像パネル ---------- */
 #imgbox{
   position:absolute; border:1px solid var(--line2); border-radius:2px; overflow:hidden;
-  background:#05080B; box-shadow:0 8px 28px rgba(0,0,0,.6); pointer-events:auto;
+  background:var(--filmbg); box-shadow:0 8px 28px var(--shadow); pointer-events:auto;
 }
 #imgbox canvas{display:block; width:100%; height:100%; cursor:crosshair}
 #imgbox .ih{
   position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; gap:6px;
-  padding:3px 6px; font-family:var(--mono); font-size:9px; letter-spacing:.08em; color:#7FA9BD;
-  background:linear-gradient(180deg,rgba(5,8,11,.85),rgba(5,8,11,0)); pointer-events:none;
+  padding:3px 6px; font-family:var(--mono); font-size:9px; letter-spacing:.08em; color:var(--filmTxt);
+  background:linear-gradient(180deg,var(--filmScrim),var(--filmScrim0)); pointer-events:none;
 }
 #imgbox .if{
   position:absolute; bottom:0; left:0; right:0; padding:3px 6px; text-align:center;
-  font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; color:#6E93A6;
-  background:linear-gradient(0deg,rgba(5,8,11,.85),rgba(5,8,11,0)); pointer-events:none;
+  font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; color:var(--filmTxt2);
+  background:linear-gradient(0deg,var(--filmScrim),var(--filmScrim0)); pointer-events:none;
 }
 #imgbox .xh{position:absolute; width:13px; height:13px; margin:-7px 0 0 -7px; pointer-events:none}
 #imgbox .xh::before,#imgbox .xh::after{content:""; position:absolute; background:var(--amber)}
@@ -114,26 +176,26 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 
 /* ---------- stage toolbar / HUD ---------- */
 .bar{position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between; gap:10px; pointer-events:none; flex-wrap:wrap}
-.seg{display:flex; border:1px solid var(--line2); border-radius:3px; overflow:hidden; pointer-events:auto; background:rgba(10,15,20,.82); backdrop-filter:blur(4px)}
+.seg{display:flex; border:1px solid var(--line2); border-radius:3px; overflow:hidden; pointer-events:auto; background:var(--scrim); backdrop-filter:blur(4px)}
 .seg button{
   padding:5px 11px; background:none; border:none; border-right:1px solid var(--line);
   color:var(--muted); font-family:var(--mono); font-size:10px; letter-spacing:.1em; cursor:pointer;
 }
 .seg button:last-child{border-right:none}
-.seg button[aria-pressed="true"]{background:#1D3040; color:#EAF6FA}
+.seg button[aria-pressed="true"]{background:var(--sel); color:var(--selT)}
 .seg button:hover{color:var(--text)}
 .barL{display:flex; gap:8px; align-items:center; flex-wrap:wrap; pointer-events:auto}
 .barR{display:flex; gap:8px; align-items:center; pointer-events:auto}
 .expose{
-  padding:5px 14px; border:1px solid #6B4A2A; background:rgba(40,22,8,.9); border-radius:3px;
-  color:#F3C173; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; cursor:pointer;
+  padding:5px 14px; border:1px solid var(--rfLine); background:var(--rfBg2); border-radius:3px;
+  color:var(--rfText); font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; cursor:pointer;
 }
-.expose:hover{background:#4A2B10; color:#FFD79A}
+.expose:hover{background:var(--rfBg3); color:var(--rfText2)}
 .hud{
   position:absolute; left:10px; bottom:26px; max-width:min(430px,62%); padding:6px 10px 7px; border-radius:3px;
-  background:rgba(10,15,20,.84); border:1px solid var(--line); pointer-events:none;
+  background:var(--scrim); border:1px solid var(--line); pointer-events:none;
 }
-.hud .now{margin:0; font-size:12px; line-height:1.55; color:#FFD79A; letter-spacing:.02em}
+.hud .now{margin:0; font-size:12px; line-height:1.55; color:var(--rfText2); letter-spacing:.02em}
 .hud .sub{margin:3px 0 0; font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; color:var(--dim); line-height:1.7}
 .hud .sub span{margin-right:4px}
 .hud .sub b{color:var(--teal); font-weight:400; margin-right:9px}
@@ -141,17 +203,17 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 .key{
   position:absolute; left:0; right:0; bottom:0; height:20px; margin:0; padding:0 8px;
   display:flex; gap:13px; align-items:center; justify-content:center; flex-wrap:nowrap; overflow:hidden;
-  background:linear-gradient(0deg,rgba(10,15,20,.9),rgba(10,15,20,0));
+  background:linear-gradient(0deg,var(--scrim2),var(--scrim0));
   font-size:9.5px; color:var(--dim); pointer-events:none; white-space:nowrap;
 }
 .key i{display:inline-block; width:13px; height:3px; border-radius:1px; vertical-align:1px; margin-right:4px}
 .playbar{position:absolute; right:10px; bottom:26px; display:flex; gap:6px; align-items:center; pointer-events:auto}
 .playbar button{
-  padding:4px 11px; background:rgba(10,15,20,.86); border:1px solid var(--line2); border-radius:3px;
+  padding:4px 11px; background:var(--scrim); border:1px solid var(--line2); border-radius:3px;
   color:var(--muted); font-family:var(--mono); font-size:10px; letter-spacing:.08em; cursor:pointer;
 }
 .playbar button:hover{color:var(--text); border-color:var(--teal)}
-.playbar button[aria-pressed="true"]{background:#1D3040; color:#EAF6FA}
+.playbar button[aria-pressed="true"]{background:var(--sel); color:var(--selT)}
 
 /* ---------- rail ---------- */
 .rail{
@@ -176,15 +238,15 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
   color:var(--muted); font-family:var(--gothic); font-size:11px; cursor:pointer;
 }
 .tabs button:last-child{border-right:none}
-.tabs button[aria-pressed="true"]{background:#1D3040; color:#EAF6FA; box-shadow:inset 0 -2px 0 var(--teal)}
+.tabs button[aria-pressed="true"]{background:var(--sel); color:var(--selT); box-shadow:inset 0 -2px 0 var(--teal)}
 .pane[hidden]{display:none}
 
 /* ---------- readout ---------- */
 .readout{
   display:flex; justify-content:space-between; align-items:baseline; padding:7px 10px; margin-bottom:10px;
-  background:#0B141B; border:1px solid var(--line); border-radius:2px;
+  background:var(--well); border:1px solid var(--line); border-radius:2px;
 }
-.readout .big{font-family:var(--gothic); font-size:12.5px; color:#EAF6FA; letter-spacing:.02em}
+.readout .big{font-family:var(--gothic); font-size:12.5px; color:var(--selT); letter-spacing:.02em}
 .readout .sm{font-family:var(--mono); font-size:9.5px; color:var(--dim); letter-spacing:.08em;
   white-space:nowrap; padding-left:8px}
 .readout .sm b{color:var(--teal); font-weight:400}
@@ -198,16 +260,16 @@ ol.seq button{
   color:var(--muted); font-family:var(--gothic); font-size:11.5px; cursor:pointer; line-height:1.5;
 }
 ol.seq button:hover{background:var(--panel2); color:var(--text)}
-ol.seq button[aria-current="step"]{background:#1B2E3D; border-color:var(--teal); color:#EAF6FA}
+ol.seq button[aria-current="step"]{background:var(--sel2); border-color:var(--teal); color:var(--selT)}
 ol.seq .no{font-family:var(--mono); font-size:10px; color:var(--teal)}
 ol.seq .tg2{display:block; font-size:10px; color:var(--dim); letter-spacing:.02em}
-ol.seq button[aria-current="step"] .tg2{color:#8FC8D8}
+ol.seq button[aria-current="step"] .tg2{color:var(--stepRuby)}
 .seqnav{display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:10px}
 .note{
   margin:10px 0 0; padding:9px 11px; background:var(--ink2); border-left:2px solid var(--teal);
   border-radius:0 2px 2px 0; font-size:12px; color:var(--muted); line-height:1.85;
 }
-.note b{color:#EAF6FA; font-weight:500}
+.note b{color:var(--selT); font-weight:500}
 .note .eq{display:block; margin:6px 0 2px; font-family:var(--mono); font-size:11px; color:var(--amber); letter-spacing:.02em; line-height:1.7}
 .note .hl{color:var(--amber)}
 
@@ -220,7 +282,7 @@ button.opt{
 }
 button.opt .ruby{font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; color:var(--dim)}
 button.opt:hover{border-color:var(--line2); color:var(--text)}
-button.opt[aria-pressed="true"]{background:#1D3040; border-color:var(--teal); color:#EAF6FA}
+button.opt[aria-pressed="true"]{background:var(--sel); border-color:var(--teal); color:var(--selT)}
 button.opt[aria-pressed="true"] .ruby{color:var(--teal)}
 button.opt:focus-visible,button.act:focus-visible,summary:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
 .pre-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:6px}
@@ -231,8 +293,8 @@ button.act{
 }
 button.act:hover{background:var(--panel2); color:var(--text); border-color:var(--teal)}
 button.act.wide{grid-column:1/-1}
-button.act.rf{color:#F3C173; border-color:#6B4A2A}
-button.act.rf:hover{background:#3A2A12; border-color:var(--amber)}
+button.act.rf{color:var(--rfText); border-color:var(--rfLine)}
+button.act.rf:hover{background:var(--rfBg); border-color:var(--amber)}
 
 /* ---------- スライダ ---------- */
 .sld{margin:0 0 9px}
@@ -244,13 +306,13 @@ input[type=range]{
   -webkit-appearance:none; appearance:none; width:100%; height:20px; background:transparent;
   cursor:pointer; margin:0; display:block;
 }
-input[type=range]::-webkit-slider-runnable-track{height:4px; background:#0A1117; border:1px solid var(--line2); border-radius:2px}
+input[type=range]::-webkit-slider-runnable-track{height:4px; background:var(--track); border:1px solid var(--line2); border-radius:2px}
 input[type=range]::-webkit-slider-thumb{
   -webkit-appearance:none; width:15px; height:15px; margin-top:-7px; border-radius:3px;
-  background:linear-gradient(180deg,#9FB4C4,#5E7386); border:1px solid #3C5265; box-shadow:0 2px 4px rgba(0,0,0,.6);
+  background:linear-gradient(180deg,var(--knob1),var(--knob2)); border:1px solid var(--knobLine); box-shadow:0 2px 4px var(--shadow);
 }
-input[type=range]::-moz-range-track{height:4px; background:#0A1117; border:1px solid var(--line2); border-radius:2px}
-input[type=range]::-moz-range-thumb{width:13px; height:13px; border-radius:3px; background:#8FA5B6; border:1px solid #3C5265}
+input[type=range]::-moz-range-track{height:4px; background:var(--track); border:1px solid var(--line2); border-radius:2px}
+input[type=range]::-moz-range-thumb{width:13px; height:13px; border-radius:3px; background:var(--knobSolid); border:1px solid var(--knobLine)}
 input[type=range]:focus-visible{outline:2px solid var(--teal); outline-offset:2px}
 input[type=range]:disabled{opacity:.35; cursor:default}
 .detent{display:flex; gap:4px; margin:-2px 0 0; flex-wrap:wrap}
@@ -282,14 +344,14 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset
   border:1px solid var(--line); border-radius:3px; color:var(--muted);
   font-family:var(--gothic); font-size:11.5px; cursor:pointer; transition:.15s;
 }
-.chip i{width:14px; height:14px; border-radius:2px; border:1px solid rgba(255,255,255,.22); flex:none}
+.chip i{width:14px; height:14px; border-radius:2px; border:1px solid var(--swLine); flex:none}
 .chip:hover{color:var(--text); border-color:var(--line2)}
-.chip[aria-pressed="true"]{background:#1D3040; border-color:var(--teal); color:#EAF6FA}
+.chip[aria-pressed="true"]{background:var(--sel); border-color:var(--teal); color:var(--selT)}
 .tiny{margin:7px 0 0; font-size:10.5px; line-height:1.75; color:var(--dim)}
 .tiny b{color:var(--muted); font-weight:500}
 .lede{
-  margin:0 0 9px; padding:6px 10px; background:#0B141B; border-left:2px solid var(--amber);
-  border-radius:0 2px 2px 0; font-size:12px; line-height:1.7; color:#F3C173;
+  margin:0 0 9px; padding:6px 10px; background:var(--well); border-left:2px solid var(--amber);
+  border-radius:0 2px 2px 0; font-size:12px; line-height:1.7; color:var(--rfText);
 }
 /* ---------- 組織テーブル（いまは未使用） ---------- */
 table.tis{width:100%; border-collapse:collapse; font-size:11.5px}
@@ -298,24 +360,24 @@ table.tis th{
   font-weight:400; text-align:right; padding:0 0 4px; border-bottom:1px solid var(--line);
 }
 table.tis th:first-child{text-align:left}
-table.tis td{padding:3px 0; border-bottom:1px solid rgba(34,49,64,.5); vertical-align:middle}
+table.tis td{padding:3px 0; border-bottom:1px solid var(--line); vertical-align:middle}
 table.tis tr{cursor:pointer}
-table.tis tr:hover td{background:rgba(24,36,48,.6)}
-table.tis tr[aria-selected="true"] td{background:#1B2E3D}
-table.tis tr[aria-selected="true"] .nm{color:#EAF6FA}
+table.tis tr:hover td{background:var(--rowHover)}
+table.tis tr[aria-selected="true"] td{background:var(--sel2)}
+table.tis tr[aria-selected="true"] .nm{color:var(--selT)}
 .sw{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; vertical-align:-1px}
 .nm{color:var(--muted)}
 td.num{text-align:right; font-family:var(--mono); font-size:10px; color:var(--dim); padding-left:6px; white-space:nowrap}
 td.barc{width:52px; padding-left:8px}
-.sigbar{height:7px; background:#0A1117; border:1px solid var(--line); border-radius:1px; overflow:hidden}
-.sigbar i{display:block; height:100%; background:linear-gradient(90deg,#2E5C6B,#9FD9E8)}
+.sigbar{height:7px; background:var(--track); border:1px solid var(--line); border-radius:1px; overflow:hidden}
+.sigbar i{display:block; height:100%; background:linear-gradient(90deg,var(--teal),var(--gap))}
 
 /* ---------- 下段パネル ---------- */
 .panels{display:grid; grid-template-columns:1fr 1fr; gap:10px; min-height:0}
 .pan{background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
   padding:9px 12px 10px; min-width:0; min-height:0; display:flex; flex-direction:column}
 .pan .ph2{display:flex; justify-content:space-between; align-items:baseline; margin:0; gap:10px; flex-wrap:wrap}
-.pan h2{font-family:var(--mincho); font-weight:700; font-size:13px; margin:0; color:#E9F2F8}
+.pan h2{font-family:var(--mincho); font-weight:700; font-size:13px; margin:0; color:var(--head)}
 .pan .hint{font-size:10px; color:var(--dim)}
 .pan .cvwrap{position:relative; flex:1; min-height:0; margin-top:5px}
 .pan canvas{position:absolute; inset:0; display:block; width:100%; height:100%}
@@ -323,12 +385,12 @@ td.barc{width:52px; padding-left:8px}
 /* ---------- filmstrip ---------- */
 .films{margin-top:10px; border:1px solid var(--line); border-radius:var(--r); background:var(--panel); padding:12px 14px 14px}
 .films .fh2{display:flex; justify-content:space-between; align-items:baseline; margin:0 0 10px}
-.films h2{font-family:var(--mincho); font-weight:700; font-size:14px; margin:0; color:#E9F2F8}
+.films h2{font-family:var(--mincho); font-weight:700; font-size:14px; margin:0; color:var(--head)}
 .films .hint{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; color:var(--dim)}
 .strip{display:flex; gap:9px; overflow-x:auto; padding-bottom:5px; min-height:132px; align-items:flex-start}
 .strip .empty{font-size:11.5px; color:var(--dim); padding:34px 4px; line-height:1.8}
 .strip figure{margin:0; flex:none; width:88px; cursor:zoom-in}
-.strip img{display:block; width:88px; height:104px; object-fit:cover; border:1px solid var(--line2); border-radius:2px; background:#05080B}
+.strip img{display:block; width:88px; height:104px; object-fit:cover; border:1px solid var(--line2); border-radius:2px; background:var(--filmbg)}
 .strip figcaption{font-family:var(--mono); font-size:8.5px; color:var(--dim); margin-top:4px; letter-spacing:.03em; line-height:1.45}
 .strip figcaption b{color:var(--teal); font-weight:400; display:block}
 .strip figure:hover img{border-color:var(--teal)}
@@ -338,7 +400,7 @@ td.barc{width:52px; padding-left:8px}
 .qhead{display:flex; justify-content:space-between; align-items:center; margin-bottom:9px}
 .qhead span{font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--dim)}
 .qhead button{padding:4px 9px; font-size:10.5px}
-.qtext{margin:0 0 10px; font-size:13px; line-height:1.7; color:#E9F2F8; text-wrap:balance}
+.qtext{margin:0 0 10px; font-size:13px; line-height:1.7; color:var(--head); text-wrap:balance}
 .qsrc{margin:-5px 0 10px; font-family:var(--mono); font-size:9.5px; letter-spacing:.04em; color:var(--dim); line-height:1.6}
 .qsrc b{color:var(--teal); font-weight:400; letter-spacing:.1em}
 .choices{list-style:none; margin:0 0 10px; padding:0; display:flex; flex-direction:column; gap:4px}
@@ -350,10 +412,10 @@ td.barc{width:52px; padding-left:8px}
 .choices button:hover:not([disabled]){border-color:var(--line2); color:var(--text)}
 .choices button[disabled]{cursor:default}
 .choices .n{font-family:var(--mono); font-size:10px; color:var(--dim)}
-.choices button.ok{background:#12291E; border-color:#2F6B49; color:#9FE3BC}
-.choices button.ok .n{color:#4FBF88}
-.choices button.ng{background:#2A1416; border-color:#6E3036; color:#E9A0A0}
-.choices button.ng .n{color:#D06A6A}
+.choices button.ok{background:var(--okBg); border-color:var(--okLine); color:var(--okText)}
+.choices button.ok .n{color:var(--okN)}
+.choices button.ng{background:var(--ngBg); border-color:var(--ngLine); color:var(--ngText)}
+.choices button.ng .n{color:var(--ngN)}
 .qexp{margin:0 0 10px; padding:9px 11px; background:var(--ink2); border-left:2px solid var(--teal);
   border-radius:0 2px 2px 0; font-size:12px; color:var(--muted); line-height:1.8}
 .qexp[hidden]{display:none}
@@ -379,20 +441,20 @@ details.fold[open] summary::before{content:"− "}
 details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1.8}
 
 /* ---------- ガイド・ライトボックス ---------- */
-#guide{position:fixed; inset:0; z-index:60; background:rgba(4,7,10,.82); display:none;
+#guide{position:fixed; inset:0; z-index:60; background:var(--modal); display:none;
   align-items:center; justify-content:center; padding:20px}
 #guide.on{display:flex}
 .gcard{width:min(340px,100%); background:var(--panel); border:1px solid var(--line2);
-  border-radius:6px; padding:16px 17px 15px; box-shadow:0 22px 60px rgba(0,0,0,.75)}
+  border-radius:6px; padding:16px 17px 15px; box-shadow:0 22px 60px var(--shadow3)}
 .ghead{margin:0 0 12px}
-.ghead b{font-family:var(--mincho); font-size:14.5px; color:#EAF6FA}
+.ghead b{font-family:var(--mincho); font-size:14.5px; color:var(--selT)}
 .gtip{margin:0 0 14px; font-size:12.5px; line-height:1.85; color:var(--muted)}
 .gtip b{font-weight:500; color:var(--text)}
-#gClose{width:100%; padding:10px; background:#1D3040; border:1px solid var(--teal); border-radius:3px;
-  color:#EAF6FA; font-family:var(--gothic); font-size:12.5px; cursor:pointer}
-#gClose:hover{background:#24425A}
+#gClose{width:100%; padding:10px; background:var(--sel); border:1px solid var(--teal); border-radius:3px;
+  color:var(--selT); font-family:var(--gothic); font-size:12.5px; cursor:pointer}
+#gClose:hover{background:var(--hoverBg)}
 #lightbox{
-  position:fixed; inset:0; background:rgba(4,7,10,.93); display:none; z-index:50;
+  position:fixed; inset:0; background:var(--modal2); display:none; z-index:50;
   align-items:center; justify-content:center; padding:24px; flex-direction:column; gap:12px;
 }
 #lightbox.on{display:flex}
@@ -411,7 +473,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
   .stage{
     order:1; position:sticky; top:0; z-index:6;
     height:clamp(230px,40vh,400px);
-    box-shadow:0 12px 20px -14px rgba(0,0,0,.95);
+    box-shadow:0 12px 20px -14px var(--shadow4);
   }
   .rail{order:2; display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); align-items:start;
     gap:10px; height:auto; overflow:visible; padding-right:0; margin-top:10px}
@@ -453,15 +515,15 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
   #imgbox .if{display:none}
 }
 #b0Seg button small{display:block; font-size:10px; opacity:.72; letter-spacing:.02em}
-.numin{width:70px; font:inherit; color:inherit; background:transparent; border:1px solid #2a3a48; border-radius:3px; padding:1px 4px; text-align:right}
-.stopat{display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--mut, #8aa0b2)}
+.numin{width:70px; font:inherit; color:inherit; background:transparent; border:1px solid var(--inputLine); border-radius:3px; padding:1px 4px; text-align:right}
+.stopat{display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--mut, var(--muted))}
 .echotg{display:inline-flex; align-items:center; cursor:pointer}
 .echotg input{position:absolute; opacity:0; pointer-events:none}
-.echotg span{font-size:12px; padding:5px 10px; border-radius:4px; border:1px solid #3E8FA3; color:#9fc7d3; background:rgba(62,143,163,.08)}
-.echotg input:checked + span{background:#3E8FA3; color:#071219; font-weight:600}
+.echotg span{font-size:12px; padding:5px 10px; border-radius:4px; border:1px solid var(--tgLine); color:var(--tgT); background:var(--tgBg)}
+.echotg input:checked + span{background:var(--tgOn); color:var(--tgOnT); font-weight:600}
 .echotg input:checked + span::before{content:'● '}
 .echotg input:not(:checked) + span::before{content:'○ '}
-.stopat input{width:64px; font:inherit; color:inherit; background:transparent; border:1px solid #2a3a48; border-radius:3px; padding:2px 4px}
+.stopat input{width:64px; font:inherit; color:inherit; background:transparent; border:1px solid var(--inputLine); border-radius:3px; padding:2px 4px}
 .stopat button{margin-left:2px}
 @media (prefers-reduced-motion:reduce){
   *{transition-duration:.01ms !important}
@@ -473,6 +535,7 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
 <div class="wrap">
 <header>
   <h1>MRI スピン3Dシミュレーター<small>T1 / T2 CONTRAST — SPIN VIEWER</small></h1>
+  <button class="hbtn" id="bTheme" type="button" aria-label="配色を切り替える">ライト</button>
   <button class="hbtn" id="bGuide" type="button">使い方</button>
 </header>
 
@@ -515,10 +578,10 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
       </div>
 
       <p class="key" id="key3d">
-        <span><i style="background:linear-gradient(90deg,#7ED9A7,#E8C77A,#C4A6E8)"></i>細い矢印＝スピン1本ずつ（色＝位相）</span>
-        <span><i style="background:#52B8CE"></i>太い矢印＝合計の磁化 M</span>
-        <span><i style="background:#7ED9A7"></i>Mz（縦・信号にならない）</span>
-        <span><i style="background:#E0645C"></i>Mxy（横・これが信号）</span>
+        <span><i style="background:linear-gradient(90deg,var(--grass),var(--amber),var(--violet))"></i>細い矢印＝スピン1本ずつ（色＝位相）</span>
+        <span><i style="background:var(--sig)"></i>太い矢印＝合計の磁化 M</span>
+        <span><i style="background:var(--grass)"></i>Mz（縦・信号にならない）</span>
+        <span><i style="background:var(--alert)"></i>Mxy（横・これが信号）</span>
       </p>
 
       <div class="playbar">
@@ -794,16 +857,18 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
    e1 は 3T で報告されている値との比からきめた組織ごとの指数。
    T2 は磁場依存が小さいので固定にしている。          */
 const TIS = [
-  { id:'fat',  nm:'脂肪',       col:'#E8C77A', T1:270,  T2:85,   PD:1.00, e1:0.50 },
-  { id:'wm',   nm:'白質',       col:'#CBD6DF', T1:650,  T2:80,   PD:0.70, e1:0.39 },
-  { id:'gm',   nm:'灰白質',     col:'#9FAFBD', T1:920,  T2:100,  PD:0.80, e1:0.53 },
-  { id:'csf',  nm:'脳脊髄液',   col:'#6FA8C9', T1:4000, T2:2000, PD:1.00, e1:0.05 },
-  { id:'mus',  nm:'筋肉',       col:'#B07A7A', T1:870,  T2:45,   PD:0.75, e1:0.70 },
-  { id:'les',  nm:'病変（浮腫）',col:'#C4A6E8', T1:1200, T2:180,  PD:0.85, e1:0.45 },
-  { id:'bone', nm:'皮質骨',     col:'#46545F', T1:250,  T2:1,    PD:0.05, e1:0.30 },
-  { id:'cus',  nm:'自由な組織', col:'#E3D35A', T1:500,  T2:100,  PD:1.00, e1:0 }    // T1・T2・プロトン密度を自分で決める（静磁場で T1 は変えない）。画像には出ない
+  { id:'fat',  nm:'脂肪',       col:'#E8C77A', colL:'#A86F0C', T1:270,  T2:85,   PD:1.00, e1:0.50 },
+  { id:'wm',   nm:'白質',       col:'#CBD6DF', colL:'#2F4C5D', T1:650,  T2:80,   PD:0.70, e1:0.39 },
+  { id:'gm',   nm:'灰白質',     col:'#9FAFBD', colL:'#7B909F', T1:920,  T2:100,  PD:0.80, e1:0.53 },
+  { id:'csf',  nm:'脳脊髄液',   col:'#6FA8C9', colL:'#13679A', T1:4000, T2:2000, PD:1.00, e1:0.05 },
+  { id:'mus',  nm:'筋肉',       col:'#B07A7A', colL:'#96403F', T1:870,  T2:45,   PD:0.75, e1:0.70 },
+  { id:'les',  nm:'病変（浮腫）',col:'#C4A6E8', colL:'#6341AC', T1:1200, T2:180,  PD:0.85, e1:0.45 },
+  { id:'bone', nm:'皮質骨',     col:'#46545F', colL:'#55636E', T1:250,  T2:1,    PD:0.05, e1:0.30 },
+  { id:'cus',  nm:'自由な組織', col:'#E3D35A', colL:'#8A7A05', T1:500,  T2:100,  PD:1.00, e1:0 }    // T1・T2・プロトン密度を自分で決める（静磁場で T1 は変えない）。画像には出ない
 ];
 const TIX = {}; TIS.forEach((t, i) => TIX[t.id] = i);
+/* 明るい配色では、暗い地むけの色は白地に埋もれるので別の色を使う */
+const tcol = t => document.documentElement.dataset.theme === 'light' ? t.colL : t.col;
 /* 画像の中にある組織（十字カーソルを置けるもの） */
 const INIMG = { fat:1, wm:1, gm:1, csf:1, mus:1, les:0, bone:1 };   // 病変ははじめは無し（「病変を追加」で入れる）
 const GAMMA = 42.58;   // MHz/T 水素のジャイロ磁気比
@@ -1332,10 +1397,51 @@ renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
     (dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) +
     ' / ' + gl.getParameter(gl.VERSION);
 }
+/* 3Dの色。明るい地では線も矢印も濃くしないと見えないので、テーマごとに持つ */
+const GLT = {
+  dark: {
+    bg:0x0A0F14, ax:0x3d566b, axz:0x4d6a80, ring:0x2b3f4f, b0:0x6d93a6, field:0x24384a,
+    plane:0x123240, planeOp:0.30, m:0x52B8CE, mz:0x7ED9A7, mxy:0xE0645C, comp:0x5b7387,
+    rf:0xF0B24B, conePar:0x8FC8D8, coneAnti:0xB07A7A,
+    skull:0xC9B6A8, skullOp:0.06, brain:0xE2CDD4, brainOp:0.17, vent:0x4F9CCB, ventOp:0.6,
+    skin:0x9FB4C4, skinOp:0.10, nose:0xFFA94D, edge:0x3E8FA3, vox:0xF0B24B, voxOp:0.10,
+    amb:0.62, dir:0.72, dir2:0.30, emis:0.20, spinL:0.58, spinE:0.12,
+    mE:[0.06, 0.14, 0.17], trail:[0.18, 0.45, 0.55, 0.30, 0.40, 0.35]
+  },
+  light: {
+    bg:0xF2F6F9, ax:0x7B94A4, axz:0x5A7587, ring:0xA9BCC8, b0:0x4E7083, field:0xCCD9E2,
+    plane:0xA2C8D6, planeOp:0.42, m:0x0E6B83, mz:0x1A8456, mxy:0xB4332A, comp:0x8CA2B0,
+    rf:0xA3700F, conePar:0x2E7A94, coneAnti:0x9A4A4A,
+    skull:0x9A8A7E, skullOp:0.10, brain:0xA98E96, brainOp:0.18, vent:0x2C7AAC, ventOp:0.55,
+    skin:0x6E8598, skinOp:0.13, nose:0xC4660F, edge:0x2E7A8C, vox:0xB5781A, voxOp:0.14,
+    amb:0.92, dir:0.42, dir2:0.18, emis:0.04, spinL:0.40, spinE:0.00,
+    mE:[0.0, 0.0, 0.0], trail:[0.05, 0.32, 0.42, 0.20, 0.26, 0.26]
+  }
+};
+let TH = GLT[document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'];
+const themed = [];                       // {o:対象, c:色のキー, op:不透明度のキー}
+function tint(o, c, op) { themed.push({ o:o, c:c, op:op }); return o; }
+function applyThemeGL() {
+  renderer.setClearColor(TH.bg, 1);
+  amb.intensity = TH.amb; dl.intensity = TH.dir; dl2.intensity = TH.dir2;
+  themed.forEach(t => {
+    const m = t.o.mat || t.o.material;
+    if (!m) return;
+    m.color.setHex(TH[t.c] !== undefined ? TH[t.c] : parseInt(t.c.slice(1), 16));
+    if (m.emissive) m.emissive.copy(m.color).multiplyScalar(TH.emis);
+    if (t.op) m.opacity = TH[t.op];
+  });
+  tisArr.forEach(t => {                  // 脳全体の部位ごとの矢印とリング
+    const c = new THREE.Color(tcol(TIS[TIX[t.id]]));
+    t.a.mat.color.copy(c); t.a.mat.emissive.copy(c).multiplyScalar(TH.emis);
+    t.ring.material.color.copy(c);
+  });
+}
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(34, 1, 0.4, 900);
 camera.up.set(0, 0, 1);                       // z（B0）を画面の上に置く
-scene.add(new THREE.AmbientLight(0x9fb4c4, 0.62));
+const amb = new THREE.AmbientLight(0x9fb4c4, 0.62); scene.add(amb);
 const dl = new THREE.DirectionalLight(0xffffff, 0.72); dl.position.set(6, -9, 12); scene.add(dl);
 const dl2 = new THREE.DirectionalLight(0x6fa8c9, 0.30); dl2.position.set(-8, 6, -4); scene.add(dl2);
 
@@ -1378,12 +1484,12 @@ function dashCircle(r, n, col, op) {
 /* ---- 座標軸と静磁場 ---- */
 const AX = 6.0;
 const axGrp = new THREE.Group(); scene.add(axGrp);
-axGrp.add(line([new THREE.Vector3(-AX, 0, 0), new THREE.Vector3(AX, 0, 0)], 0x3d566b, .9));
-axGrp.add(line([new THREE.Vector3(0, -AX, 0), new THREE.Vector3(0, AX, 0)], 0x3d566b, .9));
-axGrp.add(line([new THREE.Vector3(0, 0, -AX * .8), new THREE.Vector3(0, 0, AX)], 0x4d6a80, .9));
-axGrp.add(dashCircle(ML, 72, 0x2b3f4f, .75));
+axGrp.add(tint(line([new THREE.Vector3(-AX, 0, 0), new THREE.Vector3(AX, 0, 0)], 0x3d566b, .9), 'ax'));
+axGrp.add(tint(line([new THREE.Vector3(0, -AX, 0), new THREE.Vector3(0, AX, 0)], 0x3d566b, .9), 'ax'));
+axGrp.add(tint(line([new THREE.Vector3(0, 0, -AX * .8), new THREE.Vector3(0, 0, AX)], 0x4d6a80, .9), 'axz'));
+axGrp.add(tint(dashCircle(ML, 72, 0x2b3f4f, .75), 'ring'));
 {
-  const b0 = mkArrow(0x6d93a6, 0.045, 0.20, 0.7);
+  const b0 = mkArrow(0x6d93a6, 0.045, 0.20, 0.7); tint(b0, 'b0');
   setArrow(b0, 0, 0, 1, AX + 1.1);
   b0.grp.position.set(0, 0, 0);
   axGrp.add(b0.grp);
@@ -1391,7 +1497,7 @@ axGrp.add(dashCircle(ML, 72, 0x2b3f4f, .75));
     const a = i / 6 * Math.PI * 2, r = 7.9;
     const l = line([new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, -6.4),
                     new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 6.6)], 0x24384a, .55);
-    axGrp.add(l);
+    axGrp.add(tint(l, 'field'));
   }
 }
 /* 横磁化の面 */
@@ -1399,7 +1505,7 @@ const planeXY = new THREE.Mesh(
   new THREE.CircleGeometry(ML * 1.02, 48),
   new THREE.MeshBasicMaterial({ color:0x123240, transparent:true, opacity:0.30, side:THREE.DoubleSide, depthWrite:false })
 );
-scene.add(planeXY);
+scene.add(tint(planeXY, 'plane', 'planeOp'));
 
 /* ---- 回転座標系にのるもの（スピン・合成ベクトル・B1） ---- */
 const spinGrp = new THREE.Group(); scene.add(spinGrp);
@@ -1413,18 +1519,18 @@ function buildSpins(n) {
   }
   setDisp(n);
 }
-const mArrow = mkArrow(0x52B8CE, 0.105, 0.34, 1.0); spinGrp.add(mArrow.grp);
-const mzArrow = mkArrow(0x7ED9A7, 0.055, 0.20, 0.6, 0.92); spinGrp.add(mzArrow.grp);
-const mxyArrow = mkArrow(0xE0645C, 0.055, 0.20, 0.6, 0.92); spinGrp.add(mxyArrow.grp);
+const mArrow = mkArrow(0x52B8CE, 0.105, 0.34, 1.0); spinGrp.add(mArrow.grp); tint(mArrow, 'm');
+const mzArrow = mkArrow(0x7ED9A7, 0.055, 0.20, 0.6, 0.92); spinGrp.add(mzArrow.grp); tint(mzArrow, 'mz');
+const mxyArrow = mkArrow(0xE0645C, 0.055, 0.20, 0.6, 0.92); spinGrp.add(mxyArrow.grp); tint(mxyArrow, 'mxy');
 const compPos = new Float32Array(12);
 const compGeo = new THREE.BufferGeometry();
 compGeo.setAttribute('position', new THREE.BufferAttribute(compPos, 3));
 const compLine = new THREE.LineSegments(compGeo, new THREE.LineBasicMaterial({ color:0x5b7387, transparent:true, opacity:.7 }));
-compLine.frustumCulled = false; spinGrp.add(compLine);
-const b1Arrow = mkArrow(0xF0B24B, 0.075, 0.26, 0.72); spinGrp.add(b1Arrow.grp);
+compLine.frustumCulled = false; spinGrp.add(tint(compLine, 'comp'));
+const b1Arrow = mkArrow(0xF0B24B, 0.075, 0.26, 0.72); spinGrp.add(b1Arrow.grp); tint(b1Arrow, 'rf');
 const b1Ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.045, 8, 40, Math.PI * 1.5),
   new THREE.MeshBasicMaterial({ color:0xF0B24B, transparent:true, opacity:.75 }));
-spinGrp.add(b1Ring);
+spinGrp.add(tint(b1Ring, 'rf'));
 
 /* 合成ベクトルの先端の軌跡（実験室系でもそのまま見えるようワールド座標で持つ） */
 const TRN = 420;
@@ -1443,7 +1549,8 @@ function pushTrail(x, y, z) {
   trailN++;
   for (let i = 0; i < trailN; i++) {
     const f = i / trailN;
-    trailCol[i * 3] = 0.18 + 0.30 * f; trailCol[i * 3 + 1] = 0.45 + 0.40 * f; trailCol[i * 3 + 2] = 0.55 + 0.35 * f;
+    const TT = TH.trail;
+    trailCol[i * 3] = TT[0] + TT[3] * f; trailCol[i * 3 + 1] = TT[1] + TT[4] * f; trailCol[i * 3 + 2] = TT[2] + TT[5] * f;
   }
   trailGeo.attributes.position.needsUpdate = true;
   trailGeo.attributes.color.needsUpdate = true;
@@ -1459,6 +1566,7 @@ const cons = [];
   for (let i = 0; i < up + dn; i++) {
     const par = i < up;
     const a = mkArrow(par ? 0x8FC8D8 : 0xB07A7A, 0.030, 0.12, 0.40);
+    tint(a, par ? 'conePar' : 'coneAnti');
     a.par = par; a.ph = Math.random() * Math.PI * 2;
     a.rx = (Math.random() - .5) * 4.6; a.ry = (Math.random() - .5) * 4.6; a.rz = (Math.random() - .5) * 5.0;
     conGrp.add(a.grp); cons.push(a);
@@ -1479,23 +1587,27 @@ function brainMesh(m, color, op) {
 }
 let headFront = FOVY * 0.93 / 2 / U;
 if (typeof BRAIN3D !== 'undefined') {
-  const hm = brainMesh(BRAIN3D.head, 0xC9B6A8, 0.06);
+  const hm = tint(brainMesh(BRAIN3D.head, 0xC9B6A8, 0.06), 'skull', 'skullOp');
   hm.geometry.computeBoundingBox(); headFront = hm.geometry.boundingBox.max.y;
-  headGrp.add(hm, brainMesh(BRAIN3D.brain, 0xE2CDD4, 0.17), brainMesh(BRAIN3D.vent, 0x4F9CCB, 0.6));
+  headGrp.add(hm,
+    tint(brainMesh(BRAIN3D.brain, 0xE2CDD4, 0.17), 'brain', 'brainOp'),
+    tint(brainMesh(BRAIN3D.vent, 0x4F9CCB, 0.6), 'vent', 'ventOp'));
 } else {
   const sk = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28),
     new THREE.MeshPhongMaterial({ color:0x9FB4C4, transparent:true, opacity:0.10, shininess:8, side:THREE.DoubleSide, depthWrite:false }));
   sk.scale.set(FOVX * 0.84 / 2 / U, FOVY * 0.93 / 2 / U, 23);
-  headGrp.add(sk);
+  headGrp.add(tint(sk, 'skin', 'skinOp'));
 }
 {
   const nose = new THREE.Mesh(new THREE.ConeGeometry(1.4, 2.8, 12),
     new THREE.MeshPhongMaterial({ color:0xFFA94D, emissive:0x4a2c0a }));
+  tint(nose, 'nose');
   nose.position.set(0, headFront + 1.6, 0); nose.rotation.x = -Math.PI / 2;
   headGrp.add(nose);
 }
 const sliceEdge = new THREE.LineLoop(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3)),
   new THREE.LineBasicMaterial({ color:0x3E8FA3, transparent:true, opacity:.6 }));
+tint(sliceEdge, 'edge');
 headGrp.add(sliceEdge);
 const sliceCv = document.createElement('canvas'); sliceCv.width = IW; sliceCv.height = IH;
 const sliceCx = sliceCv.getContext('2d'), sliceImg = sliceCx.createImageData(IW, IH);
@@ -1516,11 +1628,11 @@ function placeSlicePlane() {
 const TA_IDS = ['fat', 'wm', 'gm', 'csf', 'les'];
 const TA_LEN = 6.5;                 // 部位ごとの矢印の長さ（M0 のとき、シーン単位）
 const tisArr = TA_IDS.map(id => {
-  const hold = new THREE.Group(), col = TIS[TIX[id]].col;
+  const hold = new THREE.Group(), col = tcol(TIS[TIX[id]]);
   const a = mkArrow(col, 0.13, 0.42, 1.1);
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.62, 24), new THREE.MeshBasicMaterial({ color:col, side:THREE.DoubleSide }));
   hold.add(a.grp, ring); headGrp.add(hold);
-  return { id, a, hold };
+  return { id, a, ring, hold };
 });
 function sitePos(px) { return pixScene(px[0] + .5, px[1] + .5); }
 /* 矢印を立てる場所：重ならないように、組織ごとに目安の位置（画像の幅・高さに対する割合）にいちばん近いその組織の画素 */
@@ -1560,10 +1672,10 @@ function drawSlice() {
 const voxel = new THREE.Group(); scene.add(voxel); voxel.visible = false;
 {
   const s = 5;
-  voxel.add(new THREE.Mesh(new THREE.BoxGeometry(s, s, s),
-    new THREE.MeshBasicMaterial({ color:0xF0B24B, transparent:true, opacity:0.10, depthWrite:false })));
-  voxel.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(s, s, s)),
-    new THREE.LineBasicMaterial({ color:0xF0B24B, transparent:true, opacity:.85 })));
+  voxel.add(tint(new THREE.Mesh(new THREE.BoxGeometry(s, s, s),
+    new THREE.MeshBasicMaterial({ color:0xF0B24B, transparent:true, opacity:0.10, depthWrite:false })), 'vox', 'voxOp'));
+  voxel.add(tint(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(s, s, s)),
+    new THREE.LineBasicMaterial({ color:0xF0B24B, transparent:true, opacity:.85 })), 'vox'));
 }
 /* 画像の位置 → 3D シーン（1 単位 = 5 mm、z が頭側＝B0 の向き。横断 z = +20 mm、画像の中心 y = −18 mm が原点） */
 function pixScene(fi, fj) {
@@ -1656,15 +1768,15 @@ function updateScene(dt) {
     setArrow(a, mx[i], my[i], mz[i], ML);
     const tr = Math.hypot(mx[i], my[i]);
     const h = (Math.atan2(my[i], mx[i]) / (Math.PI * 2) + 1) % 1;
-    a.mat.color.setHSL(h, Math.min(0.72, tr * 1.5), 0.58 + 0.06 * (1 - tr));
-    a.mat.emissive.setHSL(h, Math.min(0.6, tr * 1.2), 0.12);
+    a.mat.color.setHSL(h, Math.min(0.78, tr * 1.5), TH.spinL + 0.06 * (1 - tr));
+    a.mat.emissive.setHSL(h, Math.min(0.6, tr * 1.2), TH.spinE);
   }
   /* --- 合成ベクトル --- */
   const m = netM();
   const L = setArrow(mArrow, m[0], m[1], m[2], ML);
   mArrow.grp.visible = showSpin && L > 0;
   if (echoFlash > 0) { echoFlash -= dt; mArrow.mat.emissive.setRGB(0.25 + echoFlash, 0.5, 0.6); }
-  else mArrow.mat.emissive.setRGB(0.06, 0.14, 0.17);
+  else mArrow.mat.emissive.setRGB(TH.mE[0], TH.mE[1], TH.mE[2]);
 
   const txy = Math.hypot(m[0], m[1]);
   const comp = P.showComp && showSpin;
@@ -1715,7 +1827,7 @@ function updateScene(dt) {
       t.a.grp.visible = far;
       const pd = TIS[TIX[t.id]].PD;   // 熱平衡の磁化はプロトン密度に比例するので、脳全体の磁化ベクトルはプロトン密度をかけた長さにする
       if (far) setArrow(t.a, n[0] * pd, n[1] * pd, n[2] * pd, TA_LEN);
-      if (far && echoFlash > 0) t.a.mat.emissive.setRGB(0.3 + echoFlash, 0.45, 0.45); else t.a.mat.emissive.copy(new THREE.Color(TIS[TIX[t.id]].col)).multiplyScalar(0.2);
+      if (far && echoFlash > 0) t.a.mat.emissive.setRGB(0.3 + echoFlash, 0.45, 0.45); else t.a.mat.emissive.copy(new THREE.Color(tcol(TIS[TIX[t.id]]))).multiplyScalar(TH.emis);
     }
     if (++sliceN % 2 === 0) drawSlice();
   }
@@ -1771,15 +1883,19 @@ function fitCv(cv) {
   cx.clearRect(0, 0, w, h);
   return { cx:cx, w:w, h:h };
 }
-const C = {
-  line:'#223140', dim:'#5E7386', mut:'#8AA0B2', text:'#D9E4ED',
-  rf:'#F0B24B', sig:'#52B8CE', grad:'#6E8598', alert:'#E0645C', grid:'#1A2733'
-};
+const C = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
+  ['line', 'dim', 'muted', 'text', 'rf', 'sig', 'grad', 'alert', 'grid', 'grid2',
+   'gap', 'tagbg', 'env', 'rfDim', 'axisT', 'inputLine'].forEach(k => { C[k] = g('--' + k); });
+  C.mut = C.muted;
+}
+readColors();
 const MONO = '10px "IBM Plex Mono",monospace';
 /* 曲線に重なっても読めるよう、背景を敷いて書く */
 function tagBg(cx, x, y, txt, align, col) {
   const w = cx.measureText(txt).width + 7;
-  cx.fillStyle = 'rgba(10,15,20,.85)';
+  cx.fillStyle = C.tagbg;
   cx.fillRect(align === 'right' ? x - w : x, y - 7, w, 14);
   cx.fillStyle = col; cx.textAlign = align;
   cx.fillText(txt, align === 'right' ? x - 4 : x + 4, y);
@@ -1854,7 +1970,7 @@ function drawSeq() {
       ? (P.seq === 'IR' && e.t === 0 ? '縦磁化を反転' : '位相をもどす') : '倒す';
     rfRow = (x - lastRFx < 52) ? 1 - rfRow : 0;     // 近すぎるときは上下にずらす
     lastRFx = x;
-    cx.fillStyle = '#9A7A44'; cx.textAlign = 'center';
+    cx.fillStyle = C.rfDim; cx.textAlign = 'center';
     const ww = cx.measureText(word).width;      // 行頭の「RF」に重ならないところまで寄せる
     cx.fillText(word, Math.max(x, L + 3 + ww / 2), rows[0].y + 11 + rfRow * 12);
   });
@@ -1888,14 +2004,14 @@ function drawSeq() {
   /* T2 の包絡線（エコーの頂点はこの線の上にのる） */
   if (P.seq !== 'GRE') {
     const T2 = curT2(), t0 = P.seq === 'IR' ? P.TI : 0;
-    cx.strokeStyle = 'rgba(224,100,92,.75)'; cx.setLineDash([3, 3]); cx.lineWidth = 1; cx.beginPath();
+    cx.strokeStyle = C.env; cx.setLineDash([3, 3]); cx.lineWidth = 1; cx.beginPath();
     const a0 = R.trace.length ? Math.max.apply(null, R.trace.map(p => p[1])) : 1;
     for (let k = 0; k <= 60; k++) {
       const t = t0 + (P.TR - t0) * k / 60, y = sy - a0 * Math.exp(-(t - t0) / T2) * sh;
       k === 0 ? cx.moveTo(X(t), y) : cx.lineTo(X(t), y);
     }
     cx.stroke(); cx.setLineDash([]);
-    cx.fillStyle = 'rgba(224,100,92,.9)'; cx.textAlign = 'right';
+    cx.fillStyle = C.env; cx.textAlign = 'right';
     cx.fillText('T2 の包絡線', L + wDet - 4, sy - a0 * Math.exp(-(Td - t0) / T2) * sh - 8);
   }
   /* エコーの位置に「ここで読む」と書く */
@@ -1954,18 +2070,18 @@ function drawFA() {
   let mx = 1e-6; const q = Object.assign({}, P);
   for (const id of ids) for (let a = 1; a <= A; a++) { q.FA = a; mx = Math.max(mx, sigTis(TIS[TIX[id]], q)); }
   const X = a => L + (Rr - L) * a / A, Y = v => B - (B - T) * v / (mx * 1.08);
-  cx.strokeStyle = '#2a3a48'; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(L, T); cx.lineTo(L, B); cx.lineTo(Rr, B); cx.stroke();
-  cx.fillStyle = '#7f93a6'; cx.textAlign = 'center';
+  cx.strokeStyle = C.inputLine; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(L, T); cx.lineTo(L, B); cx.lineTo(Rr, B); cx.stroke();
+  cx.fillStyle = C.axisT; cx.textAlign = 'center';
   for (const a of [0, 30, 60, 90]) cx.fillText(a + '°', X(a), B + 10);
   cx.save(); cx.translate(9, (T + B) / 2); cx.rotate(-Math.PI / 2); cx.fillText('信号', 0, 0); cx.restore();
   for (const id of ids) {
-    const t = TIS[TIX[id]]; cx.strokeStyle = t.col; cx.lineWidth = id === P.tissue ? 2.4 : 1.3; cx.beginPath();
+    const t = TIS[TIX[id]]; cx.strokeStyle = tcol(t); cx.lineWidth = id === P.tissue ? 2.4 : 1.3; cx.beginPath();
     for (let a = 1; a <= A; a++) { q.FA = a; const y = Y(sigTis(t, q)); a === 1 ? cx.moveTo(X(a), y) : cx.lineTo(X(a), y); }
     cx.stroke();
   }
-  if (P.FA <= A) { cx.strokeStyle = '#F0B24B'; cx.setLineDash([3, 3]); cx.beginPath(); cx.moveTo(X(P.FA), T); cx.lineTo(X(P.FA), B); cx.stroke(); cx.setLineDash([]); }
+  if (P.FA <= A) { cx.strokeStyle = C.rf; cx.setLineDash([3, 3]); cx.beginPath(); cx.moveTo(X(P.FA), T); cx.lineTo(X(P.FA), B); cx.stroke(); cx.setLineDash([]); }
   const t = TIS[TIX[P.tissue]], ae = Math.acos(Math.exp(-P.TR / T1of(t, P.B0))) * 180 / Math.PI;
-  q.FA = ae; cx.fillStyle = t.col; cx.beginPath(); cx.arc(X(ae), Y(sigTis(t, q)), 3.5, 0, Math.PI * 2); cx.fill();
+  q.FA = ae; cx.fillStyle = tcol(t); cx.beginPath(); cx.arc(X(ae), Y(sigTis(t, q)), 3.5, 0, Math.PI * 2); cx.fill();
   $('faNote').textContent = '線＝組織ごとの信号（いまの TR・TE）。点線＝いまの α。点＝' + t.nm + 'のエルンスト角 ' + ae.toFixed(0) + '°（信号が最大になる角度）。';
 }
 function drawRel() {
@@ -1986,7 +2102,7 @@ function drawRel() {
     cx.beginPath(); cx.moveTo(L, r.y0); cx.lineTo(L, r.y1); cx.lineTo(Rr, r.y1); cx.stroke();
     if (ymin < 0) {                       // 反転回復では0の線が「消える瞬間」の目印になる
       const y = r.y1 - (0 - ymin) / (ymax - ymin) * (r.y1 - r.y0);
-      cx.strokeStyle = '#3B5568'; cx.setLineDash([2, 3]);
+      cx.strokeStyle = C.grid2; cx.setLineDash([2, 3]);
       cx.beginPath(); cx.moveTo(L, y); cx.lineTo(Rr, y); cx.stroke(); cx.setLineDash([]);
       cx.fillStyle = C.dim; cx.textAlign = 'right'; cx.fillText('0', L - 3, y);
     }
@@ -2007,7 +2123,7 @@ function drawRel() {
     let T2 = T2of(t);
     if (P.seq === 'GRE' && isFinite(P.T2p)) T2 = 1 / (1 / T2 + 1 / P.T2p);
     const sel = P.tissue === id;
-    cx.strokeStyle = t.col; cx.lineWidth = sel ? 2.2 : 1.2; cx.globalAlpha = sel ? 1 : .72;
+    cx.strokeStyle = tcol(t); cx.lineWidth = sel ? 2.2 : 1.2; cx.globalAlpha = sel ? 1 : .72;
     cx.beginPath();
     for (let k = 0; k <= 80; k++) { const tt = tmax1 * k / 80; const y = Y1(mzCurve(T1, tt, P)); k ? cx.lineTo(X1(tt), y) : cx.moveTo(X1(tt), y); }
     cx.stroke();
@@ -2018,11 +2134,11 @@ function drawRel() {
     cx.globalAlpha = 1;
     /* 標本化する点 */
     const xs = Math.min(X1(sampT), Rr), ys = Y1(mzCurve(T1, Math.min(sampT, tmax1), P));
-    cx.fillStyle = t.col; cx.beginPath(); cx.arc(xs, ys, sel ? 3.4 : 2.4, 0, 7); cx.fill();
+    cx.fillStyle = tcol(t); cx.beginPath(); cx.arc(xs, ys, sel ? 3.4 : 2.4, 0, 7); cx.fill();
     const xe = Math.min(X2(P.TE), Rr), ye = Y2(a0 * Math.exp(-P.TE / T2));
     cx.beginPath(); cx.arc(xe, ye, sel ? 3.4 : 2.4, 0, 7); cx.fill();
     ys1.push(ys); ys2.push(ye);
-    tags.push({ y:ye, nm:t.nm, col:t.col });
+    tags.push({ y:ye, nm:t.nm, col:tcol(t) });
     tags1.push({ y:Y1(mzCurve(T1, tmax1, P)), nm:t.nm, col:t.col });
   });
   /* 読み取る瞬間の、いちばん上といちばん下の差。ここが画像の明暗になる */
@@ -2030,11 +2146,11 @@ function drawRel() {
     if (arr.length < 2) return;
     const y0 = Math.min.apply(null, arr), y1 = Math.max.apply(null, arr);
     if (y1 - y0 < 4) return;
-    cx.strokeStyle = '#9FD9E8'; cx.lineWidth = 1; cx.beginPath();
+    cx.strokeStyle = C.gap; cx.lineWidth = 1; cx.beginPath();
     cx.moveTo(xg, y0); cx.lineTo(xg, y1);
     cx.moveTo(xg - 3, y0); cx.lineTo(xg + 3, y0);
     cx.moveTo(xg - 3, y1); cx.lineTo(xg + 3, y1); cx.stroke();
-    tagBg(cx, right ? xg - 4 : xg + 4, (y0 + y1) / 2, nm, right ? 'right' : 'left', '#9FD9E8');
+    tagBg(cx, right ? xg - 4 : xg + 4, (y0 + y1) / 2, nm, right ? 'right' : 'left', C.gap);
   };
   /* 右端の名前が重ならないようにずらす（上下どちらのグラフにも、線の色がどの組織かを書く） */
   const place = (arr, yMax) => {
@@ -2043,7 +2159,7 @@ function drawRel() {
     const over = arr.length ? arr[arr.length - 1].y - yMax : 0;
     if (over > 0) arr.forEach(t => t.y -= over);
     cx.textAlign = 'left';
-    arr.forEach(t => { cx.fillStyle = t.col; cx.fillText(t.nm, Rr + 4, t.y); });
+    arr.forEach(t => { cx.fillStyle = tcol(t); cx.fillText(t.nm, Rr + 4, t.y); });
   };
   place(tags1, top.y1 + 4);
   place(tags, bot.y1 + 4);
@@ -2072,7 +2188,7 @@ function drawRel() {
     ? '<b>①</b> 縦軸＝縦磁化 Mz（+1 がもとの大きさ、−1 が 180° パルスで反転した直後）。点＝TI の瞬間の各組織の Mz。この Mz が 90° パルスで倒されて横磁化になるので、0 に近い組織ほど信号が小さい。'
     : '<b>①</b> 縦軸＝縦磁化 Mz（+1 がもとの大きさ）。点＝TR の時点の各組織の Mz。次の 90° パルスで倒されて横磁化になる。')
     + '<br><b>②</b> 縦軸＝横磁化 Mxy。点＝TE の瞬間の各組織の Mxy（これが信号）。線の色と組織：'
-    + CURVE.map(id => { const t = TIS[TIX[id]]; return '<span style="color:' + t.col + '">━ ' + t.nm + '</span>'; }).join('　');
+    + CURVE.map(id => { const t = TIS[TIX[id]]; return '<span style="color:' + tcol(t) + '">━ ' + t.nm + '</span>'; }).join('　');
 }
 
 /* ================= 学習ステップ ================= */
@@ -2578,6 +2694,20 @@ chk('tBody', 'showBody', () => setScale(P.showBody));
 $('scaleSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setScale(b.dataset.sc === 'brain'); });
 chk('tComp', 'showComp'); chk('tTrail', 'showTrail', clearTrail); chk('tLab', 'showLab');
 chk('tEcho', 'echoStop'); chk('tSlow', 'slowPulse'); chk('tNoise', 'noise'); chk('tSpoil', 'spoil', () => refresh());
+/* ---- 配色（ライト / ダーク） ---- */
+const TKEY = 'mri-theme-v1';
+function applyTheme(t, save) {
+  t = t === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  TH = GLT[t];
+  $('bTheme').textContent = t === 'light' ? 'ダーク' : 'ライト';
+  if (save) { try { localStorage.setItem(TKEY, t); } catch (e) { } }
+  readColors(); applyThemeGL(); refresh();
+}
+$('bTheme').addEventListener('click', () => {
+  applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true);
+});
+
 $('bHome').addEventListener('click', homeCam);
 $('bPause').addEventListener('click', () => { P.paused = !P.paused; P.stopAt = null; refresh(); });
 /* エコーで自動停止したときの案内 */
@@ -2835,6 +2965,7 @@ setInhomo(P.T2p);
 equilibrium();
 loadExam();
 applyRail();
+applyTheme(document.documentElement.dataset.theme, false);
 setTissue('wm');
 placeTisArr();
 placeSlicePlane();
