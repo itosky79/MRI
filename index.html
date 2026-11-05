@@ -2389,7 +2389,13 @@ function mzCurve(T1, t, p) {
     const mzm = (1 - E1) / (1 - ca * E1);
     return 1 - (1 - mzm * ca) * Math.exp(-t / T1);
   }
-  return 1 - Math.exp(-t / T1);
+  /* SE：90°のあと縦磁化は 0 から戻り始めるが、TE/2 の 180°パルスでそこまで戻った分が裏返る（マイナスになる）。
+     以前はこの反転を入れていなかったので、180°のあとはグラフが 3D の縦磁化とずれていた。
+     TR での値は 1 − 2e^(−(TR−TE/2)/T1) + e^(−TR/T1) となり、画像の式（mxy0）と一致する */
+  const th = p.TE / 2;
+  if (t < th) return 1 - Math.exp(-t / T1);
+  const mh = 1 - Math.exp(-th / T1);
+  return 1 - (1 + mh) * Math.exp(-(t - th) / T1);
 }
 function mxy0(T1, p) {
   const E1 = Math.exp(-p.TR / T1);
@@ -2527,7 +2533,16 @@ function drawRel() {
     cx.beginPath(); cx.moveTo(x, r.y0 - 2); cx.lineTo(x, r.y1); cx.stroke();
   };
   const t1 = R.t, t2 = isIR ? R.t - P.TI : R.t;
-  if (t1 >= 0 && t1 <= tmax1) now(X1(t1), top);
+  if (t1 >= 0 && t1 <= tmax1) {
+    now(X1(t1), top);
+    /* 3D の組織ごとの縦磁化を、赤い線の上に点で出す（グラフの線の上に乗っていれば、3D と連動している） */
+    CURVE.forEach(id => {
+      const k = BANK_IDS.indexOf(id); if (k < 0) return;
+      const mz = bankM(BANKS[k])[2];
+      cx.fillStyle = tcol(TIS[TIX[id]]); cx.strokeStyle = '#fff'; cx.lineWidth = 1.2;
+      cx.beginPath(); cx.arc(X1(t1), Y1(mz), P.tissue === id ? 4.2 : 3.4, 0, 7); cx.fill(); cx.stroke();
+    });
+  }
   if (t2 >= 0 && t2 <= tmax2) now(X2(t2), bot);
 }
 
