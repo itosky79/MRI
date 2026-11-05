@@ -701,6 +701,14 @@ ol.seq button[aria-current="step"]{background:var(--sel)}
 
 /* 3D の上に浮かぶもの */
 .hud{border:none; border-radius:12px; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px)}
+/* 断面を動かしているあいだだけ出る位置の表示 */
+#sliceTip{position:absolute; left:50%; top:52px; transform:translateX(-50%); z-index:3; pointer-events:none;
+  padding:5px 14px; border-radius:999px; background:var(--scrim2); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+  font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; box-shadow:0 4px 14px var(--shadow);
+  opacity:0; transition:opacity .2s}
+#sliceTip.on{opacity:1}
+@media (max-width:560px){ #sliceTip{top:42%} }   /* スマホは上の操作が3段あるので、真ん中あたりに出す */
+#tisSub{display:block; margin-top:1px}
 .lab{border:none; border-radius:6px; padding:0 6px}
 html[data-theme="light"] .lab{text-shadow:none}
 .lab.axis{background:none}
@@ -739,6 +747,7 @@ html[data-theme="light"] .lab{text-shadow:none}
     <div class="stage" id="stage">
       <canvas id="gl"></canvas>
       <div id="labels"></div>
+      <div id="sliceTip" aria-live="polite"></div>
 
       <div id="imgbox">
         <div class="ih"><span id="imgSeq">T1強調</span><span id="imgPar">TR 500 / TE 15</span></div>
@@ -904,7 +913,7 @@ html[data-theme="light"] .lab{text-shadow:none}
             <div class="sld-h"><span>断面の位置</span><b id="vPos">頭側 20 mm</b></div>
             <input type="range" id="sPos" min="-60" max="80" step="1.5" value="20">
           </div>
-          <p class="tiny">問題の画像と同じ向き・高さにしてから、撮像法や TR・TE を変えて見え方を比べます。3D の「脳全体」では、断面の板がこの位置に動きます。</p>
+          <p class="tiny">3D の上で<b>右ドラッグ</b>（スマホは<b>2本指で上下</b>）でも動かせます。問題の画像と同じ向き・高さにしてから、撮像法や TR・TE を変えて見え方を比べます。</p>
         </div>
 
         <div class="sld" style="margin-top:13px">
@@ -1972,16 +1981,44 @@ function homeCam() {
   applyCam();
 }
 let drag = null, pinch = 0;
-canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); drag = { x:e.clientX, y:e.clientY }; });
+/* 右ドラッグ（スマホは2本指で上下）：断面を動かす。上へ動かすと 頭側／前／左 へ */
+let sliceAcc = 0, sliceTipTm = null;
+const sliceOK = () => phantomKind !== 'simple' && !!VOL;
+function sliceNudge(dyPx) {
+  if (!sliceOK()) return;
+  sliceAcc += -dyPx * 0.3;                         // 1 px ＝ 0.3 mm
+  const n = Math.trunc(sliceAcc / 1.5);            // 1.5 mm（スライダの刻み）ずつ動かす
+  if (!n) return;
+  sliceAcc -= n * 1.5;
+  const r = SL_RANGE[SLICE.ori], o = SLICE.ori;
+  const v = Math.max(r[0], Math.min(r[1], SLICE.pos[o] + n * 1.5));
+  if (v === SLICE.pos[o]) return;
+  SLICE.pos[o] = v; applySlice(); showSliceTip();
+}
+function showSliceTip() {
+  const t = $('sliceTip');
+  t.textContent = { ax:'横断', cor:'冠状断', sag:'矢状断' }[SLICE.ori] + '　' + posText();
+  t.classList.add('on');
+  clearTimeout(sliceTipTm); sliceTipTm = setTimeout(() => t.classList.remove('on'), 900);
+}
+canvas.addEventListener('contextmenu', e => e.preventDefault());   // 右クリックのメニューを出さない
+let nPtr = 0;   // 画面に触れている指の数。2本目が触れたら回転はやめる（2本指の操作に任せる）
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  if (e.pointerType === 'touch' && ++nPtr > 1) { drag = null; return; }
+  drag = { x:e.clientX, y:e.clientY, slice:e.button === 2 };
+  if (drag.slice) { sliceAcc = 0; if (sliceOK()) showSliceTip(); }
+});
 canvas.addEventListener('pointermove', e => {
   if (!drag) return;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
   drag.x = e.clientX; drag.y = e.clientY;
+  if (drag.slice) { sliceNudge(dy); return; }
   ctrl.th -= dx * 0.008;
   ctrl.phi = Math.max(0.12, Math.min(Math.PI - 0.12, ctrl.phi - dy * 0.008));
   applyCam();
 });
-const endDrag = () => { drag = null; };
+const endDrag = e => { drag = null; if (e.pointerType === 'touch') nPtr = Math.max(0, nPtr - 1); };
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
 canvas.addEventListener('dblclick', homeCam);
@@ -1989,14 +2026,24 @@ canvas.addEventListener('wheel', e => {
   e.preventDefault();
   ctrl.want = Math.max(7, Math.min(220, ctrl.want * (1 + Math.sign(e.deltaY) * 0.11)));
 }, { passive:false });
+/* 2本指：指の間が開く・閉じる → 拡大縮小、2本そろって上下 → 断面を動かす。
+   最初の動きでどちらかに決め、指を離すまで切り替えない */
+let two = null;
 canvas.addEventListener('touchmove', e => {
-  if (e.touches.length === 2) {
-    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-    if (pinch) { ctrl.want = Math.max(7, Math.min(220, ctrl.want * pinch / d)); }
-    pinch = d; drag = null;
+  if (e.touches.length !== 2) return;
+  const a = e.touches[0], b = e.touches[1];
+  const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), my = (a.clientY + b.clientY) / 2;
+  drag = null;
+  if (!two) { two = { d0:d, y0:my, d:d, y:my, mode:null }; return; }
+  if (!two.mode) {
+    const dd = Math.abs(d - two.d0), dm = Math.abs(my - two.y0);
+    if (dd > 12 || dm > 12) { two.mode = dm > dd * 1.2 && sliceOK() ? 'slice' : 'zoom'; sliceAcc = 0; if (two.mode === 'slice') showSliceTip(); }
   }
-}, { passive:true });
-canvas.addEventListener('touchend', () => { pinch = 0; });
+  if (two.mode === 'zoom') ctrl.want = Math.max(7, Math.min(220, ctrl.want * two.d / d));
+  else if (two.mode === 'slice') { e.preventDefault(); sliceNudge(my - two.y); }
+  two.d = d; two.y = my;
+}, { passive:false });
+canvas.addEventListener('touchend', e => { if (e.touches.length < 2) two = null; pinch = 0; });
 
 /* ---- ラベル ---- */
 const LABS = {};
