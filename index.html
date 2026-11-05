@@ -2526,6 +2526,14 @@ function drawRel() {
   cx.textAlign = 'left';
   cx.fillText(isIR ? '180° パルスからの時間 →' : '90° パルスからの時間 →', L + 2, top.y1 + 9);
   cx.fillText('90° パルスからの時間 →', L + 2, bot.y1 + 9);
+  /* いまの時刻（②の赤い線と同じ時刻）。上は 90°（IR は反転の 180°）から、下は 90° からの時間 */
+  const now = (x, r) => {
+    cx.strokeStyle = C.alert; cx.lineWidth = 1.6; cx.setLineDash([]);
+    cx.beginPath(); cx.moveTo(x, r.y0 - 2); cx.lineTo(x, r.y1); cx.stroke();
+  };
+  const t1 = R.t, t2 = isIR ? R.t - P.TI : R.t;
+  if (t1 >= 0 && t1 <= tmax1) now(X1(t1), top);
+  if (t2 >= 0 && t2 <= tmax2) now(X2(t2), bot);
 }
 
 /* ================= 学習ステップ =================
@@ -3553,7 +3561,7 @@ function loop(now) {
   if (acc > 0.08) {
     acc = 0;
     updateBridge();
-    drawSeq();
+    drawSeq(); drawRel();   // ③にも、いまの時刻の線を動かす
   }
 }
 
