@@ -2457,7 +2457,20 @@ function drawRel() {
 
   const Y1 = v => { const lo = isIR ? -1 : 0; return top.y1 - (v - lo) / (1 - lo) * (top.y1 - top.y0); };
   const Y2 = v => bot.y1 - v * (bot.y1 - bot.y0);
-  const X1 = t => L + (Rr - L) * t / tmax1;
+  /* ①の横軸：SE・GRE では②と同じ縮め方にする。TR 全体を等間隔に並べると、エコーまでの TE が左端の
+     数 % に押し込まれ、いまの時刻の線が進んでいないように見えるため。最初の Td までを横幅の 66 % に広げ、
+     残り（TR まで）は 34 % に縮めて「//」を入れる（②と同じ Td・同じ割合なので、②と③の赤い線が並んで動く）。
+     曲線の値は計算そのまま。変わるのは横軸の目盛りの取り方だけ。IR は TI が大部分を占めて元から見やすいので等間隔 */
+  const Td1 = Math.min(P.TR, P.TE * 2.4 + 30);
+  const brk1 = !isIR && Td1 < P.TR * 0.90;
+  const X1 = t => L + (Rr - L) * (!brk1 ? t / tmax1
+    : t <= Td1 ? 0.66 * t / Td1 : 0.66 + 0.34 * (t - Td1) / (tmax1 - Td1));
+  /* 曲線を描く時刻：折れ目の前後それぞれで細かく取る。SE の 180°（TE/2）の前後も入れて、縦磁化の反転を縦の線で描く */
+  const T1S = [];
+  const seg = (a, b, n) => { for (let k = 0; k <= n; k++) T1S.push(a + (b - a) * k / n); };
+  if (brk1) { seg(0, Td1, 60); seg(Td1, tmax1, 40); } else seg(0, tmax1, 80);
+  if (P.seq === 'SE') T1S.push(P.TE / 2 - 1e-6, P.TE / 2);
+  T1S.sort((a, b) => a - b);
   const X2 = t => L + (Rr - L) * t / tmax2;
 
   const tags = [], tags1 = [], ys1 = [], ys2 = [];
@@ -2468,7 +2481,7 @@ function drawRel() {
     const sel = P.tissue === id;
     cx.strokeStyle = tcol(t); cx.lineWidth = sel ? 2.2 : 1.2; cx.globalAlpha = sel ? 1 : .72;
     cx.beginPath();
-    for (let k = 0; k <= 80; k++) { const tt = tmax1 * k / 80; const y = Y1(mzCurve(T1, tt, P)); k ? cx.lineTo(X1(tt), y) : cx.moveTo(X1(tt), y); }
+    T1S.forEach((tt, k) => { const y = Y1(mzCurve(T1, tt, P)); k ? cx.lineTo(X1(tt), y) : cx.moveTo(X1(tt), y); });
     cx.stroke();
     const a0 = Math.abs(mxy0(T1, P));
     cx.beginPath();
@@ -2523,6 +2536,13 @@ function drawRel() {
   gap(Math.min(X2(P.TE), Rr) + 8, ys2, 'この差が画像の明暗', false);
   cx.fillStyle = C.dim; cx.textAlign = 'right';
   cx.fillText(Math.round(tmax1) + 'ms', Rr, top.y1 + 9);
+  if (brk1) {                                   // 折れ目のしるしと、そこまでの時間（②と同じ）
+    const xb = X1(Td1);
+    cx.strokeStyle = C.grid; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xb, top.y0); cx.lineTo(xb, top.y1); cx.stroke();
+    cx.strokeStyle = C.dim;
+    [-3, 1].forEach(o => { cx.beginPath(); cx.moveTo(xb + o - 2, top.y1 + 4); cx.lineTo(xb + o + 3, top.y1 - 3); cx.stroke(); });
+    cx.fillStyle = C.dim; cx.textAlign = 'center'; cx.fillText(Math.round(Td1) + 'ms', xb, top.y1 + 9);
+  }
   cx.fillText(Math.round(tmax2) + 'ms', Rr, bot.y1 + 9);
   cx.textAlign = 'left';
   cx.fillText(isIR ? '180° パルスからの時間 →' : '90° パルスからの時間 →', L + 2, top.y1 + 9);
