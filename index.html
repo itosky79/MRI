@@ -3,12 +3,8 @@
 <head>
 <meta charset="utf-8">
 <script>
-/* 最初の描画より前にテーマを決める。保存がなければ端末の設定に合わせる */
-try {
-  var t0 = localStorage.getItem('mri-theme-v1');
-  if (t0 !== 'light' && t0 !== 'dark') t0 = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  document.documentElement.dataset.theme = t0;
-} catch (e) { document.documentElement.dataset.theme = 'dark'; }
+/* 配色はライトだけ（ダークはやめた）。CSS は html[data-theme="light"] で色を決めているので、最初の描画より前に付ける */
+document.documentElement.dataset.theme = 'light';
 </script>
 <title>MRI スピン3Dシミュレーター</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -727,7 +723,6 @@ html[data-theme="light"] .lab{text-shadow:none}
 <div class="wrap">
 <header>
   <h1>MRI スピン3Dシミュレーター</h1>
-  <button class="hbtn" id="bTheme" type="button" aria-label="配色を切り替える">ライト</button>
   <button class="hbtn" id="bGuide" type="button">使い方をもう一度</button>
 </header>
 
@@ -3196,19 +3191,12 @@ chk('tBody', 'showBody', () => setScale(P.showBody));
 $('scaleSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setScale(b.dataset.sc === 'brain'); });
 chk('tComp', 'showComp'); chk('tTrail', 'showTrail', clearTrail); chk('tLab', 'showLab'); chk('tCoil', 'coil', () => homeCam());
 chk('tEcho', 'echoStop'); chk('tSlow', 'slowPulse'); chk('tNoise', 'noise'); chk('tSpoil', 'spoil', () => refresh());
-/* ---- 配色（ライト / ダーク） ---- */
-const TKEY = 'mri-theme-v1';
-function applyTheme(t, save) {
-  t = t === 'light' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = t;
-  TH = GLT[t];
-  $('bTheme').textContent = t === 'light' ? 'ダーク' : 'ライト';
-  if (save) { try { localStorage.setItem(TKEY, t); } catch (e) { } }
+/* ---- 配色（ライトだけ） ---- */
+function applyTheme() {
+  document.documentElement.dataset.theme = 'light';
+  TH = GLT.light;
   readColors(); applyThemeGL(); refresh();
 }
-$('bTheme').addEventListener('click', () => {
-  applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true);
-});
 
 $('bHome').addEventListener('click', homeCam);
 $('bPause').addEventListener('click', () => { P.paused = !P.paused; P.stopAt = null; refresh(); });
@@ -3571,7 +3559,7 @@ setInhomo(P.T2p);
 equilibrium();
 loadExam();
 applyRail();
-applyTheme(document.documentElement.dataset.theme, false);
+applyTheme();
 setTissue('wm');
 placeTisArr();
 placeSlicePlane();

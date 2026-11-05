@@ -37,7 +37,7 @@ MRI の原理を見せる教材です。相手は初学者（診療放射線技�
   前に一度見た人には二度と出ない。
 - 変更したら Playwright（`/opt/pw-browsers/chromium-1243/chrome-linux64/chrome`、
   `--use-gl=swiftshader --enable-unsafe-swiftshader`）で、
-  **PC 1440px / スマホ 390px × ライト / ダーク**の4通りを必ず目で見る。
+  **PC 1440px / スマホ 390px** の2通りを必ず目で見る（配色はライトだけ。ダークはやめた）。
   学習コースは最後まで通しで押して、ページエラーが出ないことを確かめる。
 - コミットしてから長いテストに入る（コンテナが落ちると作業が消える）。
 - `index.html` は 1 ファイル完結。three.js は同梱（CDN を読まない）。
