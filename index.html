@@ -699,6 +699,9 @@ ol.seq button[aria-current="step"]{background:var(--sel)}
 .grp-h:has(#tisSub){flex-wrap:wrap}
 #tisSub{display:block; flex-basis:100%; margin:1px 0 0}
 .lab{border:none; border-radius:6px; padding:0 6px}
+.lab.ta{padding:0 5px; line-height:1.5}            /* 脳全体の組織ラベルは控えめに（主役は矢印） */
+.lab.ta i{font-size:9.5px; margin-right:3px}
+.lab.ta b{font-size:10.5px}
 html[data-theme="light"] .lab{text-shadow:none}
 .lab.axis{background:none}
 #imgbox{border:none; border-radius:10px}
@@ -1855,11 +1858,11 @@ function placeSlicePlane() {
   sliceEdge.geometry.computeBoundingSphere();
 }
 const TA_IDS = ['fat', 'wm', 'gm', 'csf', 'les'];
-const TA_LEN = 8.8;                 // 部位ごとの矢印の長さ（M0 のとき、シーン単位）
+const TA_LEN = 22;                  // 部位ごとの矢印の長さ（M0 のとき、シーン単位）。脳全体の中で小さく見えないよう長め
 const tisArr = TA_IDS.map(id => {
   const hold = new THREE.Group(), col = tcol(TIS[TIX[id]]);
-  const a = mkArrow(col, 0.18, 0.58, 1.45);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.80, 24), new THREE.MeshBasicMaterial({ color:col, side:THREE.DoubleSide }));
+  const a = mkArrow(col, 0.5, 1.4, 3.2);                         // 軸も頭も太く（遠くから見るので）
+  const ring = new THREE.Mesh(new THREE.RingGeometry(1.2, 1.7, 28), new THREE.MeshBasicMaterial({ color:col, side:THREE.DoubleSide }));
   hold.add(a.grp, ring); headGrp.add(hold);
   return { id, a, ring, hold };
 });
@@ -1888,6 +1891,7 @@ function buildField() {
 /* 矢印を立てる場所：重ならないように、組織ごとに目安の位置（画像の幅・高さに対する割合）にいちばん近いその組織の画素 */
 const TA_AT = { fat:[0.80, 0.16], wm:[0.30, 0.30], gm:[0.84, 0.52], csf:[0.52, 0.47], les:null };
 const taSite = {};
+const TA_LIFT = new THREE.Vector3(0, 0, 0.8);
 function placeTisArr() {
   for (const t of tisArr) {
     let p = REP[t.id], at = TA_AT[t.id];
@@ -1899,7 +1903,7 @@ function placeTisArr() {
       }
     }
     taSite[t.id] = p; t.hold.visible = !!p;
-    if (p) t.hold.position.copy(sitePos(p));
+    if (p) t.hold.position.copy(sitePos(p)).add(TA_LIFT);   // 断面の板より少し上に立てる（横に倒れた矢印が板に埋もれないように）
   }
   buildField();
 }
@@ -2037,7 +2041,7 @@ function mkLab(key, cls) {
 mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
 mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
 mkLab('coil', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
-['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm'));
+['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm ta'));
 const _p = new THREE.Vector3();
 function place(key, x, y, z, txt, on) {
   const el = LABS[key];
@@ -2200,7 +2204,7 @@ function updateScene(dt) {
   place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
   for (const t of tisArr) {
     const n = bankM(BANKS[BANK_IDS.indexOf(t.id)]), w = t.hold.position;
-    place('ta_' + t.id, w.x + headGrp.position.x, w.y + headGrp.position.y, w.z + headGrp.position.z - 1.6,
+    place('ta_' + t.id, w.x + headGrp.position.x, w.y + headGrp.position.y, w.z + headGrp.position.z - 3.0,
       '<i>' + TIS[TIX[t.id]].nm.replace(/（.*）/, '') + '</i>' + (P.nameOnly ? '' : '<b>' +
       (Math.hypot(n[0], n[1]) * TIS[TIX[t.id]].PD).toFixed(2) + '</b>'), P.showLab && far && t.hold.visible && !P.nameOnly);
   }
