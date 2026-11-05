@@ -199,15 +199,6 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
   color:var(--rfText); font-family:var(--mono); font-size:12px; letter-spacing:.03em; cursor:pointer;
 }
 .expose:hover{background:var(--rfBg3); color:var(--rfText2)}
-.hud{
-  position:absolute; left:10px; bottom:26px; max-width:min(430px,62%); padding:6px 10px 7px; border-radius:3px;
-  background:var(--scrim); border:1px solid var(--line); pointer-events:none;
-}
-.hud .now{margin:0; font-size:13px; line-height:1.55; color:var(--rfText2); letter-spacing:.02em}
-.hud .sub{margin:3px 0 0; font-family:var(--mono); font-size:11px; letter-spacing:.02em; color:var(--dim); line-height:1.7}
-.hud .sub span{margin-right:4px}
-.hud .sub b{color:var(--teal); font-weight:400; margin-right:9px}
-.hud .sub .tis{color:var(--text); margin:0}
 .key{
   position:absolute; left:0; right:0; bottom:0; height:20px; margin:0; padding:0 8px;
   display:flex; gap:13px; align-items:center; justify-content:center; flex-wrap:nowrap; overflow:hidden;
@@ -586,8 +577,6 @@ details.fold p{margin:7px 0 0; font-size:12.5px; color:var(--dim); line-height:1
   .bar{top:7px; left:7px; right:7px; gap:7px}
   .seg button{padding:6px 9px}
   .expose{padding:6px 12px}
-  .hud{bottom:24px; left:7px; max-width:calc(100% - 190px)}
-  .hud .now{font-size:12.5px}
   .playbar{bottom:24px; right:7px}
 }
 @media (max-width:900px) and (min-width:660px) and (orientation:landscape){
@@ -700,7 +689,6 @@ ol.seq button[aria-current="step"]{background:var(--sel)}
 .qexp{border-left:none; border-radius:10px}
 
 /* 3D の上に浮かぶもの */
-.hud{border:none; border-radius:12px; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px)}
 /* 断面を動かしているあいだだけ出る位置の表示 */
 #sliceTip{position:absolute; left:50%; top:52px; transform:translateX(-50%); z-index:3; pointer-events:none;
   padding:5px 14px; border-radius:999px; background:var(--scrim2); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
@@ -708,7 +696,8 @@ ol.seq button[aria-current="step"]{background:var(--sel)}
   opacity:0; transition:opacity .2s}
 #sliceTip.on{opacity:1}
 @media (max-width:560px){ #sliceTip{top:42%} }   /* スマホは上の操作が3段あるので、真ん中あたりに出す */
-#tisSub{display:block; margin-top:1px}
+.grp-h:has(#tisSub){flex-wrap:wrap}
+#tisSub{display:block; flex-basis:100%; margin:1px 0 0}
 .lab{border:none; border-radius:6px; padding:0 6px}
 html[data-theme="light"] .lab{text-shadow:none}
 .lab.axis{background:none}
@@ -728,9 +717,6 @@ html[data-theme="light"] .lab{text-shadow:none}
   .stage .seg button{padding:3px 7px}
   .playbar button{padding:4px 9px}
   .stopat{display:none}   /* 「t = ○ ms で止める」は細かい操作なので、狭い画面では出さない */
-  /* 今の状態の箱は操作ボタンの上へ。数字の行は狭い画面では出さない（一文で足りる） */
-  .hud{bottom:62px; max-width:calc(100% - 150px)}
-  .hud .sub{display:none}
 }
 </style>
 </head>
@@ -776,10 +762,6 @@ html[data-theme="light"] .lab{text-shadow:none}
         </div>
       </div>
 
-      <div class="hud" id="hud">
-        <p class="now" id="hudNow">まだ何もしていない（縦磁化だけ）</p>
-        <p class="sub"><span>t</span><b id="hudT">0</b>ms<span>縦 Mz</span><b id="hudMz">1.00</b><span>横 Mxy</span><b id="hudMxy">0.00</b><span class="tis" id="hudTis">白質</span></p>
-      </div>
 
       <p class="key" id="keyQ" hidden>
         <span><i style="background:var(--teal)"></i>上向きの水素</span>
@@ -836,7 +818,6 @@ html[data-theme="light"] .lab{text-shadow:none}
       <!-- ===== シーケンス（メイン） ===== -->
       <div class="pane" id="pane0">
         <div class="readout"><span class="big" id="preName">T1強調 SE</span><span class="sm" id="prePar"></span></div>
-        <p class="lede" id="preLede"></p>
         <div class="pre-grid" id="preGrid"></div>
         <div class="note" id="preNote"></div>
         <div style="height:14px"></div>
@@ -2936,7 +2917,6 @@ $('bPaint').addEventListener('click', paintDemo);
 function setTissue(id) {
   P.tissue = id;
   if (REP[id]) xhairPx = REP[id].slice();
-  $('hudTis').textContent = TIS[TIX[id]].nm;
   clearTrail();
   updateTis(); layoutImg(); drawRel();
 }
@@ -2977,7 +2957,6 @@ function refresh(keep) {
   const cu = TIS[TIX.cus];
   const sig = [P.seq, P.TR, P.TE, P.TI, P.FA, P.B0, P.T2p, P.spoil, P.tissue, cu.T1, cu.T2, P.manual].join('|');
   if (sig !== seqSig || keep === false) { seqSig = sig; warmup(); if (P.echoStop) P.paused = false; }   // 撮像条件が変わったとき、最初からやり直すときは定常状態から始める（エコーで止める設定なら次のエコーまで進めて止める）
-  $('hudTis').textContent = TIS[TIX[P.tissue]].nm;
   $('imgSeq').textContent = weightName();
   $('imgPar').textContent = parText();
   $('preName').textContent = weightName();
@@ -2999,8 +2978,6 @@ function refresh(keep) {
   segSet($('nSeg'), P.nDisp, 'n'); segSet($('spdSeg'), P.spd, 's');
   const pr = presetOf();
   [...$('preGrid').children].forEach(b => b.setAttribute('aria-pressed', !!pr && b.dataset.k === pr.k));
-  $('preLede').textContent = pr ? pr.lede
-    : 'TR が' + (P.TR < 1800 ? '短く' : '長く') + '、TE が' + (P.TE < 60 ? '短い' : '長い') + '条件です（' + weightName() + '）。';
   $('preNote').innerHTML = pr ? pr.note
     : 'TR・TE を自分で決めた条件です。③のグラフで、線と線の間が広いところほど、'
       + '画像の明るさの差も大きくなります。';
@@ -3565,11 +3542,6 @@ function loop(now) {
   acc += dt;
   if (acc > 0.08) {
     acc = 0;
-    const m = netM();
-    $('hudNow').textContent = R.phase;
-    $('hudT').textContent = Math.round(R.t);
-    $('hudMz').textContent = m[2].toFixed(2);
-    $('hudMxy').textContent = Math.hypot(m[0], m[1]).toFixed(2);
     updateBridge();
     drawSeq();
   }
