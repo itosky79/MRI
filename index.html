@@ -674,6 +674,11 @@ details.fold p{margin:7px 0 0; font-size:11.5px; color:var(--dim); line-height:1
         <p class="sub"><span>t</span><b id="hudT">0</b>ms<span>縦 Mz</span><b id="hudMz">1.00</b><span>横 Mxy</span><b id="hudMxy">0.00</b><span class="tis" id="hudTis">白質</span></p>
       </div>
 
+      <p class="key" id="keyQ" hidden>
+        <span><i style="background:var(--teal)"></i>上向きの水素</span>
+        <span><i style="background:var(--alert)"></i>下向きの水素</span>
+        <span><i style="background:var(--teal); opacity:.35"></i><b>薄い矢印＝M₀（差を全部足したもの）</b></span>
+      </p>
       <p class="key" id="keyCoil" hidden>
         <span><i style="background:var(--sig)"></i>太い矢印＝磁化 M</span>
         <span><i style="background:#B08BE0"></i><b>紫＝輪を貫く分。この変化が信号（コイルが光る）</b></span>
@@ -1004,7 +1009,7 @@ const P = {
   manual:false, paused:false, spd:1,
   echoStop:true, spoil:true, nDisp:24, showBody:true,   // はじめから脳全体（部位ごとの磁化ベクトルと断面）を出す
   showComp:true, showTrail:false, showLab:true,
-  slowPulse:true, noise:true, quantum:false, coil:false,
+  slowPulse:true, noise:true, quantum:false, coil:false, nameOnly:false,
   view:1           // 0=3D / 1=3D+画像 / 2=画像
 };
 
@@ -1709,13 +1714,17 @@ const cons = [];
   const up = 17, dn = 13;
   for (let i = 0; i < up + dn; i++) {
     const par = i < up;
-    const a = mkArrow(par ? 0x8FC8D8 : 0xB07A7A, 0.030, 0.12, 0.40);
+    const a = mkArrow(par ? 0x8FC8D8 : 0xB07A7A, 0.030, 0.12, 0.40, 1);
     tint(a, par ? 'conePar' : 'coneAnti');
     a.par = par; a.ph = Math.random() * Math.PI * 2;
     a.rx = (Math.random() - .5) * 4.6; a.ry = (Math.random() - .5) * 4.6; a.rz = (Math.random() - .5) * 5.0;
     conGrp.add(a.grp); cons.push(a);
   }
 })();
+/* 薄い M₀：上向きの余りを全部足したもの。次の手で描く濃い M と同じ太さ・同じ長さにしておき、
+   「足すとこれになる」と大きさがつながるようにする */
+const m0Ghost = mkArrow(0x52B8CE, 0.135, 0.42, 1.2, 0.28); tint(m0Ghost, 'm'); conGrp.add(m0Ghost.grp);
+let qMerge = -1;   // 0〜1：円錐が集まって M になっていく途中。-1 は止まっている
 
 /* ---- 脳全体：Colin 27 の頭皮・脳・脳室、画像と同じ高さの断面、部位ごとの矢印 ----
    断面の明るさは、その場所の組織の横磁化（部位ごとの矢印の横向きの長さ）× プロトン密度を、画像と同じ物差しで描いたもの。
@@ -1770,6 +1779,27 @@ const tisArr = TA_IDS.map(id => {
   return { id, a, ring, hold };
 });
 function sitePos(px) { return pixScene(px[0] + .5, px[1] + .5); }
+/* 「脳のどこにも M がある」の手で出す、断面いっぱいに敷き詰めた小さな M。
+   すべて同じ色・上向き。長さはその場所の組織の水素の量（プロトン密度）に比例 */
+const mField = new THREE.Group(); headGrp.add(mField); mField.visible = false;
+const mfMat = new THREE.MeshPhongMaterial({ color:0x52B8CE, shininess:20, emissive:new THREE.Color(0x52B8CE).multiplyScalar(0.2) });
+tint({ material:mfMat }, 'm');
+const mfShaft = new THREE.CylinderGeometry(0.08, 0.08, 1, 6); mfShaft.translate(0, 0.5, 0);
+const mfHead = new THREE.ConeGeometry(0.26, 0.62, 8);
+function buildField() {
+  while (mField.children.length) mField.remove(mField.children[0]);
+  const st = 12;
+  for (let j = st / 2; j < IH; j += st) for (let i = st / 2; i < IW; i += st) {
+    const l = LABM[(j | 0) * IW + (i | 0)]; if (!l) continue;
+    const L = 3.8 * TIS[l - 1].PD; if (L < 0.9) continue;      // 骨のように水素がほとんどない所は立てない
+    const g = new THREE.Group();
+    const sh = new THREE.Mesh(mfShaft, mfMat); sh.scale.y = L - 0.62;
+    const hd = new THREE.Mesh(mfHead, mfMat); hd.position.y = L - 0.31;
+    g.add(sh, hd); g.rotation.x = Math.PI / 2;                  // 上（+z ＝ B₀ の向き）へ立てる
+    g.position.copy(pixScene(i + .5, j + .5));
+    mField.add(g);
+  }
+}
 /* 矢印を立てる場所：重ならないように、組織ごとに目安の位置（画像の幅・高さに対する割合）にいちばん近いその組織の画素 */
 const TA_AT = { fat:[0.80, 0.16], wm:[0.30, 0.30], gm:[0.84, 0.52], csf:[0.52, 0.47], les:null };
 const taSite = {};
@@ -1786,6 +1816,7 @@ function placeTisArr() {
     taSite[t.id] = p; t.hold.visible = !!p;
     if (p) t.hold.position.copy(sitePos(p));
   }
+  buildField();
 }
 /* 断面の明るさ：組織ごとの横磁化 × プロトン密度 × 画像と同じ正規化（いまの条件のエコーで最も明るい組織を 1） */
 let sliceN = 0;
@@ -1882,7 +1913,7 @@ function mkLab(key, cls) {
 ['z', 'x', 'y'].forEach(k => mkLab(k, 'axis'));
 mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
 mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
-mkLab('coil', 'axis'); mkLab('flux', 'm');
+mkLab('coil', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
 ['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm'));
 const _p = new THREE.Vector3();
 function place(key, x, y, z, txt, on) {
@@ -1970,16 +2001,25 @@ function updateScene(dt) {
   /* --- 熱平衡の量子的な絵 --- */
   conGrp.visible = P.quantum;
   if (P.quantum) {
+    /* 「全部を足す」：円錐が原点に集まりながら消え、薄い M₀ が濃くなる */
+    if (qMerge >= 0) qMerge = Math.min(1, qMerge + dt / 1.4);
+    const k = qMerge > 0 ? qMerge * qMerge * (3 - 2 * qMerge) : 0;
     for (const a of cons) {
       a.ph += dt * (P.paused ? 0 : 1.9);
       const s = Math.sin(54.7 * Math.PI / 180), c = Math.cos(54.7 * Math.PI / 180) * (a.par ? 1 : -1);
       setArrow(a, Math.cos(a.ph) * s, Math.sin(a.ph) * s, c, 1.65);
-      a.grp.position.set(a.rx, a.ry, a.rz);
+      a.grp.position.set(a.rx * (1 - k), a.ry * (1 - k), a.rz * (1 - k));
+      a.mat.opacity = 1 - k;
     }
+    setArrow(m0Ghost, 0, 0, 1, ML);
+    m0Ghost.mat.opacity = 0.28 + 0.72 * k;
+    if (qMerge >= 1) { qMerge = -1; P.quantum = false; }   // 集まりきったら、ふつうの M の表示に切り替える
   }
   /* --- 脳全体（部位ごとの矢印と断面） --- */
   const far = P.showBody && ctrl.dist >= 45;
   headGrp.visible = P.showBody; voxel.visible = P.showBody && !far;
+  const fieldOn = !!P.nameOnly && far;            // 「脳のどこにも M がある」：敷き詰めた M だけを見せる
+  mField.visible = fieldOn; slicePl.visible = !fieldOn;
   if (P.showBody) {
     placeHead(); headGrp.position.lerp(headAt, 1 - Math.exp(-dt * 5));
     voxel.position.copy(voxelWorld()).add(headGrp.position);
@@ -1989,6 +2029,8 @@ function updateScene(dt) {
       t.a.grp.visible = far;
       const pd = TIS[TIX[t.id]].PD;   // 熱平衡の磁化はプロトン密度に比例するので、脳全体の磁化ベクトルはプロトン密度をかけた長さにする
       if (far) setArrow(t.a, n[0] * pd, n[1] * pd, n[2] * pd, TA_LEN);
+      if (fieldOn) t.a.grp.visible = false;
+      t.ring.visible = !fieldOn;
       if (far && paintLit === t.id) t.a.mat.emissive.setRGB(0.9, 0.7, 0.25);
       else if (far && echoFlash > 0) t.a.mat.emissive.setRGB(0.3 + echoFlash, 0.45, 0.45);
       else t.a.mat.emissive.copy(new THREE.Color(tcol(TIS[TIX[t.id]]))).multiplyScalar(TH.emis);
@@ -1996,8 +2038,9 @@ function updateScene(dt) {
     if (++sliceN % 2 === 0) drawSlice();
   }
   spinGrp.visible = !far;
-  $('key3d').hidden = far || coilOn;      // 脳全体では細い矢印を出していないので凡例もしまう
+  $('key3d').hidden = far || coilOn || P.quantum;      // 脳全体では細い矢印を出していないので凡例もしまう
   $('keyCoil').hidden = !coilOn;
+  $('keyQ').hidden = !P.quantum || far;
   axGrp.visible = !P.showBody || ctrl.dist < 45;
   planeXY.visible = !P.showBody && !P.quantum;
 
@@ -2025,6 +2068,7 @@ function updateScene(dt) {
     const b = new THREE.Vector3(ax[0] * 3.3, ax[1] * 3.3, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('b1', b.x, b.y, 0.5, 'B₁', on);
   } else place('b1', 0, 0, 0, '', false);
+  place('m0', 1.6, 0, ML * 0.78, 'M₀（差を全部足したもの）', P.showLab && P.quantum);
   if (coilGrp.visible) {
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('coil', COILR * 0.86, 0, COILR * 0.56, '受信コイル', P.showLab);
@@ -2034,12 +2078,12 @@ function updateScene(dt) {
   for (const t of tisArr) {
     const n = bankM(BANKS[BANK_IDS.indexOf(t.id)]), w = t.hold.position;
     place('ta_' + t.id, w.x + headGrp.position.x, w.y + headGrp.position.y, w.z + headGrp.position.z - 1.6,
-      '<i>' + TIS[TIX[t.id]].nm.replace(/（.*）/, '') + '</i><b>' +
-      (Math.hypot(n[0], n[1]) * TIS[TIX[t.id]].PD).toFixed(2) + '</b>', P.showLab && far && t.hold.visible);
+      '<i>' + TIS[TIX[t.id]].nm.replace(/（.*）/, '') + '</i>' + (P.nameOnly ? '' : '<b>' +
+      (Math.hypot(n[0], n[1]) * TIS[TIX[t.id]].PD).toFixed(2) + '</b>'), P.showLab && far && t.hold.visible && !P.nameOnly);
   }
   const sb = pixScene(IW / 2, IH * 1.06).add(headGrp.position);
   place('slice', sb.x, sb.y, sb.z, echoFlash > 0 ? 'エコー＝この明るさが画像になる' : '明るさ＝横磁化',
-    P.showLab && far);
+    P.showLab && far && !P.nameOnly);
 }
 
 /* ================= グラフ ================= */
@@ -2381,14 +2425,21 @@ const later = (fn, ms) => { learnTm.push(setTimeout(fn, ms)); };
    「何が・どうなる・だから何」が初学者に通じる文にすること（CLAUDE.md） */
 const PRIN = [
 L({ nm:'静磁場の中のプロトン', tg:'B₀ と M₀', sel:'#stage',
-  set:{ quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
-  text:'水素の原子核は小さな磁石で、強い磁場 B₀ の中ではコマのように首を振って回ります。<br>' +
-       '磁場と<b>同じ向き（水色）</b>がわずかに多く、その<b>差の合計</b>が磁化 <b>M₀</b> です。' }),
+  set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
+  text:'水素の原子核は小さな磁石です。強い磁場 B₀ の中では、B₀ の向き（上）にそろおうとしながら、コマのように首を振って回ります。<br>' +
+       '上向き（青）が下向き（赤）より少しだけ多く、その差を全部足したものが、薄く描いた矢印 <b>M₀</b>（磁化）です。' }),
 
-L({ nm:'合成すると1本の矢印', tg:'M と回転座標系', sel:'#stage',
-  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm' },
-  text:'ここからは、全部を足した<b>1本の矢印 M</b> だけを見ます。<br>' +
-       'M は縦を向いて止まっています。止まった磁石からは<b>信号は出ません</b>。' }),
+L({ nm:'足し合わせると1本の矢印', tg:'上向きの余りの合計 M', sel:'#stage',
+  set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
+  act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
+  text:'ここに描いた30本はほんの一部で、実際は 1 mm³ の水だけで約 10²⁰ 個の水素があります。強い B₀ が上向きにそろえた<b>余りの分</b>を全部足すと、' +
+       '<b>上を向いた1本の矢印 M</b> になります。<br>ここからは、この M だけを見ていきます。' }),
+
+L({ nm:'脳のどこにも M がある', tg:'ボクセルごとに1本', sel:'#stage',
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
+  on:() => { calm(); },
+  text:'体の中では、脳の<b>どの小さな区画（ボクセル）にも</b>この M が1本ずつあり、どれも B₀ の向き（上）を向いています。' +
+       '長さはその組織の水素の量で決まります。<br>ここからは、このうち1つのボクセルを拡大して見ていきます。' }),
 
 L({ nm:'RFパルスで倒す', tg:'α = γ·B₁·τ', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm', T2p:40 },
@@ -2831,6 +2882,7 @@ function applySet(s, hard) {
   const sbWas = P.showBody, coilWas = P.coil;
   for (const k in s) P[k] = s[k];
   if ('coil' in s) $('tCoil').checked = P.coil;
+  if ('showComp' in s) $('tComp').checked = P.showComp;
   if ('tissue' in s) xhairPx = REP[P.tissue] ? REP[P.tissue].slice() : null;
   /* 脳全体 ↔ 1つのボクセルで見る距離がまったく違うので、切り替えたらカメラも寄せ直す。
      これをしないと、ボクセルに切り替えたのに脳全体の距離のままで小さく見える */
@@ -3291,8 +3343,8 @@ function tutShow() {
   tutEl.hidden = false;
   tutActDone = false;
   if (st.set) {
-    learnTm.forEach(clearTimeout); learnTm = []; R.nut = null;   // 前の手のパルスの続きや予約を持ち越さない
-    applySet(Object.assign({ coil:false }, st.set), true);   // コイルは出したい手だけ coil:true で出す
+    learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
+    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true }, st.set), true);   // コイルは出したい手だけ coil:true で出す
   }
   if (st.on) st.on();
   const n = tutList.filter(x => x.sel || x.act).length;
