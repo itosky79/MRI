@@ -9,13 +9,6 @@ try {
   if (t0 !== 'light' && t0 !== 'dark') t0 = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   document.documentElement.dataset.theme = t0;
 } catch (e) { document.documentElement.dataset.theme = 'dark'; }
-/* 見た目（試作の Apple 風 / 元の見た目）。?ui=apple / ?ui=classic で切り替えて覚える */
-try {
-  var u0 = new URLSearchParams(location.search).get('ui');
-  if (u0 === 'apple' || u0 === 'classic') localStorage.setItem('mri-ui-v1', u0);
-  else u0 = localStorage.getItem('mri-ui-v1');
-  if (u0 === 'apple') document.documentElement.dataset.ui = 'apple';
-} catch (e) { }
 </script>
 <title>MRI スピン3Dシミュレーター</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -64,7 +57,9 @@ try {
   --mincho:"Zen Maru Gothic",'Hiragino Maru Gothic ProN','Yu Gothic',system-ui,sans-serif;
   --gothic:"Zen Kaku Gothic New",'Hiragino Sans','Yu Gothic',system-ui,sans-serif;
   --mono:"IBM Plex Mono","Zen Kaku Gothic New",'Hiragino Sans','Yu Gothic',ui-monospace,monospace;   /* 日本語は等幅の全角フォントに落とさない */
-  --r:4px;
+  --r:14px;
+  /* iOS から取り入れたもの：セグメントの溝とつまみ、面の影、オレンジの上の文字 */
+  --fill:rgba(143,165,182,.14); --thumb:#2A3C4B; --cardShadow:none; --onAmber:#1A1205;
 }
 /* ---------- ライトモード ---------- */
 html[data-theme="light"]{
@@ -91,6 +86,8 @@ html[data-theme="light"]{
   --swLine:rgba(0,0,0,.38);
   --shadow:rgba(40,60,75,.18); --shadow2:rgba(40,60,75,.22); --shadow3:rgba(40,60,75,.25); --shadow4:rgba(40,60,75,.3);
   --modal:rgba(225,233,239,.86); --modal2:rgba(232,238,243,.95); --glerr:rgba(243,246,249,.96); --tutMask:rgba(18,34,46,.52);
+  --fill:rgba(70,95,115,.09); --thumb:#FFFFFF; --onAmber:#FFFFFF;
+  --cardShadow:0 1px 2px rgba(20,40,55,.05),0 6px 20px rgba(20,40,55,.06);
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%; -webkit-tap-highlight-color:transparent}
@@ -636,220 +633,105 @@ details.fold p{margin:7px 0 0; font-size:12.5px; color:var(--dim); line-height:1
 .relnote { margin:6px 2px 0; line-height:1.6; }
 
 /* =====================================================================
-   Apple 風の見た目（試作）。html[data-ui="apple"] のときだけ効く上書き。
-   元の見た目は消さずに残してあり、題字の横のボタンか ?ui=classic で戻せる。
-   方針：システムフォント／字間を詰めない／枠線をやめて角丸の白い面と薄い影／
-         選択は iOS のセグメント（白いつまみ）／強調色は systemBlue 1色
+   仕上げ：Apple（iOS）の画面から、見やすかったところだけを取り入れたもの。
+   色（青緑・オレンジ）と、数字の等幅フォントはこのアプリのまま。
+   - 角を丸くし、ライトでは枠線をやめて薄い影で面を分ける
+   - タブや切り替えは iOS のセグメント（灰色の溝の中で、選んだものだけが白く浮く）
+   - 選んだプリセットは塗りつぶしで、どれを選んでいるか一目で分かるように
+   - チェックはスイッチ、3D の上に浮かぶもの（今の状態・ラベル・案内）はすりガラス
+   - 見出しは等幅の小さい字ではなく、ふつうの太字
    ===================================================================== */
-html[data-ui="apple"]{
-  --gothic:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;
-  --mincho:-apple-system,BlinkMacSystemFont,"SF Pro Display","Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
-  --mono:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
-  --r:16px;
-  /* ダーク（iOS のダークモードの色） */
-  --ink:#000000; --ink2:#1C1C1E; --panel:#1C1C1E; --panel2:#2C2C2E;
-  --line:#38383A; --line2:#48484A;
-  --text:#F5F5F7; --muted:#AEAEB2; --dim:#8E8E93; --head:#FFFFFF;
-  --well:#2C2C2E; --track:#3A3A3C; --stage1:#1C1C1E; --stage2:#1C1C1E;
-  --sel:rgba(10,132,255,.20); --sel2:rgba(10,132,255,.16); --selT:#FFFFFF; --hoverBg:rgba(10,132,255,.30); --stepRuby:#64D2FF;
-  --teal:#0A84FF; --amber:#FF9F0A; --alert:#FF453A; --grass:#30D158; --violet:#BF5AF2;
-  --gap:#0A84FF;
-  --rfBg:rgba(255,159,10,.18); --rfBg2:rgba(255,159,10,.16); --rfBg3:rgba(255,159,10,.28); --rfLine:rgba(255,159,10,.45);
-  --rfText:#FFB340; --rfText2:#FFD08A; --rfLabBg:rgba(58,40,10,.85); --rfDim:#C98A2A;
-  --scrim:rgba(44,44,46,.72); --scrim2:rgba(28,28,30,.88); --scrim0:rgba(28,28,30,0);
-  --labTxt:#FFFFFF; --labBg:rgba(44,44,46,.78); --labLine:transparent;
-  --labMbg:rgba(44,44,46,.86); --labMline:transparent;
-  --grid:#2C2C2E; --grid2:#48484A; --axisT:#8E8E93; --grad:#8E8E93;
-  --knob1:#FFFFFF; --knob2:#FFFFFF; --knobLine:transparent; --knobSolid:#FFFFFF;
-  --tgLine:transparent; --tgBg:rgba(118,118,128,.24); --tgOn:#0A84FF; --tgOnT:#FFFFFF; --tgT:#F5F5F7;
-  --shadow:rgba(0,0,0,.45); --shadow3:rgba(0,0,0,.55);
-  --modal:rgba(0,0,0,.6); --tutMask:rgba(0,0,0,.55);
-  --fill:rgba(118,118,128,.24); --thumbOn:#636366; --card-shadow:none;
-}
-html[data-ui="apple"][data-theme="light"]{
-  --ink:#F5F5F7; --ink2:#FFFFFF; --panel:#FFFFFF; --panel2:#F2F2F7;
-  --line:#E5E5EA; --line2:#D1D1D6;
-  --text:#1D1D1F; --muted:#6E6E73; --dim:#8E8E93; --head:#1D1D1F;
-  --well:#F2F2F7; --track:#E5E5EA; --stage1:#FFFFFF; --stage2:#FFFFFF;
-  --sel:rgba(0,122,255,.10); --sel2:rgba(0,122,255,.08); --selT:#0062CC; --hoverBg:rgba(0,122,255,.16); --stepRuby:#0062CC;
-  --teal:#007AFF; --amber:#FF9500; --alert:#FF3B30; --grass:#34C759; --violet:#AF52DE;
-  --gap:#007AFF;
-  --rfBg:rgba(255,149,0,.12); --rfBg2:rgba(255,149,0,.10); --rfBg3:rgba(255,149,0,.20); --rfLine:rgba(255,149,0,.40);
-  --rfText:#C25E00; --rfText2:#9A4A00; --rfLabBg:rgba(255,244,229,.92); --rfDim:#C25E00;
-  --scrim:rgba(255,255,255,.72); --scrim2:rgba(255,255,255,.9); --scrim0:rgba(255,255,255,0);
-  --labTxt:#1D1D1F; --labBg:rgba(255,255,255,.82); --labLine:transparent;
-  --labMbg:rgba(255,255,255,.9); --labMline:transparent;
-  --grid:#EFEFF4; --grid2:#D1D1D6; --axisT:#8E8E93; --grad:#8E8E93;
-  --tgBg:rgba(118,118,128,.12); --tgOn:#007AFF; --tgT:#1D1D1F;
-  --shadow:rgba(0,0,0,.10); --shadow3:rgba(0,0,0,.16);
-  --modal:rgba(245,245,247,.8); --tutMask:rgba(0,0,0,.32);
-  --fill:rgba(118,118,128,.12); --thumbOn:#FFFFFF;
-  --card-shadow:0 1px 2px rgba(0,0,0,.04),0 6px 20px rgba(0,0,0,.05);
-}
-html[data-ui="apple"] body{font-size:14px; line-height:1.6; font-variant-numeric:tabular-nums}
-html[data-ui="apple"] *{letter-spacing:normal !important; text-transform:none !important}
+header{border-bottom:none}
+.hbtn{border:none; border-radius:999px; padding:6px 14px; background:var(--fill); color:var(--teal); font-weight:600}
+.hbtn:hover{background:var(--sel); color:var(--teal)}
 
-/* 題字 */
-html[data-ui="apple"] header{border-bottom:none; padding-block:18px 8px}
-html[data-ui="apple"] h1{font-family:var(--mincho); font-weight:700; font-size:24px; color:var(--head)}
-html[data-ui="apple"] h1 small{font-family:var(--gothic); font-size:13px; font-weight:400; color:var(--muted); margin-top:2px}
-html[data-ui="apple"] .hbtn{border:none; border-radius:999px; padding:6px 14px; background:var(--fill);
-  color:var(--teal); font-size:13px; font-weight:600}
-html[data-ui="apple"] .hbtn:hover{background:var(--sel)}
+.grp,.pan,.films,.stage{border-radius:14px; box-shadow:var(--cardShadow)}
+html[data-theme="light"] .grp,html[data-theme="light"] .pan,html[data-theme="light"] .films,html[data-theme="light"] .stage{border-color:transparent}
+.grp-h{font-family:var(--gothic); font-size:13px; font-weight:700; color:var(--text)}
+.grp-h b{font-size:12px; font-weight:400; color:var(--muted)}
+.pan h2,.films h2{font-size:14.5px}
 
-/* 面：枠線をやめて角丸＋薄い影 */
-html[data-ui="apple"] .grp,html[data-ui="apple"] .pan,html[data-ui="apple"] .films,html[data-ui="apple"] .stage{
-  border:none; border-radius:16px; box-shadow:var(--card-shadow)}
-html[data-ui="apple"] .grp{padding:16px}
-html[data-ui="apple"] .stage{background:var(--stage1)}
-html[data-ui="apple"] .split::after{background:transparent}
-html[data-ui="apple"] .split:hover::after{background:var(--line2)}
-html[data-ui="apple"] .grp-h{font-family:var(--gothic); font-size:13px; font-weight:600; color:var(--text)}
-html[data-ui="apple"] .grp-h b{font-size:12px; font-weight:400; color:var(--muted)}
-html[data-ui="apple"] .pan h2,html[data-ui="apple"] .films h2{font-family:var(--mincho); font-size:15px; font-weight:700}
-html[data-ui="apple"] .pan .hint,html[data-ui="apple"] .films .hint{font-family:var(--gothic); font-size:12px; color:var(--dim)}
-html[data-ui="apple"] .tiny{font-size:12px; color:var(--muted)}
-
-/* セグメント（タブ・切り替え）：灰色の溝に白いつまみ */
-html[data-ui="apple"] .tabs,html[data-ui="apple"] .seg{
-  border:none; border-radius:9px; padding:2px; gap:2px; background:var(--fill) !important; overflow:visible}
-html[data-ui="apple"] .stage .seg{background:var(--fill) !important; -webkit-backdrop-filter:blur(20px) saturate(1.8); backdrop-filter:blur(20px) saturate(1.8)}
-html[data-ui="apple"] .tabs button,html[data-ui="apple"] .seg button{
-  border:none !important; border-radius:7px; box-shadow:none; background:transparent;
-  font-family:var(--gothic); font-size:13px; font-weight:500; color:var(--text); padding:5px 10px}
-html[data-ui="apple"] .tabs button[aria-pressed="true"],html[data-ui="apple"] .seg button[aria-pressed="true"]{
-  background:var(--thumbOn); color:var(--text); font-weight:600;
-  box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
-html[data-ui="apple"] .stno{color:var(--dim); font-size:15px}
-html[data-ui="apple"] .tabs button{font-size:12.5px; padding:6px 2px; white-space:nowrap}
+/* セグメント */
+.tabs,.seg{border:none; border-radius:10px; padding:2px; gap:2px; background:var(--fill) !important; overflow:visible}
+.stage .seg{-webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px)}
+.tabs button,.seg button{border:none !important; border-radius:8px; box-shadow:none; background:transparent;
+  font-family:var(--gothic); color:var(--muted)}
+.tabs button[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--thumb); color:var(--text); font-weight:700;
+  box-shadow:0 2px 6px rgba(0,0,0,.14),0 1px 1px rgba(0,0,0,.05)}
+.tabs button{white-space:nowrap; padding-inline:2px}
 
 /* ボタン */
-html[data-ui="apple"] button.opt{border:none; border-radius:12px; background:var(--panel2); padding:10px 8px; font-family:var(--gothic); font-size:14px; font-weight:500; color:var(--text)}
-html[data-ui="apple"] button.opt .ruby{font-family:var(--gothic); font-size:11px; color:var(--dim)}
-html[data-ui="apple"] button.opt[aria-pressed="true"]{background:var(--teal); color:#fff}
-html[data-ui="apple"] button.opt[aria-pressed="true"] .ruby{color:rgba(255,255,255,.8)}
-html[data-ui="apple"] button.act{border:none; border-radius:12px; background:var(--sel); color:var(--teal); font-family:var(--gothic); font-size:14px; font-weight:600; padding:9px 12px}
-html[data-ui="apple"] button.act:hover{background:var(--hoverBg); color:var(--teal)}
-html[data-ui="apple"] button.act.rf{background:var(--rfBg); color:var(--rfText)}
-html[data-ui="apple"] .expose{border:none; border-radius:999px; background:var(--amber); color:#fff; font-family:var(--gothic); font-size:13px; font-weight:600; padding:6px 16px}
-html[data-ui="apple"] .expose:hover{filter:brightness(1.06); background:var(--amber); color:#fff}
-html[data-ui="apple"] .playbar button,html[data-ui="apple"] .rbbtn{border:none; border-radius:999px; background:var(--fill);
-  -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); color:var(--text); font-family:var(--gothic); font-size:12.5px; font-weight:500; padding:6px 13px}
-html[data-ui="apple"] .echotg span{border:none; border-radius:999px; padding:6px 13px; font-weight:600}
-html[data-ui="apple"] .numin{border:none; border-radius:8px; background:var(--fill); padding:3px 7px}
-html[data-ui="apple"] .stopat{font-size:12.5px}
+button.opt{border:none; border-radius:10px; background:var(--panel2); color:var(--text)}
+button.opt[aria-pressed="true"]{background:var(--teal); color:var(--tgOnT); font-weight:700}
+button.opt[aria-pressed="true"] .ruby{color:var(--tgOnT); opacity:.8}
+button.act{border:none; border-radius:10px; background:var(--tgBg); color:var(--teal); font-weight:600}
+button.act:hover{background:var(--sel); color:var(--teal)}
+button.act.rf{background:var(--rfBg); color:var(--rfText)}
+.expose{border:none; border-radius:999px; background:var(--amber); color:var(--onAmber); font-weight:700}
+.expose:hover{filter:brightness(1.06); background:var(--amber); color:var(--onAmber)}
+.playbar button,.rbbtn{border:none; border-radius:999px; background:var(--scrim); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); font-family:var(--gothic)}
+.playbar button{white-space:nowrap}
+.echotg span{border:none; border-radius:999px; white-space:nowrap}
+.numin{border:none; border-radius:7px; background:var(--fill); padding:2px 6px}
 
 /* 説明の箱 */
-html[data-ui="apple"] .readout{border:none; border-radius:12px; background:transparent; padding:0 2px 6px}
-html[data-ui="apple"] .readout .big{font-family:var(--mincho); font-size:20px; font-weight:700; color:var(--head)}
-html[data-ui="apple"] .readout .sm{font-family:var(--gothic); font-size:12px; color:var(--dim)}
-html[data-ui="apple"] .lede{border:none; border-radius:12px; background:var(--rfBg); color:var(--rfText2); font-size:13px; padding:10px 12px}
-html[data-ui="apple"] .note{border:none; border-radius:12px; background:var(--well); font-size:13px; color:var(--text); padding:10px 12px}
-html[data-ui="apple"] .note b{color:var(--text); font-weight:600}
+.readout{border:none; background:transparent; padding:0 2px 4px}
+.readout .big{font-size:18px; font-weight:700; color:var(--head)}
+.lede,.note{border-left:none; border-radius:10px}
 
-/* スライダ（iOS） */
-html[data-ui="apple"] input[type=range]::-webkit-slider-runnable-track{height:4px; border:none; border-radius:2px; background:var(--track)}
-html[data-ui="apple"] input[type=range]::-webkit-slider-thumb{width:26px; height:26px; margin-top:-11px; border:none; border-radius:50%;
-  background:#fff; box-shadow:0 0.5px 4px rgba(0,0,0,.12),0 6px 13px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
-html[data-ui="apple"] .sld.big input[type=range]::-webkit-slider-runnable-track{height:4px; border:none; border-radius:2px;
-  background:linear-gradient(90deg,var(--teal) 0,var(--teal) var(--p,0%),var(--track) var(--p,0%),var(--track) 100%)}
-html[data-ui="apple"] .sld.big input[type=range]::-webkit-slider-thumb{width:28px; height:28px; margin-top:-12px; border:none; background:#fff}
-html[data-ui="apple"] .sld.big input[type=range]::-moz-range-track{height:4px; border:none}
-html[data-ui="apple"] .sld.big input[type=range]::-moz-range-progress{height:4px}
-html[data-ui="apple"] .sld.big input[type=range]::-moz-range-thumb{width:26px; height:26px; border:none; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.2)}
-html[data-ui="apple"] .sld.big .sld-h span{font-size:14px; font-weight:500}
-html[data-ui="apple"] .sld.big .sld-h em{font-family:var(--gothic); font-size:14px; font-weight:700}
-html[data-ui="apple"] .sld.big .sld-h b{font-family:var(--gothic); font-size:17px; font-weight:600; color:var(--teal)}
-html[data-ui="apple"] .ticks button{font-family:var(--gothic); font-size:11px}
-html[data-ui="apple"] .rends{font-size:11.5px}
+/* チェック → スイッチ */
+input[type=checkbox]{width:38px; height:22px; border:none; border-radius:999px; background:var(--fill); transition:background .2s}
+input[type=checkbox]::after{content:""; position:absolute; left:2px; top:2px; width:18px; height:18px; border:none;
+  border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transform:none; transition:left .2s}
+input[type=checkbox]:checked{background:var(--teal)}
+input[type=checkbox]:checked::after{left:18px; top:2px; width:18px; height:18px; border:none; transform:none}
+label.tg{padding:4px 0; gap:10px}
 
-/* チェックボックス → iOS のスイッチ */
-html[data-ui="apple"] input[type=checkbox]{width:40px; height:24px; border:none; border-radius:999px; background:var(--fill); transition:background .2s}
-html[data-ui="apple"] input[type=checkbox]::after{content:""; position:absolute; left:2px; top:2px; width:20px; height:20px; border:none;
-  border-radius:50%; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.2); transform:none; transition:left .2s}
-html[data-ui="apple"] input[type=checkbox]:checked{background:var(--grass)}
-html[data-ui="apple"] input[type=checkbox]:checked::after{left:18px; top:2px; width:20px; height:20px; border:none; transform:none}
-html[data-ui="apple"] label.tg{font-size:13.5px; color:var(--text); padding:5px 0; gap:10px}
+/* 組織・④・学習の一覧・問題 */
+.chip{border:none; border-radius:999px; padding:4px 11px 4px 5px}
+.chip i,.bsw{border-radius:50%}
+.chip[aria-pressed="true"]{background:var(--sel); color:var(--selT); font-weight:700}
+.brow{border:none; border-radius:9px}
+.brow[aria-pressed="true"]{background:var(--sel); color:var(--selT)}
+.brow.lit{background:var(--rfBg); color:var(--rfText)}
+ol.seq button{border:none; border-radius:9px; background:transparent}
+ol.seq button[aria-current="step"]{background:var(--sel)}
+.choices button{border:none; border-radius:10px}
+.qexp{border-left:none; border-radius:10px}
 
-/* 組織・④ の行・学習の一覧・問題 */
-html[data-ui="apple"] .chip{border:none; border-radius:999px; background:var(--panel2); font-size:13px; color:var(--text); padding:5px 12px 5px 6px}
-html[data-ui="apple"] .chip i,html[data-ui="apple"] .bsw{border-radius:50%; border:none; box-shadow:inset 0 0 0 .5px var(--swLine)}
-html[data-ui="apple"] .chip[aria-pressed="true"],html[data-ui="apple"] .brow[aria-pressed="true"]{background:var(--sel); color:var(--selT)}
-html[data-ui="apple"] .brow{border:none; border-radius:10px; background:var(--panel2); font-size:13px; color:var(--text); padding:7px 10px}
-html[data-ui="apple"] .brow.lit{background:var(--rfBg); color:var(--rfText)}
-html[data-ui="apple"] .bbar{height:4px; border-radius:2px; background:var(--track)}
-html[data-ui="apple"] .bbar i{border-radius:2px}
-html[data-ui="apple"] .bv{font-family:var(--gothic); font-size:12px; font-weight:600}
-html[data-ui="apple"] .bchain{font-family:var(--gothic); font-size:11px}
-html[data-ui="apple"] ol.seq{gap:2px}
-html[data-ui="apple"] ol.seq button{border:none; border-radius:10px; background:transparent; font-size:14px; color:var(--text); padding:8px 10px}
-html[data-ui="apple"] ol.seq button:hover{background:var(--panel2)}
-html[data-ui="apple"] ol.seq button[aria-current="step"]{background:var(--sel); color:var(--selT)}
-html[data-ui="apple"] ol.seq .no{font-family:var(--gothic); font-size:13px; font-weight:600; color:var(--teal)}
-html[data-ui="apple"] ol.seq .tg2{font-size:12px; color:var(--dim)}
-html[data-ui="apple"] .choices button{border:none; border-radius:12px; background:var(--panel2); font-size:14px; color:var(--text)}
-html[data-ui="apple"] .choices button.ok{background:var(--okBg)}
-html[data-ui="apple"] .choices button.ng{background:var(--ngBg)}
-html[data-ui="apple"] .qexp{border:none; border-radius:12px}
-html[data-ui="apple"] details.fold{border-top:.5px solid var(--line)}
-html[data-ui="apple"] details.fold summary{font-family:var(--gothic); font-size:13px; font-weight:500; color:var(--text)}
+/* 3D の上に浮かぶもの */
+.hud{border:none; border-radius:12px; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px)}
+.lab{border:none; border-radius:6px; padding:0 6px}
+html[data-theme="light"] .lab{text-shadow:none}
+.lab.axis{background:none}
+#imgbox{border:none; border-radius:10px}
+.strip img{border:none; border-radius:8px}
 
-/* 3D の上に浮かぶもの：すりガラス */
-html[data-ui="apple"] .hud{border:none; border-radius:14px; background:var(--scrim); -webkit-backdrop-filter:blur(20px) saturate(1.8); backdrop-filter:blur(20px) saturate(1.8); padding:8px 12px}
-html[data-ui="apple"] .hud .now{font-size:13px; font-weight:500; color:var(--text)}
-html[data-ui="apple"] .hud .sub{font-family:var(--gothic); font-size:11.5px}
-html[data-ui="apple"] .key{font-size:11px; background:linear-gradient(0deg,var(--scrim2),var(--scrim0))}
-html[data-ui="apple"] .key i{height:4px; border-radius:2px}
-html[data-ui="apple"] .lab{border:none; border-radius:6px; padding:1px 7px; font-size:11.5px; text-shadow:none;
-  -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px)}
-html[data-ui="apple"] .lab.axis{background:none; -webkit-backdrop-filter:none; backdrop-filter:none; font-family:var(--gothic); font-size:11px}
-html[data-ui="apple"] .lab b{font-size:12.5px}
-html[data-ui="apple"] #imgbox{border:none; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,.18)}
-html[data-ui="apple"] #imgbox .ih{font-family:var(--gothic); font-size:11px}
-html[data-ui="apple"] .strip img{border:none; border-radius:10px}
-html[data-ui="apple"] .strip figcaption{font-family:var(--gothic); font-size:11px}
-
-/* 案内カード：iOS のシート風 */
-html[data-ui="apple"] #tutCard{border:none; border-radius:18px; padding:18px 18px 14px;
-  background:var(--scrim2); -webkit-backdrop-filter:blur(30px) saturate(1.8); backdrop-filter:blur(30px) saturate(1.8);
-  box-shadow:0 20px 60px rgba(0,0,0,.25)}
-html[data-ui="apple"] #tutHole{border-radius:16px}
-html[data-ui="apple"] #tutHole.ring{outline:3px solid var(--teal); outline-offset:2px}
-html[data-ui="apple"] .tstep{font-family:var(--gothic); font-size:12px; font-weight:600; color:var(--teal)}
-html[data-ui="apple"] .ttext{font-size:14.5px; line-height:1.7}
-html[data-ui="apple"] .ttext b{color:var(--head)}
-html[data-ui="apple"] .ttext .big{font-family:var(--mincho); font-size:19px}
-html[data-ui="apple"] .ttext .eq{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:12px}
-html[data-ui="apple"] #tutNext{border:none; border-radius:12px; background:var(--teal); color:#fff; font-family:var(--gothic); font-size:15px; font-weight:600; padding:11px}
-html[data-ui="apple"] #tutNext:hover{filter:brightness(1.08); background:var(--teal)}
-html[data-ui="apple"] #tutNext.doit{background:var(--amber); color:#fff}
-html[data-ui="apple"] #tutSkip,html[data-ui="apple"] #tutBack{border:none; border-radius:12px; background:var(--fill); color:var(--teal); font-family:var(--gothic); font-size:14px; font-weight:500; padding:10px 14px}
-/* スマホ：3D の上の操作は字を小さくして、画像やほかの操作と重ならないようにする */
+/* 案内カード */
+#tutCard{border:none; border-radius:16px; background:var(--scrim2); -webkit-backdrop-filter:blur(24px) saturate(1.6); backdrop-filter:blur(24px) saturate(1.6)}
+#tutHole{border-radius:14px}
+#tutNext{border:none; border-radius:10px; background:var(--teal); color:var(--tgOnT); font-weight:700}
+#tutNext:hover{filter:brightness(1.07); background:var(--teal)}
+#tutNext.doit{background:var(--amber); color:var(--onAmber)}
+#tutNext.doit:hover{background:var(--amber)}
+#tutSkip,#tutBack{border:none; border-radius:10px; background:var(--fill); color:var(--teal); font-weight:600}
+#lightbox button{border:none; border-radius:999px; background:var(--fill); color:var(--teal)}
 @media (max-width:560px){
-  html[data-ui="apple"] .stage .seg button{font-size:11.5px; padding:3px 7px}
-  html[data-ui="apple"] .stage .seg{border-radius:8px}
-  html[data-ui="apple"] .expose{font-size:12px; padding:4px 12px}
-  html[data-ui="apple"] .playbar button{font-size:11px; padding:4px 9px; white-space:nowrap}
-  html[data-ui="apple"] .echotg span{white-space:nowrap}
-  html[data-ui="apple"] .echotg span{font-size:11px; padding:4px 9px}
-  html[data-ui="apple"] .stopat{font-size:11px}
-  html[data-ui="apple"] .hud{padding:5px 9px; border-radius:11px}
-  html[data-ui="apple"] .hud .now{font-size:11.5px}
-  html[data-ui="apple"] .hud .sub{font-size:10.5px}
-  html[data-ui="apple"] .lab{font-size:10.5px; padding:0 5px}
-  html[data-ui="apple"] .lab b{font-size:11.5px}
-  html[data-ui="apple"] h1{font-size:21px}
+  .stage .seg button{padding:3px 7px}
+  .playbar button{padding:4px 9px}
+  .stopat{display:none}   /* 「t = ○ ms で止める」は細かい操作なので、狭い画面では出さない */
+  /* 今の状態の箱は操作ボタンの上へ。数字の行は狭い画面では出さない（一文で足りる） */
+  .hud{bottom:62px; max-width:calc(100% - 150px)}
+  .hud .sub{display:none}
 }
-html[data-ui="apple"] #lightbox button{border:none; border-radius:999px; background:var(--fill); color:var(--teal); font-family:var(--gothic)}
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-  <h1>MRI スピン3Dシミュレーター<small>TR と TE を変えると、体の中で何が起きて、どんな画像になるか</small></h1>
+  <h1>MRI スピン3Dシミュレーター</h1>
   <button class="hbtn" id="bTheme" type="button" aria-label="配色を切り替える">ライト</button>
   <button class="hbtn" id="bGuide" type="button">使い方をもう一度</button>
-  <button class="hbtn" id="bUI" type="button">Apple風にする</button>
 </header>
 
 <div class="work">
@@ -916,13 +798,12 @@ html[data-ui="apple"] #lightbox button{border:none; border-radius:999px; backgro
 
     <div class="panels">
       <div class="pan" id="panSeq">
-        <div class="ph2"><h2><em>②</em>パルスシーケンス</h2><span class="hint">いつ、どんな力をかけているか</span></div>
+        <div class="ph2"><h2><em>②</em>パルスシーケンス</h2></div>
         <div class="cvwrap"><canvas id="seqCv"></canvas></div>
       </div>
       <div class="pan" id="panRel">
-        <div class="ph2"><h2><em>③</em>緩和曲線とコントラスト</h2><span class="hint">組織の差がどこで開くか</span></div>
+        <div class="ph2"><h2><em>③</em>緩和曲線とコントラスト</h2></div>
         <div class="cvwrap"><canvas id="relCv"></canvas></div>
-        <p class="tiny relnote" id="relNote"></p>
       </div>
     </div>
   </div>
@@ -949,7 +830,7 @@ html[data-ui="apple"] #lightbox button{border:none; border-radius:999px; backgro
         <p class="lede" id="preLede"></p>
         <div class="pre-grid" id="preGrid"></div>
         <div class="note" id="preNote"></div>
-        <p class="grp-h" style="margin:13px 0 6px">つまみを左右に動かす <b>画像と図がすぐ変わります</b></p>
+        <div style="height:14px"></div>
         <div class="sld big">
           <div class="sld-h"><span><em>TR</em>次に倒すまでの待ち時間</span><b id="vTR">500 ms</b></div>
           <div class="rwrap"><input type="range" id="sTR" min="0" max="10" value="0" aria-label="TR"><div class="ticks" id="dTR"></div></div>
@@ -1087,7 +968,7 @@ html[data-ui="apple"] #lightbox button{border:none; border-radius:999px; backgro
 
     <!-- ===== 組織 ===== -->
     <div class="grp">
-      <p class="grp-h">3D で見ている組織 <b id="tisSub"></b></p>
+      <p class="grp-h">見ている組織 <b id="tisSub"></b></p>
       <div class="chips" id="tisChips"></div>
       <div id="cusBox" style="display:none; margin-top:8px">
         <div class="sld"><div class="sld-h"><span>T1</span><b><input type="number" id="nCT1" class="numin" min="10" max="6000" step="1" value="500"> ms <i id="vCT1" style="font-style:normal"></i></b></div><input type="range" id="sCT1" min="0" max="1" value="0"></div>
@@ -1095,7 +976,6 @@ html[data-ui="apple"] #lightbox button{border:none; border-radius:999px; backgro
         <div class="sld"><div class="sld-h"><span>プロトン密度</span><b id="vCPD">1.00</b></div><input type="range" id="sCPD" min="5" max="100" step="5" value="100"></div>
         <p class="tiny">自由な組織は 3D の矢印だけで見られます（画像には出ません）。T1 は静磁場を変えても変わりません。</p>
       </div>
-      <p class="tiny" id="tisEq"></p>
     </div>
 
     <!-- ===== ④ 矢印 → 明るさ → 画像 ===== -->
@@ -1104,7 +984,6 @@ html[data-ui="apple"] #lightbox button{border:none; border-radius:999px; backgro
       <p class="bchain"><span>組織</span><span>エコーの高さ ＝ 横の長さ × ρ</span><span>明るさ</span></p>
       <div class="brows" id="bRows"></div>
       <button class="act wide" id="bPaint" type="button" style="width:100%; margin-top:7px">組織ごとに塗ってみる</button>
-      <p class="tiny">棒の長さは、3D の<b>矢印の横向きの長さ × プロトン密度</b>（エコーの瞬間）。これを<b>その組織のある画素ぜんぶ</b>に塗ったものが画像です。</p>
     </div>
 
     <!-- ===== 表示と操作 ===== -->
@@ -1142,8 +1021,8 @@ html[data-ui="apple"] #lightbox button{border:none; border-radius:999px; backgro
 </div>
 
 <div class="films">
-  <div class="fh2"><h2>撮影した画像</h2><span class="hint">CLICK TO ENLARGE</span></div>
-  <div class="strip" id="strip"><p class="empty">「撮影」を押すと、そのときの条件で撮った画像がここに並びます。<br>T1強調・T2強調・プロトン密度と続けて撮ると、同じ断面の見え方の違いを並べて比べられます。</p></div>
+  <div class="fh2"><h2>撮影した画像</h2></div>
+  <div class="strip" id="strip"><p class="empty">「撮影」を押すと、ここに並びます。</p></div>
 </div>
 
 <div id="tut" hidden>
@@ -1508,13 +1387,13 @@ function fire(e) {
     echoFlash = 0.55;
     R.phase = 'エコー：ここで信号を読む'; return;
   }
-  R.phase = pulseSay(e.a);
+  R.phase = pulseSay(e.a, P.seq === 'IR' && e.t === 0);
   if (P.slowPulse) R.nut = { total:e.a, left:e.a, ax:e.ax, sign:1, dur:0.45 / Math.max(0.5, P.spd) };
   else pulse(e.a, e.ax);
 }
-function pulseSay(a) {
+function pulseSay(a, inv) {   // inv：IR の最初の 180°（縦磁化をひっくり返す）
   a = Math.round(a);
-  if (a === 180) return '180°パルス：位相を折り返す（または縦磁化を反転）';
+  if (a === 180) return inv ? '180°パルス：縦磁化をひっくり返す' : '180°パルス：ずれた位相を折り返す';
   return a + '°パルス：RF（B₁）で磁化を倒している';
 }
 function manualPulse(a, ax, dur) {   // dur を渡すと、その秒数をかけてゆっくり倒す（B₁ を見せたいとき）
@@ -1761,8 +1640,7 @@ let TH = GLT[document.documentElement.dataset.theme === 'light' ? 'light' : 'dar
 const themed = [];                       // {o:対象, c:色のキー, op:不透明度のキー}
 function tint(o, c, op) { themed.push({ o:o, c:c, op:op }); return o; }
 function applyThemeGL() {
-  const apple = document.documentElement.dataset.ui === 'apple';
-  renderer.setClearColor(apple ? (TH === GLT.light ? 0xFFFFFF : 0x1C1C1E) : TH.bg, 1);   // Apple 風は面の色に合わせる
+  renderer.setClearColor(TH.bg, 1);
   amb.intensity = TH.amb; dl.intensity = TH.dir; dl2.intensity = TH.dir2;
   themed.forEach(t => {
     const m = t.o.mat || t.o.material;
@@ -2298,9 +2176,7 @@ function updateScene(dt) {
       '<i>' + TIS[TIX[t.id]].nm.replace(/（.*）/, '') + '</i>' + (P.nameOnly ? '' : '<b>' +
       (Math.hypot(n[0], n[1]) * TIS[TIX[t.id]].PD).toFixed(2) + '</b>'), P.showLab && far && t.hold.visible && !P.nameOnly);
   }
-  const sb = pixScene(IW / 2, IH * 1.06).add(headGrp.position);
-  place('slice', sb.x, sb.y, sb.z, echoFlash > 0 ? 'エコー＝この明るさが画像になる' : '明るさ＝横磁化',
-    P.showLab && far && !P.nameOnly);
+  place('slice', 0, 0, 0, '', false);
 }
 
 /* ================= グラフ ================= */
@@ -2322,11 +2198,8 @@ function readColors() {
   ['line', 'dim', 'muted', 'text', 'rf', 'sig', 'grad', 'alert', 'grid', 'grid2',
    'gap', 'tagbg', 'env', 'rfDim', 'axisT', 'inputLine'].forEach(k => { C[k] = g('--' + k); });
   C.mut = C.muted;
-  /* グラフの字。数字は等幅のまま、日本語は等幅の全角フォントに落ちると字間が空いて読みにくいので、
-     ふつうのゴシックへ回す。Apple 風のときはシステムフォント */
-  MONO = document.documentElement.dataset.ui === 'apple'
-    ? '11px -apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif'
-    : '11px "IBM Plex Mono","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
+  /* グラフの字。数字は等幅のまま、日本語は等幅の全角フォントに落ちると字間が空いて読みにくいので、ふつうのゴシックへ回す */
+  MONO = '11px "IBM Plex Mono","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
 }
 let MONO = '';
 readColors();
@@ -2390,7 +2263,6 @@ function drawSeq() {
 
   const evs = R.evs;
   /* RF */
-  let lastRFx = -1e9, rfRow = 0;
   evs.forEach(e => {
     if (e.k !== 'rf') return;
     const x = X(e.t), hh = (e.a / 180) * (h * 0.11) + h * 0.028;
@@ -2402,15 +2274,10 @@ function drawSeq() {
     }
     cx.stroke();
     cx.fillStyle = C.rf; cx.textAlign = 'center'; cx.font = MONO;
-    cx.fillText(Math.round(e.a) + '°', x, rows[0].y - hh - 8);
-    /* 何のためのパルスかを、ことばでも添える */
-    const word = Math.round(e.a) === 180
-      ? (P.seq === 'IR' && e.t === 0 ? '縦磁化を反転' : '位相をもどす') : '倒す';
-    rfRow = (x - lastRFx < 52) ? 1 - rfRow : 0;     // 近すぎるときは上下にずらす
-    lastRFx = x;
-    cx.fillStyle = C.rfDim; cx.textAlign = 'center';
-    const ww = cx.measureText(word).width;      // 行頭の「RF」に重ならないところまで寄せる
-    cx.fillText(word, Math.max(x, L + 3 + ww / 2), rows[0].y + 11 + rfRow * 12);
+    /* 180° は山が高く、上の端からはみ出して見えなくなっていたので、はみ出すときは山の右肩に置く */
+    const ty = rows[0].y - hh - 8;
+    if (ty < 9) { cx.textAlign = 'left'; cx.fillText(Math.round(e.a) + '°', x + 7, 9); }
+    else cx.fillText(Math.round(e.a) + '°', x, ty);
   });
   /* 傾斜磁場（スライス選択・位相・読み出し）を模式的に */
   const gy = rows[1].y;
@@ -2471,7 +2338,6 @@ function drawSeq() {
   dim(0, P.TR, h * 0.045, 'TR ' + Math.round(P.TR));
   cx.textAlign = 'right';
   if (P.manual) { cx.fillStyle = C.rf; cx.fillText('手動：パルスは自分で撃ちます', Rr, h * 0.115); }
-  else if (brk) { cx.fillStyle = C.dim; cx.fillText('// 以降は目盛が変わる', Rr, h * 0.115); }
   /* いまの時刻 */
   const xc = X(R.t);
   cx.strokeStyle = C.alert; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xc, h * 0.08); cx.lineTo(xc, h * 0.88); cx.stroke();
@@ -2622,8 +2488,6 @@ function drawRel() {
   cx.textAlign = 'left';
   cx.fillText(isIR ? '180° パルスからの時間 →' : '90° パルスからの時間 →', L + 2, top.y1 + 9);
   cx.fillText('90° パルスからの時間 →', L + 2, bot.y1 + 9);
-  $('relNote').innerHTML = (isIR ? '<b>①</b>の点（TI）で倒せる縦磁化が決まり、' : '<b>①</b>の点（TR）で次に倒せる縦磁化が決まり、')
-    + '<b>②</b>の点（TE）の高さが<b>画像の明るさ</b>になる。';
 }
 
 /* ================= 学習ステップ =================
@@ -2962,7 +2826,6 @@ function updateTis() {
   const T2s = 1 / (1 / T2of(t) + (isFinite(P.T2p) ? 1 / P.T2p : 0));
   $('cusBox').style.display = P.tissue === 'cus' ? '' : 'none';
   $('tisSub').textContent = 'T1 ' + Math.round(T1of(t, P.B0)) + ' / T2 ' + Math.round(T2of(t)) + ' / T2* ' + Math.round(T2s) + ' ms・プロトン密度 ' + t.PD.toFixed(2);
-  $('tisEq').innerHTML = '画像をクリックしても選べます。<br>' + eqText();
 }
 /* ---- ④ 矢印 → 明るさ → 画像 ----
    棒の長さ＝エコーのときの 横磁化 × プロトン密度。3D の矢印にエコーの瞬間に出ている数字と同じ値で、
@@ -3301,16 +3164,6 @@ function applyTheme(t, save) {
   if (save) { try { localStorage.setItem(TKEY, t); } catch (e) { } }
   readColors(); applyThemeGL(); refresh();
 }
-/* 見た目の切り替え（試作） */
-function applyUI(ui, save) {
-  if (ui === 'apple') document.documentElement.dataset.ui = 'apple'; else delete document.documentElement.dataset.ui;
-  $('bUI').textContent = ui === 'apple' ? '元の見た目に戻す' : 'Apple風にする';
-  if (save) { try { localStorage.setItem('mri-ui-v1', ui); } catch (e) { } }
-  readColors(); applyThemeGL(); refresh();
-  requestAnimationFrame(resize);
-}
-$('bUI').addEventListener('click', () => applyUI(document.documentElement.dataset.ui === 'apple' ? 'classic' : 'apple', true));
-$('bUI').textContent = document.documentElement.dataset.ui === 'apple' ? '元の見た目に戻す' : 'Apple風にする';
 $('bTheme').addEventListener('click', () => {
   applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true);
 });
@@ -3351,8 +3204,7 @@ const strip = $('strip');
 function renderStrip() {
   strip.innerHTML = '';
   if (!shots.length) {
-    strip.innerHTML = '<p class="empty">「撮影」を押すと、そのときの条件で撮った画像がここに並びます。<br>' +
-      'T1強調・T2強調・プロトン密度と続けて撮ると、同じ断面の見え方の違いを並べて比べられます。</p>';
+    strip.innerHTML = '<p class="empty">「撮影」を押すと、ここに並びます。</p>';
     return;
   }
   shots.forEach(s => {
