@@ -2351,10 +2351,16 @@ function drawSeq() {
     cx.fillStyle = C.env; cx.textAlign = 'right';
     cx.fillText('T2 の包絡線', L + wDet - 4, sy - a0 * Math.exp(-(Td - t0) / T2) * sh - 8);
   }
-  /* エコーの位置に「ここで読む」と書く */
+  /* エコーの位置に「ここで読む」と書く。
+     以前は「↓ ここで信号を読む」を1つの文字列としてエコーの位置に中央ぞろえで書いていたので、
+     ↓ がエコーより左（文字列の左端）に来て、違う時刻を指していた。↓ はエコーの真上に置き、言葉はその横へ */
   if (te) {
+    const xe = X(te.t), ye = sy - sh - 7, word = 'ここで信号を読む';
     cx.fillStyle = C.sig; cx.textAlign = 'center';
-    cx.fillText('↓ ここで信号を読む', X(te.t), sy - sh - 7);
+    cx.fillText('↓', xe, ye);
+    const ww = cx.measureText(word).width;
+    if (xe + 9 + ww <= Rr) { cx.textAlign = 'left'; cx.fillText(word, xe + 9, ye); }
+    else { cx.textAlign = 'right'; cx.fillText(word, xe - 9, ye); }
   }
   /* TE・TI・TR の寸法線 */
   const dim = (t0, t1, y, nm) => {
