@@ -1792,9 +1792,15 @@ function clearTrail() { trailN = 0; trailGeo.setDrawRange(0, 0); }
 
 /* ---- 熱平衡のようす（量子的な描き方）: ±z のコーンの上を歳差する ---- */
 const conGrp = new THREE.Group(); scene.add(conGrp); conGrp.visible = false;
+/* 熱平衡の水素（上向き＝平行、下向き＝反平行）。
+   本数と長さは、「余った上向きの分を縦に積むと、ちょうど M（長さ ML）になる」ように決めてある：
+   余り 6 本 × 長さ CONE_L × cos54.7° ＝ 6 × 1.5 × 0.578 ≒ 5.2 ＝ ML。
+   本当の差は 100 万個に 5 個ほどなので、差は見えるように大きく描いている（学習カードでもそう断る） */
+const CONE_UP = 19, CONE_DN = 13, CONE_L = 1.5, CONE_TH = 54.7 * Math.PI / 180;
+const CONE_H = CONE_L * Math.cos(CONE_TH);       // 1本の縦の長さ
 const cons = [];
 (function () {
-  const up = 17, dn = 13;
+  const up = CONE_UP, dn = CONE_DN;
   for (let i = 0; i < up + dn; i++) {
     const par = i < up;
     const a = mkArrow(par ? 0x8FC8D8 : 0xB07A7A, 0.030, 0.12, 0.40, 1);
@@ -1808,6 +1814,7 @@ const cons = [];
    「足すとこれになる」と大きさがつながるようにする */
 const m0Ghost = mkArrow(0x52B8CE, 0.135, 0.42, 1.2, 0.28); tint(m0Ghost, 'm'); conGrp.add(m0Ghost.grp);
 let qMerge = -1;   // 0〜1：円錐が集まって M になっていく途中。-1 は止まっている
+let qStage = 0;    // ラベル用：1 打ち消し合い中／2 積み上げ中／3 M になる
 
 /* ---- 脳全体：Colin 27 の頭皮・脳・脳室、画像と同じ高さの断面、部位ごとの矢印 ----
    断面の明るさは、その場所の組織の横磁化（部位ごとの矢印の横向きの長さ）× プロトン密度を、画像と同じ物差しで描いたもの。
@@ -2123,19 +2130,35 @@ function updateScene(dt) {
   /* --- 熱平衡の量子的な絵 --- */
   conGrp.visible = P.quantum;
   if (P.quantum) {
-    /* 「全部を足す」：円錐が原点に集まりながら消え、薄い M₀ が濃くなる */
-    if (qMerge >= 0) qMerge = Math.min(1, qMerge + dt / 1.4);
-    const k = qMerge > 0 ? qMerge * qMerge * (3 - 2 * qMerge) : 0;
+    /* 「全部を足し合わせる」を3段で見せる（qMerge 0→1、約4秒）
+       A：下向き1本と上向き1本がペアになって打ち消し合い、消える（13 組）
+       B：残った上向き6本が、z 軸の上に縦に積み重なる（縦の長さの合計 ＝ ML）
+       C：積み上がった高さが、そのまま M になる（薄い M₀ が濃くなる） */
+    if (qMerge >= 0) qMerge = Math.min(1, qMerge + dt / 4.2);
+    const sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+    const u = qMerge > 0 ? qMerge : 0;
+    const pA = sm(u / 0.38), pB = sm((u - 0.42) / 0.36), pC = sm((u - 0.82) / 0.18);
+    const s = Math.sin(CONE_TH), cz = Math.cos(CONE_TH);
+    let iUp = 0, iDn = 0;
     for (const a of cons) {
       a.ph += dt * (P.paused ? 0 : 1.9);
-      const s = Math.sin(54.7 * Math.PI / 180), c = Math.cos(54.7 * Math.PI / 180) * (a.par ? 1 : -1);
-      setArrow(a, Math.cos(a.ph) * s, Math.sin(a.ph) * s, c, 1.65);
-      a.grp.position.set(a.rx * (1 - k), a.ry * (1 - k), a.rz * (1 - k));
-      a.mat.opacity = 1 - k;
+      setArrow(a, Math.cos(a.ph) * s, Math.sin(a.ph) * s, a.par ? cz : -cz, CONE_L);
+      if (!a.par) {                                       // 下向き：相手の上向きへ寄っていき、一緒に消える
+        const b = cons[iDn++];
+        a.grp.position.set(a.rx + (b.rx - a.rx) * pA, a.ry + (b.ry - a.ry) * pA, a.rz + (b.rz - a.rz) * pA);
+        a.mat.opacity = 1 - pA;
+      } else if (iUp < CONE_DN) {                          // ペアになった上向き：その場で消える
+        a.grp.position.set(a.rx, a.ry, a.rz); a.mat.opacity = 1 - pA; iUp++;
+      } else {                                             // 余った上向き：縦に積む
+        const e = iUp++ - CONE_DN;
+        a.grp.position.set(a.rx * (1 - pB), a.ry * (1 - pB), a.rz + (e * CONE_H - a.rz) * pB);
+        a.mat.opacity = 1 - pC;
+      }
     }
     setArrow(m0Ghost, 0, 0, 1, ML);
-    m0Ghost.mat.opacity = 0.28 + 0.72 * k;
-    if (qMerge >= 1) { qMerge = -1; P.quantum = false; }   // 集まりきったら、ふつうの M の表示に切り替える
+    m0Ghost.mat.opacity = 0.22 + 0.78 * pC;
+    qStage = qMerge < 0 ? 0 : (u < 0.42 ? 1 : u < 0.82 ? 2 : 3);
+    if (qMerge >= 1) { qMerge = -1; qStage = 0; P.quantum = false; }   // 積み上がったら、ふつうの M の表示に切り替える
   }
   /* --- 脳全体（部位ごとの矢印と断面） --- */
   const far = P.showBody && ctrl.dist >= 45;
@@ -2190,7 +2213,9 @@ function updateScene(dt) {
     const b = new THREE.Vector3(ax[0] * 3.3, ax[1] * 3.3, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('b1', b.x, b.y, 0.5, 'B₁', on);
   } else place('b1', 0, 0, 0, '', false);
-  place('m0', 1.6, 0, ML * 0.78, 'M₀（差を全部足したもの）', P.showLab && P.quantum);
+  place('m0', 1.6, 0, ML * 0.78,
+    qStage === 1 ? '上と下が1本ずつ打ち消し合う' : qStage === 2 ? '残った ' + (CONE_UP - CONE_DN) + ' 本を縦に積む' : 'M₀（余った分を全部足したもの）',
+    P.showLab && P.quantum);
   if (coilGrp.visible) {
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('coil', COILR * 0.86, 0, COILR * 0.56, '受信コイル', P.showLab);
@@ -2594,8 +2619,8 @@ L({ nm:'静磁場の中のプロトン', tg:'B₀ と M₀', sel:'#stage',
 L({ nm:'足し合わせると1本の矢印', tg:'上向きの余りの合計 M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
-  text:'ここに描いた30本はほんの一部で、実際は 1 mm³ の水だけで約 10²⁰ 個の水素があります。強い B₀ が上向きにそろえた<b>余りの分</b>を全部足すと、' +
-       '<b>上を向いた1本の矢印 M</b> になります。<br>ここからは、この M だけを見ていきます。' }),
+  text:'上向きと下向きは<b>1本ずつ打ち消し合い</b>、<b>余った上向きの分</b>だけが残ります。それを縦に積んだ高さが、<b>磁化 M</b> です。<br>' +
+       'ここでは差が見えるよう大きく描いています。本当は100万個に約5個の差ですが、1 mm³ の水だけで約330兆個が余ります。' }),
 
 L({ nm:'脳のどこにも M がある', tg:'ボクセルごとに1本', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
