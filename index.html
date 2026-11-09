@@ -1229,6 +1229,22 @@ function pulse(aDeg, ax) {
   pulseArr(mx, my, mz, c, s, ax);
   for (const b of BANKS) pulseArr(b.x, b.y, b.z, c, s, ax);
 }
+/* 横向きの任意の軸 (cos φ, sin φ, 0) のまわりに倒す。φ = 0 で pulse(a, 'x') と同じ向き。
+   共鳴の手で、周波数のずれた B₁（M から見ると φ が回っていく）を当てるのに使う */
+function pulsePhiArr(X, Y, Z, c, s, nx, ny) {
+  for (let i = 0; i < NISO; i++) {
+    const x = X[i], y = Y[i], z = Z[i], d = (nx * x + ny * y) * (1 - c);
+    X[i] = x * c + nx * d - ny * z * s;
+    Y[i] = y * c + ny * d + nx * z * s;
+    Z[i] = z * c + (ny * x - nx * y) * s;
+  }
+}
+function pulsePhi(aDeg, phiDeg) {
+  const a = aDeg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  const f = phiDeg * Math.PI / 180, nx = Math.cos(f), ny = Math.sin(f);
+  pulsePhiArr(mx, my, mz, c, s, nx, ny);
+  for (const b of BANKS) pulsePhiArr(b.x, b.y, b.z, c, s, nx, ny);
+}
 function spoilArr(X, Y) {   // 傾斜磁場で位相をばらす（大きさは変えない）
   for (let i = 0; i < NISO; i++) {
     const a = (i / NISO - 0.5) * Math.PI * 16, c = Math.cos(a), s = Math.sin(a);
@@ -1301,7 +1317,10 @@ function rateAt(t) {
 function advance(wall) {
   if (R.nut) {                                   // パルスのアニメーション中は時間を止める
     const st = Math.min(R.nut.left, wall / R.nut.dur * R.nut.total);
-    pulse(st * (R.nut.sign), R.nut.ax);
+    if (R.nut.off) {                             // 周波数のずれた B₁：M から見ると B₁ の向き φ が回っていく
+      R.nut.ph += st / R.nut.total * R.nut.off;
+      pulsePhi(st, R.nut.ph);
+    } else pulse(st * (R.nut.sign), R.nut.ax);
     R.nut.left -= Math.abs(st);
     if (R.nut.left <= 0.01) R.nut = null;
     return;
@@ -1384,9 +1403,10 @@ function pulseSay(a, inv) {   // inv：IR の最初の 180°（縦磁化をひ�
   if (a === 180) return inv ? '180°パルス：縦磁化をひっくり返す' : '180°パルス：ずれた位相を折り返す';
   return a + '°パルス：RF（B₁）で磁化を倒している';
 }
-function manualPulse(a, ax, dur) {   // dur を渡すと、その秒数をかけてゆっくり倒す（B₁ を見せたいとき）
-  R.phase = pulseSay(a);
-  if (dur || P.slowPulse) R.nut = { total:a, left:a, ax:ax, sign:1, dur:dur || 0.45 / Math.max(0.5, P.spd) };
+function manualPulse(a, ax, dur, off) {   // dur を渡すと、その秒数をかけてゆっくり倒す（B₁ を見せたいとき）
+  R.phase = pulseSay(a);                 // off：B₁ の周波数のずれ（パルスのあいだに M から見て B₁ が回る角度、度）
+  if (off) R.nut = { total:a, left:a, ax:ax, sign:1, dur:dur || 3, off:off, ph:0 };
+  else if (dur || P.slowPulse) R.nut = { total:a, left:a, ax:ax, sign:1, dur:dur || 0.45 / Math.max(0.5, P.spd) };
   else pulse(a, ax);
 }
 
@@ -2059,6 +2079,10 @@ function place(key, x, y, z, txt, on) {
 
 /* ================= 画面の更新 ================= */
 let labPhase = 0, echoFlash = 0;
+function b1Dir() {   // いま当てている B₁ の向き（M と一緒に回る座標で）
+  if (R.nut.off) { const f = R.nut.ph * Math.PI / 180; return [Math.cos(f), Math.sin(f), 0]; }
+  return R.nut.ax === 'x' ? [1, 0, 0] : [0, 1, 0];
+}
 const _m = new THREE.Vector3(), ZAX = new THREE.Vector3(0, 0, 1);
 function updateScene(dt) {
   /* 受信コイルを出しているあいだは歳差を速めに見せる。遅いままだと 1 周 7 秒かかり、
@@ -2071,7 +2095,7 @@ function updateScene(dt) {
   /* 受信コイルを出しているあいだは、見てほしいのは「回る磁化」と「輪を貫く分」の2本だけ。
      細い矢印（虹色）・Mz・Mxy・軌跡は、色が増えて焦点がぼけるのでしまう */
   const coilOn = !!P.coil && P.frame === 'lab' && !(P.showBody && ctrl.dist >= 45);
-  const showThin = showSpin && !coilOn;
+  const showThin = showSpin && !coilOn && !P.onlyM;   // onlyM：M だけを見せたい手（共鳴）で細い矢印をしまう
   for (let k = 0; k < spins.length; k++) {
     const a = spins[k];
     if (!showThin) { a.grp.visible = false; continue; }
@@ -2110,7 +2134,7 @@ function updateScene(dt) {
   const onRF = !!R.nut;
   b1Arrow.grp.visible = onRF;
   if (onRF) {
-    const ax = R.nut.ax === 'x' ? [1, 0, 0] : [0, 1, 0];
+    const ax = b1Dir();
     setArrow(b1Arrow, ax[0], ax[1], 0, 3.0);
   }
   /* --- 受信コイル：貫く磁束と、その変化（＝信号） --- */
@@ -2209,7 +2233,7 @@ function updateScene(dt) {
     place('mxy', q.x * 1.18, q.y * 1.18, -0.5, 'Mxy', on && comp && txy > 0.18);
   }
   if (onRF) {
-    const ax = R.nut.ax === 'x' ? [1, 0, 0] : [0, 1, 0];
+    const ax = b1Dir();
     const b = new THREE.Vector3(ax[0] * 3.3, ax[1] * 3.3, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('b1', b.x, b.y, 0.5, 'B₁', on);
   } else place('b1', 0, 0, 0, '', false);
@@ -2628,11 +2652,25 @@ L({ nm:'脳のどこにも M がある', tg:'ボクセルごとに1本', sel:'#s
   text:'体の中では、脳の<b>どの小さな区画（ボクセル）にも</b>この M が1本ずつあり、どれも B₀ の向き（上）を向いています。' +
        '長さはその組織の水素の量で決まります。<br>ここからは、このうち1つのボクセルを拡大して見ていきます。' }),
 
+/* 共鳴：B₁ の速さが M と合えば倒れ、ずれれば少しぐらつくだけ。
+   ずれの量は、パルスの終わりに M がちょうど真上へ戻る値にしている（M から見た実効磁場のまわりの回転がちょうど1周：
+   √(90² + off²) = 360 → off ≈ 349°）。そのあいだ M は最大で約 29°しか倒れない */
+L({ nm:'共鳴：リズムが合うと倒れる', tg:'f = 42.58 MHz × B₀', sel:'#stage',
+  set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, tissue:'csf', T2p:Infinity },
+  on:() => { calm(); },
+  acts:[
+    { label:'同じ速さの電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0); } },
+    { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
+  ],
+  text:'M は B₀ の中で決まった速さで回っています。電波の磁場 <b>B₁</b>（オレンジ）を<b>同じ速さ</b>で回すと、いつも同じ側から押せるので M は倒れていきます。<br>' +
+       '速さがずれると押す向きがずれていき、押したり引いたりで<b>少しぐらつくだけ</b>です。ブランコをリズムに合わせて押すのと同じで、これを<b>共鳴</b>といいます。' +
+       '<span class="eq">共鳴周波数 f = 42.58 MHz × B₀〔T〕　（1.5 T で約 64 MHz）</span>' }),
+
 L({ nm:'RFパルスで倒す', tg:'α = γ·B₁·τ', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm', T2p:40 },
   act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
-  text:'水素と<b>同じ周波数の電波（RF）</b>を当てると<b>共鳴</b>し、M が横へ倒れます。<br>' +
-       'オレンジの <b>B₁</b> が電波の磁場です。倒れる角度は<b>強さ × 当てる時間</b>で決まります。' }),
+  text:'ここからは、M と<b>一緒に回る目線</b>（回転座標）で見ます。回る動きが消えるので、M が<b>まっすぐ倒れていく</b>のが分かります。<br>' +
+       '倒れる角度は、B₁ の<b>強さ × 当てる時間</b>で決まります。' }),
 
 L({ nm:'どうやって信号になるのか', tg:'電磁誘導 V = −dΦ/dt', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
@@ -3480,7 +3518,8 @@ const TUT = [
          'この案内は、題字の横の<b>「使い方をもう一度」</b>でいつでも見られます。',
     next:'はじめる' }
 ];
-let tutList = TUT, tutI = -1, tutWaiting = null, tutActDone = false, tutAfter = null;
+let tutList = TUT, tutI = -1, tutWaiting = null, tutActI = 0, tutAfter = null;
+const actsOf = st => st.acts || (st.act ? [st.act] : []);   // acts：ボタンを押すたびに順にやること（比べて見せたい手）
 const tutEl = $('tut'), tutHole = $('tutHole'), tutCard = $('tutCard');
 
 function tutPlace(el) {
@@ -3515,15 +3554,15 @@ function tutPlace(el) {
 function tutShow() {
   const st = tutList[tutI];
   tutEl.hidden = false;
-  tutActDone = false;
+  tutActI = 0;
   if (st.set) {
     learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
-    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true }, st.set), true);   // コイルは出したい手だけ coil:true で出す
+    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false }, st.set), true);   // コイルは出したい手だけ coil:true で出す
   }
   if (st.on) st.on();
-  const n = tutList.filter(x => x.sel || x.act).length;
-  const k = tutList.slice(0, tutI + 1).filter(x => x.sel || x.act).length;
-  $('tutStep').textContent = st.head || (st.sel || st.act ? k + ' / ' + n : '');
+  const n = tutList.filter(x => x.sel || actsOf(x).length).length;
+  const k = tutList.slice(0, tutI + 1).filter(x => x.sel || actsOf(x).length).length;
+  $('tutStep').textContent = st.head || (st.sel || actsOf(st).length ? k + ' / ' + n : '');
   $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + st.text;
   $('tutBack').hidden = !(st.back && tutI > 0);
   $('tutSkip').textContent = st.quit || 'スキップ';
@@ -3547,12 +3586,14 @@ function tutShow() {
 /* 進むボタン：やることがある手では、まず「やる」ボタンになる */
 function tutBtn(st) {
   const b = $('tutNext');
-  if (st.act && !tutActDone) { b.textContent = st.act.label; b.className = 'doit'; }
+  const acts = actsOf(st);
+  if (tutActI < acts.length) { b.textContent = acts[tutActI].label; b.className = 'doit'; }
   else { b.textContent = st.next || (st.wait ? '押さずに次へ' : '次へ'); b.className = ''; }
 }
 function tutHit() {
   const st = tutList[tutI];
-  if (st.act && !tutActDone) { tutActDone = true; st.act.fn(); tutBtn(st); return; }
+  const acts = actsOf(st);
+  if (tutActI < acts.length) { acts[tutActI++].fn(); tutBtn(st); return; }
   tutNext();
 }
 function tutNext() { tutI++; if (tutI >= tutList.length) tutEnd(); else tutShow(); }
