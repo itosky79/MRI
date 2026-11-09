@@ -517,6 +517,16 @@ details.fold p{margin:7px 0 0; font-size:12.5px; color:var(--dim); line-height:1
 .ttext b{color:var(--selT); font-weight:700}
 .ttext .eq{display:block; margin:7px 0 3px; font-family:var(--mono); font-size:12px; color:var(--rfText); line-height:1.7}
 .ttext .eq2{display:block; margin:7px 0 0; font-size:12px; color:var(--dim); line-height:1.65}
+.tzone{display:inline-flex; gap:3px; margin-left:8px; vertical-align:1px}
+.tzone i{font-style:normal; font-family:var(--gothic); font-size:10.5px; letter-spacing:0; padding:1px 8px; border-radius:9px; color:var(--dim); background:var(--fill)}
+.tzone i.on{background:var(--sel); color:var(--selT); font-weight:700}
+.tmap{display:grid; gap:0; margin:9px 0 8px}
+.tmap .z{display:grid; grid-template-columns:4.2em 1fr; gap:10px; align-items:center; padding:8px 10px; border-radius:8px; background:var(--fill)}
+.tmap .zl{font-weight:700; color:var(--head); line-height:1.3}
+.tmap .zl small{display:block; font-weight:400; font-size:11px; color:var(--dim)}
+.tmap .zt{line-height:1.6}
+.tmap .zt small{display:block; font-size:11.5px; color:var(--dim)}
+.tmap .za{text-align:center; color:var(--dim); line-height:1.4; font-size:12px}
 .ttext .big{display:block; font-family:var(--mincho); font-size:15px; font-weight:700; color:var(--head); margin-bottom:6px}
 .tnav{display:flex; gap:8px; align-items:center}
 #tutSkip,#tutBack{flex:none; padding:7px 12px; background:transparent; border:1px solid var(--line); border-radius:3px;
@@ -2640,18 +2650,33 @@ const later = (fn, ms) => { learnTm.push(setTimeout(fn, ms)); };
    どのカードも 2 行まで。ただし切り詰めすぎて意味が通らなくなるのは本末転倒なので、
    「何が・どうなる・だから何」が初学者に通じる文にすること（CLAUDE.md） */
 const PRIN = [
-L({ nm:'静磁場の中のプロトン', tg:'B₀ と M₀', sel:'#stage',
+/* 全体の地図：電磁気が出てくるのは機械の側の「入口（電流 → 磁場）」と「出口（磁場の変化 → 電流）」だけで、
+   あいだは体の中の水素の話。この先の手のカードには、どこの話かを小さく示す（zone） */
+L({ nm:'MRI の全体の地図', tg:'入口・体の中・出口', map:true,
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
+  on:() => { calm(); },
+  text:'MRI の機械は、<b>電流を流して磁場を作り</b>、その磁場で体の中の水素を動かします。最後に、水素が回って起こす<b>磁場の変化を、電流として読み取ります</b>。' +
+       '<span class="tmap">' +
+         '<span class="z"><span class="zl">入口<small>機械</small></span><span class="zt">電流を流して<b>磁場を作る</b><small>静磁場 B₀・電波の磁場 B₁</small></span></span>' +
+         '<span class="za">↓</span>' +
+         '<span class="z"><span class="zl">体の中<small>水素</small></span><span class="zt">M が<b>そろう → 倒れて回る → 消える・戻る</b></span></span>' +
+         '<span class="za">↓</span>' +
+         '<span class="z"><span class="zl">出口<small>機械</small></span><span class="zt">回る M の<b>磁場の変化</b>で、コイルに<b>電流</b>が流れる<small>これが信号（電磁誘導）</small></span></span>' +
+       '</span>' +
+       'この先のカードには、いま入口・体の中・出口のどこの話かを、上に小さく出します。' }),
+
+L({ nm:'静磁場の中のプロトン', zone:[0, 1], tg:'B₀ と M₀', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   text:'水素の原子核は小さな磁石です。強い磁場 B₀ の中では、B₀ の向き（上）にそろおうとしながら、コマのように首を振って回ります。<br>' +
        '上向き（青）が下向き（赤）より少しだけ多く、その差を全部足したものが、薄く描いた矢印 <b>M₀</b>（磁化）です。' }),
 
-L({ nm:'足し合わせると1本の矢印', tg:'上向きの余りの合計 M', sel:'#stage',
+L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの合計 M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
   text:'上向きと下向きは<b>1本ずつ打ち消し合い</b>、<b>余った上向きの分</b>だけが残ります。それを縦に積んだ高さが、<b>磁化 M</b> です。<br>' +
        'ここでは差が見えるよう大きく描いています。本当は100万個に約5個の差ですが、1 mm³ の水だけで約330兆個が余ります。' }),
 
-L({ nm:'脳のどこにも M がある', tg:'ボクセルごとに1本', sel:'#stage',
+L({ nm:'脳のどこにも M がある', zone:[1], tg:'ボクセルごとに1本', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
   on:() => { calm(); },
   text:'体の中では、脳の<b>どの小さな区画（ボクセル）にも</b>この M が1本ずつあり、どれも B₀ の向き（上）を向いています。' +
@@ -2660,7 +2685,7 @@ L({ nm:'脳のどこにも M がある', tg:'ボクセルごとに1本', sel:'#s
 /* 共鳴：B₁ の速さが M と合えば倒れ、ずれれば少しぐらつくだけ。
    ずれの量は、パルスの終わりに M がちょうど真上へ戻る値にしている（M から見た実効磁場のまわりの回転がちょうど1周：
    √(90² + off²) = 360 → off ≈ 349°）。そのあいだ M は最大で約 29°しか倒れない */
-L({ nm:'共鳴：リズムが合うと倒れる', tg:'f = 42.58 MHz × B₀', sel:'#stage',
+L({ nm:'共鳴：リズムが合うと倒れる', zone:[0, 1], tg:'f = 42.58 MHz × B₀', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   acts:[
@@ -2671,20 +2696,20 @@ L({ nm:'共鳴：リズムが合うと倒れる', tg:'f = 42.58 MHz × B₀', se
        '速さがずれると押す向きがずれ、押したり引いたりで<b>少しぐらつくだけ</b>です。リズムに合わせて押すブランコと同じで、これを<b>共鳴</b>といいます。' +
        '<span class="eq">f = 42.58 MHz × B₀〔T〕（1.5 T で約 64 MHz）</span>' }),
 
-L({ nm:'RFパルスで倒す', tg:'α = γ·B₁·τ', sel:'#stage',
+L({ nm:'RFパルスで倒す', zone:[0, 1], tg:'α = γ·B₁·τ', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm', T2p:40 },
   act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
   text:'ここからは、M と<b>一緒に回る目線</b>（回転座標）で見ます。回る動きが消えるので、M が<b>まっすぐ倒れていく</b>のが分かります。<br>' +
        '倒れる角度は、B₁ の<b>強さ × 当てる時間</b>で決まります。' }),
 
-L({ nm:'どうやって信号になるのか', tg:'電磁誘導 V = −dΦ/dt', sel:'#stage',
+L({ nm:'どうやって信号になるのか', zone:[2], tg:'電磁誘導 V = −dΦ/dt', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
   act:{ label:'もう一度 倒す', fn:() => { calm(); manualPulse(90, 'x', 1.2); } },
   on:() => { calm(); manualPulse(90, 'x', 1.2); },
   text:'回る M のうち、体を囲む<b>受信コイル</b>（輪）を<b>突き抜ける分（紫）</b>が増えたり減ったりします。<br>' +
        'この<b>変化</b>でコイルに電圧が生まれます（電磁誘導）。これが MRI の信号です。' }),
 
-L({ nm:'縦磁化だけでは信号は出ない', tg:'だから一度倒す', sel:'#stage',
+L({ nm:'縦磁化だけでは信号は出ない', zone:[2], tg:'だから一度倒す', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   act:{ label:'ここで倒してみる', fn:() => {
@@ -2694,17 +2719,17 @@ L({ nm:'縦磁化だけでは信号は出ない', tg:'だから一度倒す', se
   text:'倒す前の M は縦向きで動かないので、輪を突き抜ける分は<b>0 のまま</b>。コイルは光りません。<br>' +
        '倒して横に回り出すと、はじめて光ります。<b>だから一度倒す</b>のです。' }),
 
-L({ nm:'T2：横磁化が短くなる', tg:'スピン-スピン緩和', sel:'#stage',
+L({ nm:'T2：横磁化が短くなる', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
   text:'磁場を完全に均一にしても、横の矢印は<b>だんだん短く</b>なります。これが <b>T2</b> の減り方です。<br>' +
        '最初の 37% になるまでの時間を、その組織の T2 といいます。' }),
 
-L({ nm:'T2*：磁場のムラで もっと速く', tg:'1/T2* = 1/T2 + 1/T2′', sel:'#stage',
+L({ nm:'T2*：磁場のムラで もっと速く', zone:[1], tg:'1/T2* = 1/T2 + 1/T2′', sel:'#stage',
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
   text:'実際の磁場には<b>ムラ</b>があり、回る速さがそろいません。矢印が<b>扇のように開いて</b>打ち消し合い、<br>' +
        '信号は T2 より<b>ずっと速く</b>消えます。これが <b>T2*</b> です。' }),
 
-L({ nm:'スピンエコー：180°で呼びもどす', tg:'エコーの高さは T2 だけ', sel:'#stage',
+L({ nm:'スピンエコー：180°で呼びもどす', zone:[1], tg:'エコーの高さは T2 だけ', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
   act:{ label:'90° → 少し待つ → 180°', fn:() => {
     calm(); manualPulse(90, 'x');
@@ -2713,7 +2738,7 @@ L({ nm:'スピンエコー：180°で呼びもどす', tg:'エコーの高さは
   text:'<b>180°</b> で扇を裏返すと、ずれた分が逆向きに戻り、少しあとで<b>ぴたりとそろいます</b>（エコー）。<br>' +
        '戻せるのはムラの分だけ。だから<b>エコーの高さは T2 で決まります</b>。' }),
 
-L({ nm:'T1：縦磁化がもどる', tg:'スピン-格子緩和', sel:'#panRel',
+L({ nm:'T1：縦磁化がもどる', zone:[1], tg:'スピン-格子緩和', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   text:'倒れた M は時間がたつと<b>縦へ戻ります</b>（T1）。戻る速さは組織ごとに違います。<br>' +
        '次に倒したとき信号になるのは、<b>それまでに戻れた分だけ</b>です。' }),
@@ -3524,6 +3549,7 @@ const TUT = [
     next:'はじめる' }
 ];
 let tutList = TUT, tutI = -1, tutWaiting = null, tutActI = 0, tutAfter = null;
+const ZONES = ['入口', '体の中', '出口'];
 const actsOf = st => st.acts || (st.act ? [st.act] : []);   // acts：ボタンを押すたびに順にやること（比べて見せたい手）
 const tutEl = $('tut'), tutHole = $('tutHole'), tutCard = $('tutCard');
 
@@ -3565,9 +3591,13 @@ function tutShow() {
     applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false }, st.set), true);   // コイルは出したい手だけ coil:true で出す
   }
   if (st.on) st.on();
-  const n = tutList.filter(x => x.sel || actsOf(x).length).length;
-  const k = tutList.slice(0, tutI + 1).filter(x => x.sel || actsOf(x).length).length;
-  $('tutStep').textContent = st.head || (st.sel || actsOf(st).length ? k + ' / ' + n : '');
+  const counted = x => x.sel || x.map || actsOf(x).length;
+  const n = tutList.filter(counted).length;
+  const k = tutList.slice(0, tutI + 1).filter(counted).length;
+  /* 原理コースの手は「入口（機械が磁場を作る）・体の中（水素）・出口（機械が信号を読む）」のどこの話かを小さく出す */
+  const zone = st.zone ? ' <span class="tzone">' + ZONES.map((w, i) => '<i' + (st.zone.includes(i) ? ' class="on"' : '') + '>' + w + '</i>').join('') + '</span>' : '';
+  $('tutStep').innerHTML = (st.head || (counted(st) ? k + ' / ' + n : '')) + zone;
+  tutCard.style.width = st.map ? 'min(440px,calc(100vw - 28px))' : '';   // 地図の手だけ少し広く
   $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + st.text;
   $('tutBack').hidden = !(st.back && tutI > 0);
   $('tutSkip').textContent = st.quit || 'スキップ';
