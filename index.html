@@ -770,6 +770,10 @@ html[data-theme="light"] .lab{text-shadow:none}
         <span><i style="background:var(--sig)"></i>太い矢印＝磁化 M</span>
         <span><i style="background:#B08BE0"></i><b>紫＝輪を貫く分。この変化が信号（コイルが光る）</b></span>
       </p>
+      <p class="key" id="keyRes" hidden>
+        <span><i style="background:var(--sig)"></i>太い矢印＝磁化 M</span>
+        <span><i style="background:var(--amber)"></i><b>オレンジ＝電波の磁場 B₁</b></span>
+      </p>
       <p class="key" id="key3d">
         <span><i style="background:linear-gradient(90deg,var(--grass),var(--amber),var(--violet))"></i>細い矢印＝スピン（色＝位相）</span>
         <span><i style="background:var(--sig)"></i>太い矢印＝合計 M</span>
@@ -1754,7 +1758,7 @@ const compGeo = new THREE.BufferGeometry();
 compGeo.setAttribute('position', new THREE.BufferAttribute(compPos, 3));
 const compLine = new THREE.LineSegments(compGeo, new THREE.LineBasicMaterial({ color:0x5b7387, transparent:true, opacity:.7 }));
 compLine.frustumCulled = false; spinGrp.add(tint(compLine, 'comp'));
-const b1Arrow = mkArrow(0xF0B24B, 0.075, 0.26, 0.72); spinGrp.add(b1Arrow.grp); tint(b1Arrow, 'rf');
+const b1Arrow = mkArrow(0xF0B24B, 0.13, 0.4, 1.0); spinGrp.add(b1Arrow.grp); tint(b1Arrow, 'rf');
 
 /* ---- 受信コイル（静止座標系のときだけ）----
    実際の受信コイルは体を囲んでいるので、ここでも輪を原点のまわりに置き、磁化が輪の中で回るようにした。
@@ -2207,7 +2211,8 @@ function updateScene(dt) {
     if (++sliceN % 2 === 0) drawSlice();
   }
   spinGrp.visible = !far;
-  $('key3d').hidden = far || coilOn || P.quantum;      // 脳全体では細い矢印を出していないので凡例もしまう
+  $('key3d').hidden = far || coilOn || P.quantum || !!P.onlyM;      // 脳全体では細い矢印を出していないので凡例もしまう
+  $('keyRes').hidden = far || !P.onlyM;
   $('keyCoil').hidden = !coilOn;
   $('keyQ').hidden = !P.quantum || far;
   axGrp.visible = !P.showBody || ctrl.dist < 45;
@@ -2662,9 +2667,9 @@ L({ nm:'共鳴：リズムが合うと倒れる', tg:'f = 42.58 MHz × B₀', se
     { label:'同じ速さの電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0); } },
     { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
   ],
-  text:'M は B₀ の中で決まった速さで回っています。電波の磁場 <b>B₁</b>（オレンジ）を<b>同じ速さ</b>で回すと、いつも同じ側から押せるので M は倒れていきます。<br>' +
-       '速さがずれると押す向きがずれていき、押したり引いたりで<b>少しぐらつくだけ</b>です。ブランコをリズムに合わせて押すのと同じで、これを<b>共鳴</b>といいます。' +
-       '<span class="eq">共鳴周波数 f = 42.58 MHz × B₀〔T〕　（1.5 T で約 64 MHz）</span>' }),
+  text:'M は B₀ の中で決まった速さで回っています。電波の磁場 <b>B₁</b>（オレンジ）も<b>同じ速さ</b>で回すと、いつも同じ側から押せるので、M は倒れていきます。<br>' +
+       '速さがずれると押す向きがずれ、押したり引いたりで<b>少しぐらつくだけ</b>です。リズムに合わせて押すブランコと同じで、これを<b>共鳴</b>といいます。' +
+       '<span class="eq">f = 42.58 MHz × B₀〔T〕（1.5 T で約 64 MHz）</span>' }),
 
 L({ nm:'RFパルスで倒す', tg:'α = γ·B₁·τ', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm', T2p:40 },
