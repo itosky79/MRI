@@ -555,7 +555,8 @@ details.fold p{margin:7px 0 0; font-size:12.5px; color:var(--dim); line-height:1
 #tutSkip,#tutBack{flex:none; padding:7px 12px; background:transparent; border:1px solid var(--line); border-radius:3px;
   color:var(--dim); font-family:var(--gothic); font-size:12.5px; cursor:pointer}
 #tutSkip:hover,#tutBack:hover{color:var(--text); border-color:var(--line2)}
-#tutBack[hidden]{display:none}
+#tutBack[hidden]{display:inline-block; visibility:hidden}   /* 戻れない手でも場所は取っておく（次へボタンの位置をそろえる） */
+body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足し、いちばん下の帯もカードの上までスクロールできるようにする */
 #tutNext.doit{background:var(--rfBg); border-color:var(--rfLine); color:var(--rfText)}
 #tutNext.doit:hover{background:var(--rfBg3)}
 #tutNext{flex:1; padding:8px; background:var(--sel); border:1px solid var(--teal); border-radius:3px;
@@ -4136,7 +4137,7 @@ function tutFit(el) {   // 光らせるものが、下に固定したカード�
 }
 function tutShow() {
   const st = tutList[tutI];
-  tutEl.hidden = false;
+  tutEl.hidden = false; document.body.classList.add('tutOn');
   tutActI = 0;
   if (st.set) {
     learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
@@ -4190,7 +4191,7 @@ function tutNext() { tutI++; if (tutI >= tutList.length) tutEnd(); else tutShow(
 function tutBack() { if (tutI > 0) { tutI--; tutShow(); } }
 function tutEnd() {
   if (tutWaiting) { tutWaiting.el.removeEventListener('click', tutWaiting.fn); tutWaiting = null; }
-  tutI = -1; tutEl.hidden = true;
+  tutI = -1; tutEl.hidden = true; document.body.classList.remove('tutOn');
   const f = tutAfter; tutAfter = null;
   if (f) f();
 }
