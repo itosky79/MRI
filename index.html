@@ -1875,8 +1875,8 @@ const indPhi = y => Math.pow(1 + Math.pow((y + MAG_L / 2) / 4.5, 2), -1.5);
    選んだ1枚の断面を真上から見て、GN × GN のボクセルに横磁化 M を1本ずつ置く（もう倒れている）。回転座標なので、
    傾斜がなければ止まって見える。左右の傾斜 gx：列ごとに回る速さが変わる（周波数エンコード）。
    上下の傾斜 gy を一瞬だけ：行ごとに回った角度（位相）がずれたまま残る（位相エンコード） */
-const GN = 5, GS = 2.6, GL = 1.15, GW = 0.9;
-const gridGrp = new THREE.Group(); scene.add(gridGrp); gridGrp.visible = false;
+const GN = 5, GS = 2.6, GL = 1.15, GW = 0.9, GOFF = 1.2;   // GOFF：下の再生ボタンと重ならないよう少し上へ
+const gridGrp = new THREE.Group(); scene.add(gridGrp); gridGrp.visible = false; gridGrp.position.y = GOFF;
 const GRID = { gx:0, gy:0, gyLeft:0, gyAmp:0, ang:new Array(GN * GN).fill(0), arr:[] };
 {
   const pl = new THREE.Mesh(new THREE.PlaneGeometry(GN * GS + 0.6, GN * GS + 0.6),
@@ -2130,7 +2130,7 @@ function applyCam() {
    「貫く分」が手前向きになって、長さが見えなくなるため */
 function homeCam() {
   if (P.grid) {                                 // 断面を真上から見る：右が x（左右）、上が y（上下）
-    ctrl.th = -Math.PI / 2; ctrl.phi = 0.32; ctrl.want = smallScr ? 30 : 24; applyCam(); return;
+    ctrl.th = -Math.PI / 2; ctrl.phi = 0.32; ctrl.want = smallScr ? 38 : 33; applyCam(); return;
   }
   if (P.slab) {                                 // 層の積み重ねを正面（-y 側）から少し見下ろす：右が周波数
     ctrl.th = -Math.PI / 2; ctrl.phi = 1.36; ctrl.want = smallScr ? 40 : 34; applyCam(); return;
@@ -2448,11 +2448,11 @@ function updateScene(dt) {
   place('slice', 0, 0, 0, '', false);
   {
     const g = !!P.grid && P.showLab, e = (GN - 1) / 2 * GS, fq = Math.abs(GRID.gx) > 0, ph = GRID.ang.some(a => Math.abs(a) > 0.05);
-    place('gL', -e, -e - 2.2, 0, '左：遅く回る', g && fq);
-    place('gR', e, -e - 2.2, 0, '右：速く回る', g && fq);
-    place('gT', e + 3.4, e, 0, '上の行：先に進む', g && !fq && ph);
-    place('gB', e + 3.4, -e, 0, '下の行：遅れる', g && !fq && ph);
-    place('gOn', 0, e + 2.3, 0, fq ? '左右の傾斜 ON（読んでいる間）' : '上下の傾斜 ON（一瞬だけ）', g && (fq || GRID.gyLeft > 0));
+    place('gL', -e, GOFF - e - 2.0, 0, '左：遅く回る', g && fq);
+    place('gR', e, GOFF - e - 2.0, 0, '右：速く回る', g && fq);
+    place('gT', e + 3.6, GOFF + e, 0, '上の行：先に進む', g && !fq && ph);
+    place('gB', e + 3.6, GOFF - e, 0, '下の行：遅れる', g && !fq && ph);
+    place('gOn', 0, smallScr ? GOFF - e - 3.6 : GOFF + e + 2.1, 0, fq ? '左右の傾斜 ON（読んでいる間）' : '上下の傾斜 ON（一瞬だけ）', g && (fq || GRID.gyLeft > 0));
   }
   place('boreB0', 24 * Math.cos(-Math.PI / 4) + 6, 24 * Math.sin(-Math.PI / 4), 12, 'B₀（足 → 頭）', !!P.bore && P.showBody && P.showLab);
   place('boreW', BORE_R + 1, 6, 18, '筒（ボア）の壁の電線', !!P.bore && P.showBody && P.showLab);
