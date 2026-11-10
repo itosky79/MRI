@@ -755,7 +755,10 @@ html[data-theme="light"] .lab{text-shadow:none}
 /* ---- 読みやすさ：文字を大きくする（本文 13 → 15.5px、補足 11〜11.5 → 12.5〜13px） ---- */
 .ttext{font-size:15.5px; line-height:1.85}
 .ttext .big{font-size:18px; margin-bottom:8px}
-.tstep{font-size:12.5px}
+.tstep{font-size:12.5px; display:flex; align-items:center; gap:0; flex-wrap:wrap}
+.tprog{flex:1; min-width:80px; height:5px; margin:0 8px 0 12px; border-radius:3px; background:var(--fill); overflow:hidden}
+.tprog i{display:block; height:100%; background:var(--teal); border-radius:3px}
+.tprogn{font-size:12px; color:var(--dim)}
 .tzone i{font-size:12px; padding:2px 9px}
 .ttext .eq,.ttext .eq2{font-size:13.5px}
 .tmap .zl{font-size:15px}
@@ -3133,9 +3136,10 @@ L({ nm:'静磁場 B₀ の向き', zone:[0], tg:'体の長い方向 ＝ 画面�
   on:() => { calm(); },
   text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。<br>画面では、この向きを「上」として描きます。' }),
 
-L({ nm:'静磁場の中のプロトン', zone:[1], tg:'B₀ と M₀', sel:'#stage',
+L({ nm:'静磁場の中のプロトン', zone:[1], tg:'足し合わせると M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
-  text:'[[h:水素の原子核]]は小さな磁石で、[[b0:B₀]] の中では上向きが少しだけ多くなります。<br>薄い矢印 [[m0:M₀]] が、その差の合計です。' }),
+  act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
+  text:'[[h:水素の原子核]]は小さな磁石で、B₀ の中では上向きが少しだけ多くなります。<br>全部を足し合わせると、上と下は打ち消し合い、<b>余った上向きの分</b>が [[m:M]] になります。' }),
 
 L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの合計 M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
@@ -3431,7 +3435,7 @@ const CHAPTERS = [
     steps:['T1強調と T2強調を撮り比べる', 'MRI の全体の地図'],
     end:'MRI は、<b>磁場で水素を動かし、その変化を電流で読む</b>装置です。<br>次の章：静磁場の中で水素がどうなるか' },
   { no:'第1章', nm:'静磁場と磁化', goal:'静磁場の中で水素がそろい、磁化 M ができる。',
-    steps:['静磁場 B₀ の向き', '静磁場の中のプロトン', '足し合わせると1本の矢印', '脳のどこにも M がある'],
+    steps:['静磁場 B₀ の向き', '静磁場の中のプロトン', '脳のどこにも M がある'],
     end:'静磁場の中で、水素は<b>磁化 M</b> になります。<br>次の章：M から信号を受け取る仕組み' },
   { no:'第2章', nm:'電磁誘導と信号の受け取り', goal:'コイルに電流が流れるのは、磁場が変化するときだけ。',
     steps:['電磁誘導：変化が電気を生む', '回る M でコイルに電流が流れる'],
@@ -3440,13 +3444,13 @@ const CHAPTERS = [
     steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す'],
     end:'<b>同じ周波数の電波</b>だけが M を倒せます（共鳴）。<br>次の章：倒した M のその後（緩和）' },
   { no:'第4章', nm:'緩和とスピンエコー', goal:'信号は T2・T2* で減り、縦磁化は T1 で戻る。',
-    steps:['T2：横磁化が短くなる', 'T2*：磁場のムラで もっと速く', 'スピンエコー：180°で呼びもどす', 'T1：縦磁化がもどる', 'ここまでをまとめると'],
+    steps:['T2：横磁化が短くなる', 'T2*：磁場のムラで もっと速く', 'スピンエコー：180°で呼びもどす', 'T1：縦磁化がもどる'],
     end:'信号は <b>T2 で減り</b>、縦は <b>T1 で戻ります</b>。<br>次の章：どこからの信号かを見分けて画像にする' },
   { no:'第5章', nm:'位置の決め方と画像の再構成', goal:'傾斜磁場で位置を決め、k 空間から画像を作る。',
     steps:['スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表', '矢印から画像へ'],
     end:'<b>傾斜磁場で位置を決め</b>、k 空間から画像を作ります。<br>次の章：白黒の差（コントラスト）と序章の答え' },
   { no:'第6章', nm:'コントラスト', goal:'TR・TE・TI の選び方で、T1強調・T2強調・FLAIR が決まる。',
-    steps:['井戸とバケツで考える TR と TE', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '3枚ならべて見る', '水の白黒が逆になる理由', 'GRE：180° を使わない', 'IR：狙った組織を消す', 'FLAIR：水を消す'],
+    steps:['TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'GRE：180° を使わない', 'IR：狙った組織を消す', 'FLAIR：水を消す'],
     end:'<b>TR で T1 の差、TE で T2 の差</b>が明るさに出ます。<br>最後の章：1枚の画像ができるまで' },
   { no:'終章', nm:'撮像の流れ', goal:'1枚の画像ができるまでを通して見る。',
     steps:['1枚の画像ができるまで'],
@@ -3457,11 +3461,11 @@ const CHAPTERS = [
   for (const st of pool) byNm[st.nm] = st;
   CHAPTERS.forEach((ch, c) => {
     ch.list = ch.steps.map(nm => { if (!byNm[nm]) throw new Error('手が見つからない: ' + nm); return byNm[nm]; });
+    /* 章の終わりのまとめカードは置かない（長くなるので）。章の最後の手のボタンを「次の章へ」にする */
     const last = ch.list[ch.list.length - 1], hasNext = c < CHAPTERS.length - 1;
-    ch.full = ch.list.concat([{ head:ch.no + ' おわり', nm:'この章のまとめ', sel:last.sel || '#stage', blk:last.blk, text:ch.end,
-      quit:'とじる', next:hasNext ? '次の章へ' : 'とじる', back:true,
-      on:() => chDone(c),
-      go:hasNext ? () => { tutEnd(); runChapter(c + 1, 0); } : null }]);
+    last.next = hasNext ? '次の章へ' : '終わる';
+    last.go = () => { chDone(c); tutEnd(); if (hasNext) runChapter(c + 1, 0); };
+    ch.full = ch.list;
   });
 }
 let curCh = -1, curStep = 0;   // いま開いている章と手（一覧の印に使う）
@@ -3880,7 +3884,7 @@ const GLOSS = [
   ['信号の仕組み（第1〜4章）', [
     ['静磁場 B₀', 'MRI の筒の中の強い磁場。体の長い方向（足 → 頭）を向く。この画面では「上」。', '静磁場 B₀ の向き'],
     ['プロトン', '水素の原子核。小さな磁石としてふるまう。', '静磁場の中のプロトン'],
-    ['磁化 M（M₀）', 'たくさんの水素の小さな磁石を足し合わせた1本の矢印。', '足し合わせると1本の矢印'],
+    ['磁化 M（M₀）', 'たくさんの水素の小さな磁石を足し合わせた1本の矢印。', '静磁場の中のプロトン'],
     ['ボクセル', '体を小さく区切った1区画。画像の1マスにあたる。', '脳のどこにも M がある'],
     ['共鳴・ラーモア周波数', '水素が回る速さと同じ周波数の電波だけが M を倒せること。周波数は B₀ に比例（1.5 T で約 64 MHz）。', '共鳴'],
     ['RF パルス・B₁', 'M を倒すために当てる電波と、その磁場。', 'RFパルスで倒す'],
@@ -3903,9 +3907,9 @@ const GLOSS = [
     ['k 空間・フーリエ変換', '集めた信号を並べた表と、それを画像に変える計算。中心は明暗、外側は輪郭を決める。', 'k 空間'],
   ]],
   ['コントラスト（第6章）', [
-    ['TR', '倒してから次に倒すまでの時間（井戸を汲む間隔）。短くすると T1 の差が出る。', 'TR'],
+    ['TR', '倒してから次に倒すまでの時間。短くすると T1 の差が出る。', 'TR'],
     ['TE', '倒してから信号を読むまでの時間。長くすると T2 の差が出る。', 'TE'],
-    ['T1強調・T2強調・プロトン密度強調', 'TR・TE の長い・短いの組み合わせで決まる画像の種類。', '3枚ならべて見る'],
+    ['T1強調・T2強調・プロトン密度強調', 'TR・TE の長い・短いの組み合わせで決まる画像の種類。', '水の白黒'],
     ['GRE', '180° を使わずにエコーを作る撮り方。T2 ではなく T2* で暗くなる。', 'GRE'],
     ['IR・TI・STIR', '180° で縦磁化を反転させ、消したい組織が 0 になる瞬間（TI）に倒す。脂肪を消すのが STIR。', 'IR'],
     ['FLAIR', 'TI を長くして、水（脳脊髄液）を消す撮り方。', 'FLAIR'],
@@ -4343,8 +4347,14 @@ function tutShow() {
   const n = tutList.filter(counted).length;
   const k = tutList.slice(0, tutI + 1).filter(counted).length;
   const zone = '';   // 「入口・体の中・出口」の表示は分かりにくいのでやめた
-  const chl = curCh >= 0 && tutList === CHAPTERS[curCh].full ? CHAPTERS[curCh].no + '　' : '';
-  $('tutStep').innerHTML = (st.head || (counted(st) ? chl + k + ' / ' + n : '')) + zone;
+  let chl = '', prog = '';
+  if (curCh >= 0 && tutList === CHAPTERS[curCh].full) {   // 全体のどこまで来たか（全部で何手か）を、いつも出す
+    const all = CHAPTERS.reduce((a, ch) => a + ch.list.length, 0);
+    const done = CHAPTERS.slice(0, curCh).reduce((a, ch) => a + ch.list.length, 0) + tutI + 1;
+    chl = CHAPTERS[curCh].no + '（全' + CHAPTERS.length + '章）　';
+    prog = '<span class="tprog"><i style="width:' + (done / all * 100).toFixed(1) + '%"></i></span><span class="tprogn">全体 ' + done + ' / ' + all + '</span>';
+  }
+  $('tutStep').innerHTML = (st.head || (counted(st) ? chl + k + ' / ' + n : '')) + zone + prog;
   tutCard.style.width = '';
   const wtxt = st.text.replace(/\[\[(\w+):([^\]]+)\]\]/g, '<span class="tw $1" data-w="$1" role="button" tabindex="0">$2</span>');
   $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + wtxt;
