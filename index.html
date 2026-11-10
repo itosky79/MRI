@@ -780,6 +780,10 @@ html[data-theme="light"] .lab{text-shadow:none}
         <span><i style="background:var(--sig)"></i>太い矢印＝磁化 M</span>
         <span><i style="background:#B08BE0"></i><b>紫＝輪を貫く分。この変化が信号（コイルが光る）</b></span>
       </p>
+      <p class="key" id="keySlab" hidden>
+        <span><i style="background:var(--sig)"></i>矢印＝各層の磁化 M</span>
+        <span><i style="background:var(--amber)"></i><b>オレンジ＝電波の周波数の範囲と、そこに入った層</b></span>
+      </p>
       <p class="key" id="keyRes" hidden>
         <span><i style="background:var(--sig)"></i>太い矢印＝磁化 M</span>
         <span><i style="background:var(--amber)"></i><b>オレンジ＝電波の磁場 B₁</b></span>
@@ -859,9 +863,10 @@ html[data-theme="light"] .lab{text-shadow:none}
 
       <!-- ===== 学習 ===== -->
       <div class="pane" id="pane1" hidden>
-        <div class="seg" id="courseSeg" style="display:grid; grid-template-columns:1fr 1fr; background:var(--ink2)">
+        <div class="seg" id="courseSeg" style="display:grid; grid-template-columns:1fr 1fr 1fr; background:var(--ink2)">
           <button type="button" data-c="0" aria-pressed="true">原理</button>
           <button type="button" data-c="1">撮像法</button>
+          <button type="button" data-c="2">場所の区別</button>
         </div>
         <p class="tiny" id="courseLede" style="margin:8px 0 10px"></p>
         <button class="act wide" id="bLearn" type="button" style="width:100%">① から順に</button>
@@ -1824,6 +1829,62 @@ function pushTrail(x, y, z) {
 }
 function clearTrail() { trailN = 0; trailGeo.setDrawRange(0, 0); }
 
+/* ---- スライス選択（「場所の区別」コース） ----
+   体の軸（z ＝ B₀ の向き、足 → 頭）に沿って薄い層を SLN 枚積み、層ごとに M を1本立てる。
+   右に各層の周波数を棒で並べる。傾斜磁場の強さ g で、層 k の周波数は f = g·(k − 中央)（中心の周波数からのずれ、刻み単位）。
+   電波の周波数の範囲（中心 fc、半幅 hw）をオレンジの帯で重ね、|f − fc| ≤ hw の層だけが倒れる。
+   ・傾斜なし（g = 0）：どの層も f = 0 なので、全部が帯に入り、全部倒れる
+   ・厚さ ＝ 帯に入る層の数 ≒ 2hw / g（帯域幅 ÷ 傾斜） */
+const SLN = 7, SLC = (SLN - 1) / 2, SLDZ = 2.0, SLR = 2.0, SLXB = 2.6, SLFB = 3.6, SLST = 0.5, SLOFF = -3.6, SLML = 1.6;
+const slabGrp = new THREE.Group(); scene.add(slabGrp); slabGrp.visible = false; slabGrp.position.x = SLOFF;
+const SLB = { g:0, gT:0, fc:0, fcT:0, hw:0.5, hwT:0.5, ph:0, glow:0, tip:new Array(SLN).fill(0), tipT:new Array(SLN).fill(0), disc:[], bar:[], arr:[] };
+const slDiscGeo = new THREE.CylinderGeometry(SLR, SLR, 0.08, 40); slDiscGeo.rotateX(Math.PI / 2);
+const slBarGeo = new THREE.BoxGeometry(1, 0.34, 0.34); slBarGeo.translate(0.5, 0, 0);
+for (let k = 0; k < SLN; k++) {
+  const z = (k - SLC) * SLDZ;
+  const d = new THREE.Mesh(slDiscGeo, new THREE.MeshPhongMaterial({ color:0xB9C6CF, transparent:true, opacity:0.32, depthWrite:false }));
+  d.position.z = z; slabGrp.add(d); SLB.disc.push(d);
+  const b = new THREE.Mesh(slBarGeo, new THREE.MeshPhongMaterial({ color:0xAEBBC4 }));
+  b.position.set(SLXB, 0, z); slabGrp.add(b); SLB.bar.push(b);
+  const a = mkArrow(0x11788F, 0.11, 0.34, 0.8); a.grp.position.z = z; slabGrp.add(a.grp); SLB.arr.push(a); tint(a, 'm');
+}
+const slBand = new THREE.Mesh(new THREE.BoxGeometry(1, 0.05, 1),
+  new THREE.MeshBasicMaterial({ color:0xF0B24B, transparent:true, opacity:0.22, depthWrite:false }));
+slBand.position.y = 0.3; slabGrp.add(slBand);
+const slFreq = k => SLB.g * (k - SLC);                       // 層 k の周波数（中心からのずれ、刻み単位）
+const slInBand = (k, g, fc, hw) => Math.abs(g * (k - SLC) - fc) <= hw + 1e-6;
+function slabInit(o) {   // すぐにその状態にする（手の始め）
+  Object.assign(SLB, { g:o.g, gT:o.g, fc:o.fc, fcT:o.fc, hw:o.hw, hwT:o.hw, glow:0 });
+  SLB.tip.fill(0); SLB.tipT.fill(0);
+}
+function slabSet(o) {    // 傾斜・中心周波数・範囲を、なめらかに変える（M は立て直す）
+  if ('g' in o) SLB.gT = o.g; if ('fc' in o) SLB.fcT = o.fc; if ('hw' in o) SLB.hwT = o.hw;
+  SLB.tipT.fill(0);
+}
+function slabRF() {      // 電波を当てる：帯に入った層だけを倒す
+  for (let k = 0; k < SLN; k++) SLB.tipT[k] = slInBand(k, SLB.gT, SLB.fcT, SLB.hwT) ? 90 : 0;
+  SLB.glow = 1;
+}
+function slabUpdate(dt) {
+  const e = 1 - Math.exp(-dt * 3.2);
+  SLB.g += (SLB.gT - SLB.g) * e; SLB.fc += (SLB.fcT - SLB.fc) * e; SLB.hw += (SLB.hwT - SLB.hw) * e;
+  SLB.ph += dt * 1.1; SLB.glow = Math.max(0, SLB.glow - dt * 0.5);
+  for (let k = 0; k < SLN; k++) {
+    const d = SLB.tipT[k] - SLB.tip[k];                         // 60°/秒：90°を 1.5 秒かけて倒す（速いと見えない）
+    SLB.tip[k] += Math.sign(d) * Math.min(Math.abs(d), (d > 0 ? 60 : 240) * dt);
+    const th = SLB.tip[k] * Math.PI / 180;
+    setArrow(SLB.arr[k], Math.sin(th) * Math.cos(SLB.ph), Math.sin(th) * Math.sin(SLB.ph), Math.cos(th), SLML);
+    const sel = SLB.tipT[k] > 0;
+    SLB.disc[k].material.color.setHex(sel ? 0xF0B24B : 0xB9C6CF);
+    SLB.disc[k].material.opacity = sel ? 0.45 : 0.32;
+    SLB.bar[k].scale.x = SLFB + slFreq(k) * SLST;
+    SLB.bar[k].material.color.setHex(Math.abs(slFreq(k) - SLB.fc) <= SLB.hw + 0.02 ? 0xE09A2B : 0xAEBBC4);
+  }
+  const x0 = SLXB + SLFB + (SLB.fc - SLB.hw) * SLST, x1 = SLXB + SLFB + (SLB.fc + SLB.hw) * SLST;
+  slBand.position.x = (x0 + x1) / 2; slBand.scale.set(Math.max(0.05, x1 - x0), 1, SLN * SLDZ + 1.2);
+  slBand.material.opacity = 0.2 + 0.3 * SLB.glow;
+}
+
 /* ---- 熱平衡のようす（量子的な描き方）: ±z のコーンの上を歳差する ---- */
 const conGrp = new THREE.Group(); scene.add(conGrp); conGrp.visible = false;
 /* 熱平衡の水素（上向き＝平行、下向き＝反平行）。
@@ -1996,6 +2057,9 @@ function applyCam() {
 /* コイルを出すときは、輪を斜めから見る向きにする。輪の法線（y）に正対すると
    「貫く分」が手前向きになって、長さが見えなくなるため */
 function homeCam() {
+  if (P.slab) {                                 // 層の積み重ねを正面（-y 側）から少し見下ろす：右が周波数
+    ctrl.th = -Math.PI / 2; ctrl.phi = 1.36; ctrl.want = smallScr ? 40 : 33; applyCam(); return;
+  }
   ctrl.th = P.showBody || !P.coil ? -1.05 : -0.42;
   ctrl.phi = P.showBody ? 0.8 : 1.15;
   ctrl.want = P.showBody ? 82 : (P.coil ? (smallScr ? 38 : 30) : 23);
@@ -2077,6 +2141,7 @@ function mkLab(key, cls) {
 mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
 mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
 mkLab('coil', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
+mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
 ['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm ta'));
 const _p = new THREE.Vector3();
 function place(key, x, y, z, txt, on) {
@@ -2105,7 +2170,7 @@ function updateScene(dt) {
   spinGrp.rotation.z = P.frame === 'lab' ? labPhase : 0;
 
   /* --- スピン1本ずつ --- */
-  const showSpin = !P.quantum;
+  const showSpin = !P.quantum && !P.slab;
   /* 受信コイルを出しているあいだは、見てほしいのは「回る磁化」と「輪を貫く分」の2本だけ。
      細い矢印（虹色）・Mz・Mxy・軌跡は、色が増えて焦点がぼけるのでしまう */
   const coilOn = !!P.coil && P.frame === 'lab' && !(P.showBody && ctrl.dist >= 45);
@@ -2220,13 +2285,16 @@ function updateScene(dt) {
     }
     if (++sliceN % 2 === 0) drawSlice();
   }
-  spinGrp.visible = !far;
-  $('key3d').hidden = far || coilOn || P.quantum || !!P.onlyM;      // 脳全体では細い矢印を出していないので凡例もしまう
+  spinGrp.visible = !far && !P.slab;
+  slabGrp.visible = !!P.slab;
+  if (P.slab) slabUpdate(dt);
+  $('keySlab').hidden = !P.slab;
+  $('key3d').hidden = far || coilOn || P.quantum || !!P.onlyM || !!P.slab;      // 脳全体では細い矢印を出していないので凡例もしまう
   $('keyRes').hidden = far || !P.onlyM;
   $('keyCoil').hidden = !coilOn;
   $('keyQ').hidden = !P.quantum || far;
-  axGrp.visible = !P.showBody || ctrl.dist < 45;
-  planeXY.visible = !P.showBody && !P.quantum;
+  axGrp.visible = (!P.showBody || ctrl.dist < 45) && !P.slab;
+  planeXY.visible = !P.showBody && !P.quantum && !P.slab;
 
   /* --- カメラをなめらかに追従 --- */
   ctrl.dist += (ctrl.want - ctrl.dist) * (1 - Math.exp(-dt * 4.5));
@@ -2234,7 +2302,7 @@ function updateScene(dt) {
 
   /* --- ラベル --- */
   const near3d = !P.showBody || ctrl.dist < 45;
-  const on = P.showLab && near3d;
+  const on = P.showLab && near3d && !P.slab;
   const rot = P.frame === 'rot';
   place('z', 1.7, 0, AX - 0.2, 'z ＝ B₀ の向き', on);
   place('b0', 0, 0, 0, '', false);
@@ -2252,6 +2320,13 @@ function updateScene(dt) {
     const b = new THREE.Vector3(ax[0] * 3.3, ax[1] * 3.3, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('b1', b.x, b.y, 0.5, 'B₁', on);
   } else place('b1', 0, 0, 0, '', false);
+  {
+    const sl = !!P.slab && P.showLab, top = SLC * SLDZ;
+    place('slHead', SLOFF - SLR - 0.6, 0, top + 0.9, '頭側', sl);
+    place('slFoot', SLOFF - SLR - 0.6, 0, -top - 0.9, '足側', sl);
+    place('slFreq', SLOFF + SLXB + SLFB, 0, -top - 1.9, '各層の周波数 →', sl);
+    place('slBand', SLOFF + slBand.position.x, 0, top + 1.9, '電波の周波数の範囲', sl);
+  }
   place('m0', 1.6, 0, ML * 0.78,
     qStage === 1 ? '上と下が1本ずつ打ち消し合う' : qStage === 2 ? '残った ' + (CONE_UP - CONE_DN) + ' 本を縦に積む' : 'M₀（余った分を全部足したもの）',
     P.showLab && P.quantum);
@@ -2801,6 +2876,35 @@ L({ nm:'FLAIR：水を消す', tg:'STIR との違い', sel:'#imgbox',
        '脳室が黒くなり、すぐそばの病変（浮腫）が白く浮かび上がります。' })
 ];
 
+/* ---------- 場所の区別：体のどこから来た信号かを見分ける ----------
+   まずはスライス選択（傾斜磁場で層ごとに周波数を変え、共鳴で1枚だけを倒す）。
+   断面の中の縦・横の見分け方（周波数・位相エンコード）は、このあとここに足していく */
+const SLSET = { quantum:false, manual:true, frame:'rot', view:0, showBody:false, slab:true, showComp:false };
+const LOC = [
+L({ nm:'スライス選択：1枚だけ倒す', zone:[0, 1], tg:'傾斜磁場 ＋ 共鳴', sel:'#stage',
+  set:SLSET,
+  on:() => { calm(); slabInit({ g:0, fc:0, hw:0.5 }); },
+  acts:[
+    { label:'電波を当てる（傾斜なし）', fn:() => { slabInit({ g:0, fc:0, hw:0.5 }); slabRF(); } },
+    { label:'傾斜磁場をかける', fn:() => { slabSet({ g:1 }); } },
+    { label:'電波を当てる', fn:() => { slabRF(); } },
+  ],
+  text:'右の棒は、各層が回る<b>周波数</b>です。傾斜磁場がないと全部同じなので、電波を当てると<b>全部の層が倒れて</b>しまいます。<br>' +
+       '傾斜磁場で頭側ほど磁場を強くすると、周波数が<b>階段</b>になり、電波の範囲（オレンジ）に入った<b>1枚だけ</b>が倒れます。' }),
+
+L({ nm:'スライスの位置と厚さ', zone:[0, 1], tg:'厚さ ＝ 帯域幅 ÷ 傾斜', sel:'#stage',
+  set:SLSET,
+  on:() => { calm(); slabInit({ g:1, fc:0, hw:0.5 }); later(slabRF, 600); },
+  acts:[
+    { label:'中心の周波数を上げる', fn:() => { slabSet({ fc:2 }); later(slabRF, 1300); } },
+    { label:'周波数の範囲を広げる', fn:() => { slabSet({ hw:1.5 }); later(slabRF, 1300); } },
+    { label:'傾斜を急にする', fn:() => { slabSet({ g:2 }); later(slabRF, 1300); } },
+  ],
+  text:'電波の<b>中心の周波数</b>を変えると、倒れる層（断面の位置）が動きます。周波数の<b>範囲（帯域幅）</b>を広げると、何枚も倒れて断面が<b>厚く</b>なります。<br>' +
+       '傾斜を<b>急に</b>すると、層ごとの周波数の差が開くので、同じ範囲に入る層が減り、断面は<b>薄く</b>なります。' +
+       '<span class="eq">スライス厚 ＝ 帯域幅 ÷ 傾斜磁場の強さ</span>' })
+];
+
 /* コースの定義。list は案内カードに渡す「本編＋おしまいの1枚」 */
 const COURSE = [
   { nm:'原理', lede:'MRI の信号が<b>なぜ出て、なぜ消えるのか</b>。T1強調などの撮り方の話は、ここでは出てきません。',
@@ -2810,9 +2914,13 @@ const COURSE = [
   { nm:'撮像法', lede:'「原理」で見た仕組みを使って、<b>T1強調・T2強調などの画像をどう作り分けるか</b>。先に「原理」を見ておくと分かりやすくなります。',
     end:{ head:'おしまい', nm:'ひととおり見ました', next:'とじる', quit:'とじる',
       text:'ここからは<b>「シーケンス」</b>タブで TR・TE を自分で動かしたり、<b>「問題」</b>タブで国家試験の問題を解いて確かめたりできます。<br>' +
-           'この案内は、いつでも「学習」タブから開き直せます。' } }
+           'この案内は、いつでも「学習」タブから開き直せます。' } },
+  { nm:'場所の区別', lede:'体の<b>どこから来た信号か</b>を、どうやって見分けるのか。まずは、1枚の断面だけを選んで倒す方法（スライス選択）です。',
+    end:{ head:'おしまい', nm:'スライス選択はここまで', next:'とじる', quit:'とじる',
+      text:'傾斜磁場で層ごとに周波数を変え、<b>共鳴</b>を使って1枚だけを倒す。これがスライス選択です。<br>' +
+           '断面の位置は電波の中心の周波数で、厚さは帯域幅と傾斜の強さで決まります。' } }
 ];
-COURSE[0].steps = PRIN; COURSE[1].steps = METH;
+COURSE[0].steps = PRIN; COURSE[1].steps = METH; COURSE[2].steps = LOC;
 COURSE.forEach(c => { c.list = c.steps.concat([c.end]); });
 let course = 0, STEPS = COURSE[0].steps, LEARN = COURSE[0].list;
 
@@ -3129,7 +3237,7 @@ function refresh(keep) {
 }
 function applySet(s, hard) {
   if (!s) return;
-  const sbWas = P.showBody, coilWas = P.coil;
+  const sbWas = P.showBody, coilWas = P.coil, slabWas = !!P.slab;
   for (const k in s) P[k] = s[k];
   if ('coil' in s) $('tCoil').checked = P.coil;
   if ('showComp' in s) $('tComp').checked = P.showComp;
@@ -3138,6 +3246,7 @@ function applySet(s, hard) {
      これをしないと、ボクセルに切り替えたのに脳全体の距離のままで小さく見える */
   if ('showBody' in s && s.showBody !== sbWas) setScale(P.showBody);
   else if ('coil' in s && s.coil !== coilWas) homeCam();
+  else if ('slab' in s && !!s.slab !== slabWas) homeCam();
   if (s.nDisp) buildSpins(s.nDisp);
   if (hard) { equilibrium(); clearTrail(); seqSig = ''; }
   refresh(!hard);
@@ -3588,7 +3697,7 @@ function tutShow() {
   tutActI = 0;
   if (st.set) {
     learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
-    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false }, st.set), true);   // コイルは出したい手だけ coil:true で出す
+    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false }, st.set), true);   // コイルは出したい手だけ coil:true で出す
   }
   if (st.on) st.on();
   const counted = x => x.sel || x.map || actsOf(x).length;
