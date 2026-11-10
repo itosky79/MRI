@@ -807,7 +807,8 @@ details.fold summary{font-size:12.5px}
 .mk{position:absolute; display:none; transform:translate(-50%,-140%); padding:1px 7px; border-radius:7px; font-size:12px; font-weight:700;
   color:#fff; background:rgba(17,120,143,.92); white-space:nowrap; pointer-events:none}
 .mk::after{content:""; position:absolute; left:50%; top:100%; margin-left:-5px; border:5px solid transparent; border-top-color:rgba(17,120,143,.92)}
-.mk.mkl{background:rgba(190,59,48,.92)} .mk.mkl::after{border-top-color:rgba(190,59,48,.92)}
+.mk.mkl{background:rgba(190,59,48,.92); transform:translate(-50%,45%)}   /* 病変は点の下に出して、水の印と重ならないように */
+.mk.mkl::after{top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(190,59,48,.92)}
 .strip figure{position:relative}
 .mk.smk{font-size:11px}
 body.markOn .mk.smk{display:block}
@@ -2594,7 +2595,7 @@ function updateScene(dt) {
   } else if (coilGrp.visible) {
     place('mag', 0, 0, 0, '', false);
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    place('coil', COILR * 1.02, 0, -COILR * 0.62, Math.hypot(m[0], m[1]) > 0.08 ? '受信コイル：<b>電流（信号）が流れる</b>' : '受信コイル：電流は流れない', P.showLab);
+    place('coil', COILR * 0.98, 0, -COILR * 0.2, Math.hypot(m[0], m[1]) > 0.08 ? '受信コイル：<b>電流（信号）が流れる</b>' : '受信コイル：電流は流れない', P.showLab);
     place('flux', -0.3, _m.y * ML * 1.08, -2.3, '<i>輪を通る分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab);
   } else { place('coil', 0, 0, 0, '', false); place('flux', 0, 0, 0, '', false); place('mag', 0, 0, 0, '', false); }
   place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
@@ -2607,7 +2608,7 @@ function updateScene(dt) {
   place('slice', 0, 0, 0, '', false);
   {
     const fo = !!P.nameOnly && P.showBody && ctrl.dist >= 45 && !P.bore && P.showLab && mField.children.length > 0;
-    place('fBrain', headGrp.position.x, headGrp.position.y, headGrp.position.z + 20, '脳', fo);
+    place('fBrain', headGrp.position.x - 16, headGrp.position.y, headGrp.position.z + 12, '脳', fo);
     const c = fo ? mField.children[Math.floor(mField.children.length * 0.45)] : null;
     place('fVox', c ? c.position.x + headGrp.position.x : 0, c ? c.position.y + headGrp.position.y : 0, c ? c.position.z + headGrp.position.z + 5.2 : 0,
       '1つのボクセルの M', fo);
@@ -3719,7 +3720,7 @@ function layoutImg() {
   const mk = (el, id, on) => {
     const q = REP[id];
     if (!on || !q) { el.style.display = 'none'; return; }
-    el.style.display = ''; el.style.left = ((q[0] + .5) / IW * 100) + '%'; el.style.top = ((q[1] + .5) / IH * 100) + '%';
+    el.style.display = 'block'; el.style.left = ((q[0] + .5) / IW * 100) + '%'; el.style.top = ((q[1] + .5) / IH * 100) + '%';
   };
   mk($('mkW'), 'csf', !!(P.tag && P.tag.mark));
   mk($('mkL'), 'les', !!(P.tag && P.tag.mark) && lesOn);
