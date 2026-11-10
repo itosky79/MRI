@@ -1835,8 +1835,8 @@ function clearTrail() { trailN = 0; trailGeo.setDrawRange(0, 0); }
    電波の周波数の範囲（中心 fc、半幅 hw）をオレンジの帯で重ね、|f − fc| ≤ hw の層だけが倒れる。
    ・傾斜なし（g = 0）：どの層も f = 0 なので、全部が帯に入り、全部倒れる
    ・厚さ ＝ 帯に入る層の数 ≒ 2hw / g（帯域幅 ÷ 傾斜） */
-const SLN = 7, SLC = (SLN - 1) / 2, SLDZ = 2.0, SLR = 2.0, SLXB = 2.6, SLFB = 3.6, SLST = 0.5, SLOFF = -3.6, SLML = 1.6;
-const slabGrp = new THREE.Group(); scene.add(slabGrp); slabGrp.visible = false; slabGrp.position.x = SLOFF;
+const SLN = 7, SLC = (SLN - 1) / 2, SLDZ = 2.0, SLR = 2.0, SLXB = 2.6, SLFB = 3.6, SLST = 0.5, SLOFF = -3.6, SLZ = 0.5, SLML = 1.7;   // SLZ：下の再生ボタンと重ならないよう少し上げる
+const slabGrp = new THREE.Group(); scene.add(slabGrp); slabGrp.visible = false; slabGrp.position.set(SLOFF, 0, SLZ);
 const SLB = { g:0, gT:0, fc:0, fcT:0, hw:0.5, hwT:0.5, ph:0, glow:0, tip:new Array(SLN).fill(0), tipT:new Array(SLN).fill(0), disc:[], bar:[], arr:[] };
 const slDiscGeo = new THREE.CylinderGeometry(SLR, SLR, 0.08, 40); slDiscGeo.rotateX(Math.PI / 2);
 const slBarGeo = new THREE.BoxGeometry(1, 0.34, 0.34); slBarGeo.translate(0.5, 0, 0);
@@ -2058,7 +2058,7 @@ function applyCam() {
    「貫く分」が手前向きになって、長さが見えなくなるため */
 function homeCam() {
   if (P.slab) {                                 // 層の積み重ねを正面（-y 側）から少し見下ろす：右が周波数
-    ctrl.th = -Math.PI / 2; ctrl.phi = 1.36; ctrl.want = smallScr ? 40 : 33; applyCam(); return;
+    ctrl.th = -Math.PI / 2; ctrl.phi = 1.36; ctrl.want = smallScr ? 40 : 34; applyCam(); return;
   }
   ctrl.th = P.showBody || !P.coil ? -1.05 : -0.42;
   ctrl.phi = P.showBody ? 0.8 : 1.15;
@@ -2322,10 +2322,10 @@ function updateScene(dt) {
   } else place('b1', 0, 0, 0, '', false);
   {
     const sl = !!P.slab && P.showLab, top = SLC * SLDZ;
-    place('slHead', SLOFF - SLR - 0.6, 0, top + 0.9, '頭側', sl);
-    place('slFoot', SLOFF - SLR - 0.6, 0, -top - 0.9, '足側', sl);
-    place('slFreq', SLOFF + SLXB + SLFB, 0, -top - 1.9, '各層の周波数 →', sl);
-    place('slBand', SLOFF + slBand.position.x, 0, top + 1.9, '電波の周波数の範囲', sl);
+    place('slHead', SLOFF - SLR - 0.6, 0, SLZ + top + 0.9, '頭側', sl);
+    place('slFoot', SLOFF - SLR - 0.6, 0, SLZ - top - 0.9, '足側', sl);
+    place('slFreq', SLOFF + SLXB + SLFB, 0, SLZ - top - 1.6, '各層の周波数 →', sl);
+    place('slBand', SLOFF + slBand.position.x, 0, SLZ + top + 1.7, '電波の周波数の範囲', sl);
   }
   place('m0', 1.6, 0, ML * 0.78,
     qStage === 1 ? '上と下が1本ずつ打ち消し合う' : qStage === 2 ? '残った ' + (CONE_UP - CONE_DN) + ' 本を縦に積む' : 'M₀（余った分を全部足したもの）',
@@ -3260,7 +3260,10 @@ function setMode(m) {
   for (let i = 0; i < 4; i++) $('pane' + i).hidden = i !== mode;
   document.body.classList.toggle('quiz', mode === 3);
   if (mode !== 1) {            // 学習モード用の特別な表示（量子描像・手動・受信コイル）は持ち越さない
+    const wasSlab = !!P.slab;
     P.quantum = false; P.manual = false; P.coil = false; $('tCoil').checked = false;
+    P.slab = false; P.onlyM = false;           // スライス選択の層の絵・共鳴の手の表示も持ち越さない
+    if (wasSlab) homeCam();
     refresh(true);
   }
   if (mode === 1) markStep();
