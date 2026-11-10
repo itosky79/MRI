@@ -2896,6 +2896,17 @@ L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
 
 /* ---------- 撮像法：原理を使って、どう撮るか ---------- */
 const METH = [
+/* 撮像法の入口：T1強調・T2強調を「1台のスマホ」で考える（会話で一番通じた例え）。
+   ・信号はいつも横から出る（T1強調も「縦の戻り具合が、次に倒したときの横の長さに表れたもの」）という誤解を先に解いておく */
+L({ nm:'スマホで考える TR と TE', tg:'充電時間と、明るさを測るまで', map:true,
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+  text:'1台のスマホで考えます。<b>バッテリー</b>が縦の M、<b>画面の明るさ</b>が横の M（＝信号）、<b>画面をつける</b>のが M を倒すことです。' +
+       '<span class="tmap">' +
+         '<span class="z"><span class="zl">TR<small>つける間隔</small></span><span class="zt">あいだの<b>充電時間</b>。短いと、充電の遅い機種（水）は満タンにならず暗い<small>→ 充電の速さ（T1）の比べっこ＝T1強調</small></span></span>' +
+         '<span class="za">　</span>' +
+         '<span class="z"><span class="zl">TE<small>つけてから測るまで</small></span><span class="zt">画面は<b>だんだん暗くなる</b>。長く待つと、暗くなりにくい機種（水）だけ明るい<small>→ 画面の持ち（T2）の比べっこ＝T2強調</small></span></span>' +
+       '</span>' +
+       '測っているのは、どちらも<b>画面の明るさ（横の M）</b>です。T1強調も、縦の戻り具合が次の横の明るさに表れたものです。' }),
 L({ nm:'矢印から画像へ', tg:'横の長さ × ρ ＝ 明るさ', sel:'#panBridge', blk:'nearest',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
   act:{ label:'組織ごとに塗ってみる', fn:() => paintDemo() },
@@ -2905,14 +2916,14 @@ L({ nm:'矢印から画像へ', tg:'横の長さ × ρ ＝ 明るさ', sel:'#pan
 L({ nm:'TR：次に倒すまでの待ち時間', tg:'T1 の差をつける', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
-  text:'<b>TR</b> は、倒してから次にまた倒すまでの待ち時間です。短くすると、縦へ戻るのが遅い<b>水（脳脊髄液）が戻りきれず暗く</b>なります。<br>' +
-       'このように、<b>T1 の違いを明るさの違いにした画像</b>が T1強調です。' }),
+  text:'<b>TR</b> は、倒してから次に倒すまでの待ち時間（スマホの<b>充電時間</b>）です。短くすると、縦へ戻るのが遅い水（脳脊髄液）は戻りきれず、次に倒したときの横の矢印が短く、<b>暗く</b>なります。<br>' +
+       'こうして <b>T1 の違いを明るさの違いにした画像</b>が T1強調です。' }),
 
 L({ nm:'TE：倒してから読むまで', tg:'T2 の差をつける', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:4000, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TE を 15 → 100 ms に長くする', fn:() => applySet({ TE:100 }, true) },
-  text:'<b>TE</b> は、倒してから信号を読むまでの時間です。長くすると、横の矢印が速く縮む組織から暗くなり、<b>縮みにくい水が白く</b>残ります。<br>' +
-       'このように、<b>T2 の違いを明るさの違いにした画像</b>が T2強調です。' }),
+  text:'<b>TE</b> は、倒してから信号を読むまでの時間（画面をつけてから<b>明るさを測るまで</b>）です。長くすると、横の矢印が速く縮む組織から暗くなり、<b>縮みにくい水が白く</b>残ります。<br>' +
+       'こうして <b>T2 の違いを明るさの違いにした画像</b>が T2強調です。' }),
 
 L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
