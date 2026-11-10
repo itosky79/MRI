@@ -89,7 +89,7 @@ html[data-theme="light"]{
 html{-webkit-text-size-adjust:100%; -webkit-tap-highlight-color:transparent}
 body{
   margin:0; background:var(--ink); color:var(--text);
-  font-family:var(--gothic); font-size:14px; line-height:1.75;
+  font-family:var(--gothic); font-size:16px; line-height:1.75;
   -webkit-font-smoothing:antialiased;
   font-feature-settings:"palt" 1;   /* かなの字送りを字形に合わせて詰める（ゆるい全角送りより読みやすい） */
 }
@@ -99,13 +99,13 @@ body{
 header{padding-block:14px 9px; border-bottom:1px solid var(--line); margin-bottom:11px;
   display:flex; align-items:center; gap:12px; flex-wrap:wrap}
 .hbtn{flex:none; padding:5px 13px; background:var(--panel2); border:1px solid var(--line2);
-  border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:12.5px; cursor:pointer}
+  border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:14.5px; cursor:pointer}
 .hbtn:hover{color:var(--text); border-color:var(--teal)}
 h1{
   font-family:var(--mincho); font-weight:700; font-size:clamp(17px,2vw,22px);
   letter-spacing:.03em; margin:0; line-height:1.3;
 }
-h1 small{font-family:var(--mono); font-size:11.5px; letter-spacing:.04em; color:var(--dim); display:block; font-weight:400}
+h1 small{font-family:var(--mono); font-size:13px; letter-spacing:.04em; color:var(--dim); display:block; font-weight:400}
 
 /* ---------- workspace ---------- */
 .work{
@@ -119,8 +119,8 @@ h1 small{font-family:var(--mono); font-size:11.5px; letter-spacing:.04em; color:
 .split:hover::after,.split:focus-visible::after{background:var(--teal)}
 .split:focus-visible{outline:none}
 .railbar{display:none; justify-content:space-between; align-items:center; gap:8px; padding:2px 2px 8px; border-bottom:1px solid var(--line); margin-bottom:2px}
-.rbname{font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--dim)}
-.rbbtn{padding:3px 10px; background:var(--panel2); border:1px solid var(--line2); border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:12px; cursor:pointer}
+.rbname{font-family:var(--mono); font-size:12.5px; letter-spacing:.04em; color:var(--dim)}
+.rbbtn{padding:3px 10px; background:var(--panel2); border:1px solid var(--line2); border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:14px; cursor:pointer}
 .rbbtn:hover{color:var(--text); border-color:var(--teal)}
 body.detached .work{grid-template-columns:minmax(0,1fr)}
 body.detached .split{display:none}
@@ -139,21 +139,21 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 .stage canvas#gl{display:block; width:100%; height:100%; touch-action:none; cursor:grab}
 .stage canvas#gl:active{cursor:grabbing}
 .glerr{position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; justify-content:center;
-  gap:9px; padding:24px; background:var(--glerr); color:var(--muted); font-size:13.5px; line-height:1.85}
-.glerr b{color:var(--alert); font-size:14px; font-weight:700}
-.glinfo{margin:9px 0 0; font-family:var(--mono); font-size:11px; line-height:1.7; color:var(--dim); word-break:break-all}
+  gap:9px; padding:24px; background:var(--glerr); color:var(--muted); font-size:15.5px; line-height:1.85}
+.glerr b{color:var(--alert); font-size:16px; font-weight:700}
+.glinfo{margin:9px 0 0; font-family:var(--mono); font-size:12.5px; line-height:1.7; color:var(--dim); word-break:break-all}
 #labels{position:absolute; inset:0; pointer-events:none}
 .lab{
   position:absolute; top:0; left:0; white-space:nowrap;
-  font-size:11.5px; font-weight:500; letter-spacing:.04em;
+  font-size:13px; font-weight:500; letter-spacing:.04em;
   color:var(--labTxt); background:var(--labBg); border:1px solid var(--labLine);
   padding:0 5px; border-radius:2px; transition:opacity .18s;
   text-shadow:0 1px 3px #000;
 }
-.lab.axis{color:var(--dim); background:none; border:none; font-family:var(--mono); font-size:11px; letter-spacing:.04em}
+.lab.axis{color:var(--dim); background:none; border:none; font-family:var(--mono); font-size:12.5px; letter-spacing:.04em}
 .lab.m{color:var(--selT); border-color:var(--labMline); background:var(--labMbg)}
-.lab i{font-style:normal; font-size:11px; color:var(--muted); margin-right:5px}
-.lab b{font-weight:700; font-size:13px; letter-spacing:.02em}
+.lab i{font-style:normal; font-size:12.5px; color:var(--muted); margin-right:5px}
+.lab b{font-weight:700; font-size:15px; letter-spacing:.02em}
 .key[hidden]{display:none}
 .lab.rf{color:var(--rfText2); border-color:var(--rfLine); background:var(--rfLabBg)}
 
@@ -165,12 +165,12 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 #imgbox canvas{display:block; width:100%; height:100%; cursor:crosshair}
 #imgbox .ih{
   position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; gap:6px;
-  padding:3px 6px; font-family:var(--mono); font-size:11px; letter-spacing:.02em; color:var(--filmTxt);
+  padding:3px 6px; font-family:var(--mono); font-size:12.5px; letter-spacing:.02em; color:var(--filmTxt);
   background:linear-gradient(180deg,var(--filmScrim),var(--filmScrim0)); pointer-events:none;
 }
 #imgbox .if{
   position:absolute; bottom:0; left:0; right:0; padding:3px 6px; text-align:center;
-  font-family:var(--mono); font-size:10.5px; letter-spacing:.02em; color:var(--filmTxt2);
+  font-family:var(--mono); font-size:12px; letter-spacing:.02em; color:var(--filmTxt2);
   background:linear-gradient(0deg,var(--filmScrim),var(--filmScrim0)); pointer-events:none;
 }
 #imgbox .xh{position:absolute; width:13px; height:13px; margin:-7px 0 0 -7px; pointer-events:none}
@@ -183,7 +183,7 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 .seg{display:flex; border:1px solid var(--line2); border-radius:3px; overflow:hidden; pointer-events:auto; background:var(--scrim); backdrop-filter:blur(4px)}
 .seg button{
   padding:5px 11px; background:none; border:none; border-right:1px solid var(--line);
-  color:var(--muted); font-family:var(--mono); font-size:11.5px; letter-spacing:.03em; cursor:pointer;
+  color:var(--muted); font-family:var(--mono); font-size:13px; letter-spacing:.03em; cursor:pointer;
 }
 .seg button:last-child{border-right:none}
 .seg button[aria-pressed="true"]{background:var(--sel); color:var(--selT)}
@@ -192,20 +192,20 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 .barR{display:flex; gap:8px; align-items:center; pointer-events:auto}
 .expose{
   padding:5px 14px; border:1px solid var(--rfLine); background:var(--rfBg2); border-radius:3px;
-  color:var(--rfText); font-family:var(--mono); font-size:12px; letter-spacing:.03em; cursor:pointer;
+  color:var(--rfText); font-family:var(--mono); font-size:14px; letter-spacing:.03em; cursor:pointer;
 }
 .expose:hover{background:var(--rfBg3); color:var(--rfText2)}
 .key{
   position:absolute; left:0; right:0; bottom:0; height:20px; margin:0; padding:0 8px;
   display:flex; gap:13px; align-items:center; justify-content:center; flex-wrap:nowrap; overflow:hidden;
   background:linear-gradient(0deg,var(--scrim2),var(--scrim0));
-  font-size:11px; color:var(--dim); pointer-events:none; white-space:nowrap;
+  font-size:12.5px; color:var(--dim); pointer-events:none; white-space:nowrap;
 }
 .key i{display:inline-block; width:13px; height:3px; border-radius:1px; vertical-align:1px; margin-right:4px}
 .playbar{position:absolute; right:10px; bottom:26px; display:flex; gap:6px; align-items:center; pointer-events:auto}
 .playbar button{
   padding:4px 11px; background:var(--scrim); border:1px solid var(--line2); border-radius:3px;
-  color:var(--muted); font-family:var(--mono); font-size:11.5px; letter-spacing:.02em; cursor:pointer;
+  color:var(--muted); font-family:var(--mono); font-size:13px; letter-spacing:.02em; cursor:pointer;
 }
 .playbar button:hover{color:var(--text); border-color:var(--teal)}
 .playbar button[aria-pressed="true"]{background:var(--sel); color:var(--selT)}
@@ -221,16 +221,16 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 .rail::-webkit-scrollbar-track{background:transparent}
 .grp{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:12px 13px 13px}
 .grp-h{
-  font-family:var(--mono); font-size:11.5px; letter-spacing:.05em; color:var(--dim);
+  font-family:var(--mono); font-size:13px; letter-spacing:.05em; color:var(--dim);
   text-transform:uppercase; margin:0 0 9px; display:flex; justify-content:space-between; align-items:baseline;
 }
-.grp-h b{font-family:var(--gothic); font-weight:500; font-size:12px; letter-spacing:.02em; color:var(--muted); text-transform:none}
+.grp-h b{font-family:var(--gothic); font-weight:500; font-size:14px; letter-spacing:.02em; color:var(--muted); text-transform:none}
 
 /* ---------- tabs ---------- */
 .tabs{display:grid; grid-template-columns:repeat(4,1fr); gap:0; border:1px solid var(--line2); border-radius:3px; overflow:hidden; margin-bottom:12px}
 .tabs button{
   padding:7px 1px; background:var(--ink2); border:none; border-right:1px solid var(--line);
-  color:var(--muted); font-family:var(--gothic); font-size:12px; cursor:pointer;
+  color:var(--muted); font-family:var(--gothic); font-size:14px; cursor:pointer;
 }
 .tabs button:last-child{border-right:none}
 .tabs button[aria-pressed="true"]{background:var(--sel); color:var(--selT); box-shadow:inset 0 -2px 0 var(--teal)}
@@ -242,7 +242,7 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
   background:var(--well); border:1px solid var(--line); border-radius:2px;
 }
 .readout .big{font-family:var(--gothic); font-size:13.5px; color:var(--selT); letter-spacing:.02em}
-.readout .sm{font-family:var(--mono); font-size:11px; color:var(--dim); letter-spacing:.02em;
+.readout .sm{font-family:var(--mono); font-size:12.5px; color:var(--dim); letter-spacing:.02em;
   white-space:nowrap; padding-left:8px}
 .readout .sm b{color:var(--teal); font-weight:400}
 
@@ -267,7 +267,7 @@ ol.seq button[aria-current="step"] .tg2{color:var(--stepRuby)}
 .seqnav{display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:10px}
 .note{
   margin:10px 0 0; padding:9px 11px; background:var(--ink2); border-left:2px solid var(--teal);
-  border-radius:0 2px 2px 0; font-size:13px; color:var(--muted); line-height:1.85;
+  border-radius:0 2px 2px 0; font-size:15px; color:var(--muted); line-height:1.85;
 }
 .note b{color:var(--selT); font-weight:500}
 .note .eq{display:block; margin:6px 0 2px; font-family:var(--mono); font-size:12px; color:var(--amber); letter-spacing:.02em; line-height:1.7}
@@ -277,10 +277,10 @@ ol.seq button[aria-current="step"] .tg2{color:var(--stepRuby)}
 button.opt{
   display:flex; flex-direction:column; align-items:center; gap:2px; padding:7px 3px 6px;
   background:var(--panel2); border:1px solid var(--line); border-radius:3px; color:var(--muted);
-  font-family:var(--gothic); font-size:12px; font-weight:500; cursor:pointer;
+  font-family:var(--gothic); font-size:14px; font-weight:500; cursor:pointer;
   transition:border-color .15s,color .15s,background .15s;
 }
-button.opt .ruby{font-family:var(--mono); font-size:10.5px; letter-spacing:.02em; color:var(--dim)}
+button.opt .ruby{font-family:var(--mono); font-size:12px; letter-spacing:.02em; color:var(--dim)}
 button.opt:hover{border-color:var(--line2); color:var(--text)}
 button.opt[aria-pressed="true"]{background:var(--sel); border-color:var(--teal); color:var(--selT)}
 button.opt[aria-pressed="true"] .ruby{color:var(--teal)}
@@ -289,7 +289,7 @@ button.opt:focus-visible,button.act:focus-visible,summary:focus-visible{outline:
 .acts{display:grid; grid-template-columns:1fr 1fr; gap:6px}
 button.act{
   padding:7px 4px; background:transparent; border:1px solid var(--line2); border-radius:3px;
-  color:var(--muted); font-family:var(--gothic); font-size:12.5px; cursor:pointer; transition:.15s;
+  color:var(--muted); font-family:var(--gothic); font-size:14.5px; cursor:pointer; transition:.15s;
 }
 button.act:hover{background:var(--panel2); color:var(--text); border-color:var(--teal)}
 button.act.wide{grid-column:1/-1}
@@ -299,8 +299,8 @@ button.act.rf:hover{background:var(--rfBg); border-color:var(--amber)}
 /* ---------- スライダ ---------- */
 .sld{margin:0 0 9px}
 .sld-h{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:1px}
-.sld-h span{font-size:12.5px; color:var(--muted)}
-.sld-h b{font-family:var(--mono); font-size:12px; font-weight:400; color:var(--teal)}
+.sld-h span{font-size:14.5px; color:var(--muted)}
+.sld-h b{font-family:var(--mono); font-size:14px; font-weight:400; color:var(--teal)}
 .sld-h b.off{color:var(--dim)}
 input[type=range]{
   -webkit-appearance:none; appearance:none; width:100%; height:20px; background:transparent;
@@ -343,21 +343,21 @@ input[type=range]:disabled{opacity:.35; cursor:default}
 .ticks{position:absolute; left:0; right:0; top:30px; height:18px}
 .ticks button{
   position:absolute; top:0; transform:translateX(-50%); padding:3px 3px 0; background:none; border:none;
-  color:var(--dim); font-family:var(--mono); font-size:11.5px; cursor:pointer; line-height:1.2;
+  color:var(--dim); font-family:var(--mono); font-size:13px; cursor:pointer; line-height:1.2;
 }
 .ticks button::before{content:""; position:absolute; left:50%; top:-3px; width:1px; height:4px; background:var(--line2)}
 .ticks button:hover{color:var(--text)}
 .ticks button[aria-current="true"]{color:var(--teal); font-weight:700}
-.rends{display:flex; justify-content:space-between; gap:8px; margin-top:2px; font-size:12px; color:var(--dim)}
+.rends{display:flex; justify-content:space-between; gap:8px; margin-top:2px; font-size:14px; color:var(--dim)}
 .detent button{
   padding:2px 7px; background:var(--panel2); border:1px solid var(--line); border-radius:2px;
-  color:var(--dim); font-family:var(--mono); font-size:11px; cursor:pointer;
+  color:var(--dim); font-family:var(--mono); font-size:12.5px; cursor:pointer;
 }
 .detent button:hover{color:var(--text); border-color:var(--teal)}
 
 /* ---------- チェックボックス ---------- */
 .toggles{display:flex; flex-direction:column; gap:1px}
-label.tg{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--muted); cursor:pointer; padding:2px 0}
+label.tg{display:flex; align-items:center; gap:8px; font-size:15.5px; color:var(--muted); cursor:pointer; padding:2px 0}
 label.tg:hover{color:var(--text)}
 input[type=checkbox]{
   appearance:none; -webkit-appearance:none; width:14px; height:14px; flex:none;
@@ -375,7 +375,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset
 .chip{
   display:flex; align-items:center; gap:6px; padding:4px 9px 4px 5px; background:var(--panel2);
   border:1px solid var(--line); border-radius:3px; color:var(--muted);
-  font-family:var(--gothic); font-size:12.5px; cursor:pointer; transition:.15s;
+  font-family:var(--gothic); font-size:14.5px; cursor:pointer; transition:.15s;
 }
 .chip i{width:14px; height:14px; border-radius:2px; border:1px solid var(--swLine); flex:none}
 .chip:hover{color:var(--text); border-color:var(--line2)}
@@ -386,30 +386,30 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset
 .brow{
   display:grid; grid-template-columns:60px 1fr 32px 17px; align-items:center; gap:7px;
   padding:4px 7px; background:var(--panel2); border:1px solid var(--line); border-radius:3px;
-  color:var(--muted); font-family:var(--gothic); font-size:12px; cursor:pointer; text-align:left;
+  color:var(--muted); font-family:var(--gothic); font-size:14px; cursor:pointer; text-align:left;
 }
 .brow:hover{color:var(--text); border-color:var(--line2)}
 .brow[aria-pressed="true"]{background:var(--sel); border-color:var(--teal); color:var(--selT)}
 .brow.lit{border-color:var(--amber); background:var(--rfBg2); color:var(--rfText)}
 .bbar{display:block; height:7px; border-radius:2px; background:var(--ink2); overflow:hidden}
 .bbar i{display:block; height:100%; width:0; background:var(--alert); border-radius:2px}
-.bv{font-family:var(--mono); font-size:11.5px; color:var(--teal); text-align:right}
+.bv{font-family:var(--mono); font-size:13px; color:var(--teal); text-align:right}
 .brow[aria-pressed="true"] .bv{color:var(--selT)}
 .bsw{width:17px; height:17px; border-radius:2px; border:1px solid var(--swLine)}
 .bchain{
   display:flex; align-items:center; justify-content:space-between; gap:4px; margin:0 0 2px;
-  font-family:var(--mono); font-size:11px; letter-spacing:.02em; color:var(--dim);
+  font-family:var(--mono); font-size:12.5px; letter-spacing:.02em; color:var(--dim);
 }
-.tiny{margin:7px 0 0; font-size:12px; line-height:1.75; color:var(--dim)}
+.tiny{margin:7px 0 0; font-size:14px; line-height:1.75; color:var(--dim)}
 .tiny b{color:var(--muted); font-weight:500}
 .lede{
   margin:0 0 9px; padding:6px 10px; background:var(--well); border-left:2px solid var(--amber);
-  border-radius:0 2px 2px 0; font-size:13px; line-height:1.7; color:var(--rfText);
+  border-radius:0 2px 2px 0; font-size:15px; line-height:1.7; color:var(--rfText);
 }
 /* ---------- 組織テーブル（いまは未使用） ---------- */
-table.tis{width:100%; border-collapse:collapse; font-size:12.5px}
+table.tis{width:100%; border-collapse:collapse; font-size:14.5px}
 table.tis th{
-  font-family:var(--mono); font-size:11px; letter-spacing:.03em; color:var(--dim);
+  font-family:var(--mono); font-size:12.5px; letter-spacing:.03em; color:var(--dim);
   font-weight:400; text-align:right; padding:0 0 4px; border-bottom:1px solid var(--line);
 }
 table.tis th:first-child{text-align:left}
@@ -420,7 +420,7 @@ table.tis tr[aria-selected="true"] td{background:var(--sel2)}
 table.tis tr[aria-selected="true"] .nm{color:var(--selT)}
 .sw{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; vertical-align:-1px}
 .nm{color:var(--muted)}
-td.num{text-align:right; font-family:var(--mono); font-size:11.5px; color:var(--dim); padding-left:6px; white-space:nowrap}
+td.num{text-align:right; font-family:var(--mono); font-size:13px; color:var(--dim); padding-left:6px; white-space:nowrap}
 td.barc{width:52px; padding-left:8px}
 .sigbar{height:7px; background:var(--track); border:1px solid var(--line); border-radius:1px; overflow:hidden}
 .sigbar i{display:block; height:100%; background:linear-gradient(90deg,var(--teal),var(--gap))}
@@ -430,63 +430,63 @@ td.barc{width:52px; padding-left:8px}
 .pan{background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
   padding:9px 12px 10px; min-width:0; min-height:0; display:flex; flex-direction:column}
 .pan .ph2{display:flex; justify-content:space-between; align-items:baseline; margin:0; gap:10px; flex-wrap:wrap}
-.pan h2{font-family:var(--mincho); font-weight:700; font-size:13px; margin:0; color:var(--head)}
-.pan .hint{font-size:11.5px; color:var(--dim)}
+.pan h2{font-family:var(--mincho); font-weight:700; font-size:15px; margin:0; color:var(--head)}
+.pan .hint{font-size:13px; color:var(--dim)}
 .pan .cvwrap{position:relative; flex:1; min-height:0; margin-top:5px}
 .pan canvas{position:absolute; inset:0; display:block; width:100%; height:100%}
 
 /* ---------- filmstrip ---------- */
 .films{margin-top:10px; border:1px solid var(--line); border-radius:var(--r); background:var(--panel); padding:12px 14px 14px}
 .films .fh2{display:flex; justify-content:space-between; align-items:baseline; margin:0 0 10px}
-.films h2{font-family:var(--mincho); font-weight:700; font-size:14px; margin:0; color:var(--head)}
-.films .hint{font-family:var(--mono); font-size:11px; letter-spacing:.03em; color:var(--dim)}
+.films h2{font-family:var(--mincho); font-weight:700; font-size:16px; margin:0; color:var(--head)}
+.films .hint{font-family:var(--mono); font-size:12.5px; letter-spacing:.03em; color:var(--dim)}
 .strip{display:flex; gap:9px; overflow-x:auto; padding-bottom:5px; min-height:132px; align-items:flex-start}
-.strip .empty{font-size:12.5px; color:var(--dim); padding:34px 4px; line-height:1.8}
+.strip .empty{font-size:14.5px; color:var(--dim); padding:34px 4px; line-height:1.8}
 .strip figure{margin:0; flex:none; width:88px; cursor:zoom-in}
 .strip img{display:block; width:88px; height:104px; object-fit:cover; border:1px solid var(--line2); border-radius:2px; background:var(--filmbg)}
-.strip figcaption{font-family:var(--mono); font-size:10.5px; color:var(--dim); margin-top:4px; letter-spacing:.03em; line-height:1.45}
+.strip figcaption{font-family:var(--mono); font-size:12px; color:var(--dim); margin-top:4px; letter-spacing:.03em; line-height:1.45}
 .strip figcaption b{color:var(--teal); font-weight:400; display:block}
 .strip figure:hover img{border-color:var(--teal)}
 
 /* ---------- 問題 ---------- */
-.qnote{margin:0 0 10px; font-size:13px; line-height:1.8; color:var(--muted)}
+.qnote{margin:0 0 10px; font-size:15px; line-height:1.8; color:var(--muted)}
 .qhead{display:flex; justify-content:space-between; align-items:center; margin-bottom:9px}
-.qhead span{font-family:var(--mono); font-size:11.5px; letter-spacing:.03em; color:var(--dim)}
-.qhead button{padding:4px 9px; font-size:12px}
-.qtext{margin:0 0 10px; font-size:13px; line-height:1.7; color:var(--head); text-wrap:balance}
-.qsrc{margin:-5px 0 10px; font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--dim); line-height:1.6}
+.qhead span{font-family:var(--mono); font-size:13px; letter-spacing:.03em; color:var(--dim)}
+.qhead button{padding:4px 9px; font-size:14px}
+.qtext{margin:0 0 10px; font-size:15px; line-height:1.7; color:var(--head); text-wrap:balance}
+.qsrc{margin:-5px 0 10px; font-family:var(--mono); font-size:12.5px; letter-spacing:.04em; color:var(--dim); line-height:1.6}
 .qsrc b{color:var(--teal); font-weight:400; letter-spacing:.03em}
 .choices{list-style:none; margin:0 0 10px; padding:0; display:flex; flex-direction:column; gap:4px}
 .choices button{
   width:100%; text-align:left; display:grid; grid-template-columns:16px 1fr; gap:7px; align-items:baseline;
   padding:6px 9px; background:var(--panel2); border:1px solid var(--line); border-radius:3px;
-  color:var(--muted); font-family:var(--gothic); font-size:13px; cursor:pointer; line-height:1.5;
+  color:var(--muted); font-family:var(--gothic); font-size:15px; cursor:pointer; line-height:1.5;
 }
 .choices button:hover:not([disabled]){border-color:var(--line2); color:var(--text)}
 .choices button[disabled]{cursor:default}
-.choices .n{font-family:var(--mono); font-size:11.5px; color:var(--dim)}
+.choices .n{font-family:var(--mono); font-size:13px; color:var(--dim)}
 .choices button.ok{background:var(--okBg); border-color:var(--okLine); color:var(--okText)}
 .choices button.ok .n{color:var(--okN)}
 .choices button.ng{background:var(--ngBg); border-color:var(--ngLine); color:var(--ngText)}
 .choices button.ng .n{color:var(--ngN)}
 .qexp{margin:0 0 10px; padding:9px 11px; background:var(--ink2); border-left:2px solid var(--teal);
-  border-radius:0 2px 2px 0; font-size:13px; color:var(--muted); line-height:1.8}
+  border-radius:0 2px 2px 0; font-size:15px; color:var(--muted); line-height:1.8}
 .qexp[hidden]{display:none}
 #qPaste{
   width:100%; height:180px; resize:vertical; padding:9px 10px; border-radius:3px;
   background:var(--ink2); border:1px solid var(--line2); color:var(--text);
-  font-family:var(--mono); font-size:12.5px; line-height:1.7;
+  font-family:var(--mono); font-size:14.5px; line-height:1.7;
 }
 #qPaste:focus-visible{outline:2px solid var(--teal); outline-offset:1px}
 pre.fmt{
   margin:7px 0 0; padding:9px 10px; background:var(--ink2); border-radius:3px; overflow-x:auto;
-  font-family:var(--mono); font-size:12px; line-height:1.65; color:var(--muted); white-space:pre;
+  font-family:var(--mono); font-size:14px; line-height:1.65; color:var(--muted); white-space:pre;
 }
 
 /* ---------- 折りたたみ ---------- */
 details.fold{margin-top:10px; border-top:1px solid var(--line); padding-top:8px}
 details.fold:first-child{margin-top:0; border-top:none; padding-top:0}
-details.fold summary{list-style:none; cursor:pointer; font-family:var(--mono); font-size:11px;
+details.fold summary{list-style:none; cursor:pointer; font-family:var(--mono); font-size:12.5px;
   letter-spacing:.03em; color:var(--dim)}
 details.fold summary::-webkit-details-marker{display:none}
 details.fold summary::before{content:"+ "; color:var(--teal)}
@@ -500,11 +500,11 @@ details.fold[open] summary::before{content:"− "}
   background:var(--fill); color:var(--teal); font-size:11.5px; font-family:var(--gothic); cursor:pointer}
 .gloss .gl button:hover{background:var(--sel)}
 .gloss .gh{margin:12px 0 2px; font-size:11px; color:var(--dim); letter-spacing:.04em}
-details.fold p{margin:7px 0 0; font-size:12.5px; color:var(--dim); line-height:1.8}
+details.fold p{margin:7px 0 0; font-size:14.5px; color:var(--dim); line-height:1.8}
 
 /* ---------- 画面の番号 ---------- */
 .pan h2 em{font-style:normal; color:var(--teal); margin-right:4px}
-.stno{flex:none; font-size:13px; color:var(--teal); line-height:1; padding:0 2px 0 0; pointer-events:none}
+.stno{flex:none; font-size:15px; color:var(--teal); line-height:1; padding:0 2px 0 0; pointer-events:none}
 
 /* ---------- はじめてのチュートリアル ---------- */
 #tut{position:fixed; inset:0; z-index:70; pointer-events:none}
@@ -570,11 +570,11 @@ body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足�
 .gcard{width:min(340px,100%); background:var(--panel); border:1px solid var(--line2);
   border-radius:6px; padding:16px 17px 15px; box-shadow:0 22px 60px var(--shadow3)}
 .ghead{margin:0 0 12px}
-.ghead b{font-family:var(--mincho); font-size:14.5px; color:var(--selT)}
-.gtip{margin:0 0 14px; font-size:13.5px; line-height:1.85; color:var(--muted)}
+.ghead b{font-family:var(--mincho); font-size:16.5px; color:var(--selT)}
+.gtip{margin:0 0 14px; font-size:15.5px; line-height:1.85; color:var(--muted)}
 .gtip b{font-weight:500; color:var(--text)}
 #gClose{width:100%; padding:10px; background:var(--sel); border:1px solid var(--teal); border-radius:3px;
-  color:var(--selT); font-family:var(--gothic); font-size:13.5px; cursor:pointer}
+  color:var(--selT); font-family:var(--gothic); font-size:15.5px; cursor:pointer}
 #gClose:hover{background:var(--hoverBg)}
 #lightbox{
   position:fixed; inset:0; background:var(--modal2); display:none; z-index:50;
@@ -582,8 +582,8 @@ body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足�
 }
 #lightbox.on{display:flex}
 #lightbox img{display:block; max-width:min(92vw,420px); max-height:78vh; border:1px solid var(--line2); image-rendering:auto}
-#lightbox p{margin:0; font-family:var(--mono); font-size:12px; color:var(--muted); letter-spacing:.02em; text-align:center; line-height:1.8}
-#lightbox button{padding:7px 20px; background:transparent; border:1px solid var(--line2); border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:13px; cursor:pointer}
+#lightbox p{margin:0; font-family:var(--mono); font-size:14px; color:var(--muted); letter-spacing:.02em; text-align:center; line-height:1.8}
+#lightbox button{padding:7px 20px; background:transparent; border:1px solid var(--line2); border-radius:3px; color:var(--muted); font-family:var(--gothic); font-size:15px; cursor:pointer}
 #lightbox button:hover{color:var(--text); border-color:var(--teal)}
 
 /* ---------- スマートフォン・タブレット ---------- */
@@ -622,25 +622,25 @@ body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足�
   .key{display:none}
 }
 @media (max-width:560px){
-  .seg button{padding:5px 6px; font-size:11px; letter-spacing:.02em}
-  .expose{padding:5px 10px; font-size:11px; letter-spacing:.02em}
+  .seg button{padding:5px 6px; font-size:12.5px; letter-spacing:.02em}
+  .expose{padding:5px 10px; font-size:12.5px; letter-spacing:.02em}
   .wrap{padding-inline:14px;
     padding-left:max(14px,env(safe-area-inset-left)); padding-right:max(14px,env(safe-area-inset-right));
     padding-bottom:max(40px,env(safe-area-inset-bottom))}
-  h1{font-size:17px}
+  h1{font-size:19.5px}
   .stage{height:clamp(230px,42vh,380px)}
-  .tabs button{font-size:12px; padding:9px 1px}
+  .tabs button{font-size:14px; padding:9px 1px}
   .pan{height:240px}
-  .choices button{padding:8px 9px; font-size:13.5px}
+  .choices button{padding:8px 9px; font-size:15.5px}
   .seqnav .act,.acts .act{padding:9px 4px}
   #imgbox .if{display:none}
 }
-#b0Seg button small{display:block; font-size:11.5px; opacity:.72; letter-spacing:.02em}
+#b0Seg button small{display:block; font-size:13px; opacity:.72; letter-spacing:.02em}
 .numin{width:70px; font:inherit; color:inherit; background:transparent; border:1px solid var(--inputLine); border-radius:3px; padding:1px 4px; text-align:right}
-.stopat{display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--mut, var(--muted))}
+.stopat{display:inline-flex; align-items:center; gap:4px; font-size:14px; color:var(--mut, var(--muted))}
 .echotg{display:inline-flex; align-items:center; cursor:pointer}
 .echotg input{position:absolute; opacity:0; pointer-events:none}
-.echotg span{font-size:13px; padding:5px 10px; border-radius:4px; border:1px solid var(--tgLine); color:var(--tgT); background:var(--tgBg)}
+.echotg span{font-size:15px; padding:5px 10px; border-radius:4px; border:1px solid var(--tgLine); color:var(--tgT); background:var(--tgBg)}
 .echotg input:checked + span{background:var(--tgOn); color:var(--tgOnT); font-weight:600}
 .echotg input:checked + span::before{content:'● '}
 .echotg input:not(:checked) + span::before{content:'○ '}
@@ -666,9 +666,9 @@ header{border-bottom:none}
 
 .grp,.pan,.films,.stage{border-radius:14px; box-shadow:var(--cardShadow)}
 html[data-theme="light"] .grp,html[data-theme="light"] .pan,html[data-theme="light"] .films,html[data-theme="light"] .stage{border-color:transparent}
-.grp-h{font-family:var(--gothic); font-size:13px; font-weight:700; color:var(--text)}
-.grp-h b{font-size:12px; font-weight:400; color:var(--muted)}
-.pan h2,.films h2{font-size:14.5px}
+.grp-h{font-family:var(--gothic); font-size:15px; font-weight:700; color:var(--text)}
+.grp-h b{font-size:14px; font-weight:400; color:var(--muted)}
+.pan h2,.films h2{font-size:16.5px}
 
 /* セグメント */
 .tabs,.seg{border:none; border-radius:10px; padding:2px; gap:2px; background:var(--fill) !important; overflow:visible}
@@ -722,7 +722,7 @@ ol.seq button[aria-current="step"]{background:var(--sel)}
 /* 断面を動かしているあいだだけ出る位置の表示 */
 #sliceTip{position:absolute; left:50%; top:52px; transform:translateX(-50%); z-index:3; pointer-events:none;
   padding:5px 14px; border-radius:999px; background:var(--scrim2); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
-  font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; box-shadow:0 4px 14px var(--shadow);
+  font-size:16px; font-weight:700; color:var(--text); white-space:nowrap; box-shadow:0 4px 14px var(--shadow);
   opacity:0; transition:opacity .2s}
 #sliceTip.on{opacity:1}
 @media (max-width:560px){ #sliceTip{top:42%} }   /* スマホは上の操作が3段あるので、真ん中あたりに出す */
@@ -730,8 +730,8 @@ ol.seq button[aria-current="step"]{background:var(--sel)}
 #tisSub{display:block; flex-basis:100%; margin:1px 0 0}
 .lab{border:none; border-radius:6px; padding:0 6px}
 .lab.ta{padding:0 5px; line-height:1.5}            /* 脳全体の組織ラベルは控えめに（主役は矢印） */
-.lab.ta i{font-size:9.5px; margin-right:3px}
-.lab.ta b{font-size:10.5px}
+.lab.ta i{font-size:11px; margin-right:3px}
+.lab.ta b{font-size:12px}
 html[data-theme="light"] .lab{text-shadow:none}
 .lab.axis{background:none}
 #imgbox{border:none; border-radius:10px}
@@ -777,40 +777,40 @@ ol.seq .tg2{font-size:12.5px}
 .gloss dd{font-size:13.5px}
 .gloss .gl button{font-size:13px}
 .gloss .gh{font-size:12.5px}
-.lab{font-size:13px}
-.lab i{font-size:12px}
-.lab b{font-size:14.5px}
-.lab.axis{font-size:12.5px}
-.lab.ta i{font-size:11px}
-.lab.ta b{font-size:12.5px}
-.key{font-size:12.5px; height:23px}
+.lab{font-size:15px}
+.lab i{font-size:14px}
+.lab b{font-size:16.5px}
+.lab.axis{font-size:14.5px}
+.lab.ta i{font-size:12.5px}
+.lab.ta b{font-size:14.5px}
+.key{font-size:14.5px; height:27px}
 /* シーケンス・詳細・問題タブの小さかった文字（10.5〜12.5px）も1段上げる */
-.seg button{font-size:12.5px}
-.playbar button{font-size:12.5px}
-button.opt{font-size:13.5px}
-.ruby{font-size:11.5px}
-#dTR button,#dTE button{font-size:12.5px}
-.bv,.bn{font-size:13px}
-#modeTabs button{font-size:13.5px}
-.rends span{font-size:13px}
-.grp-h,.grp-h b{font-size:13.5px}
-button.act{font-size:13.5px}
-.chip{font-size:13.5px}
-.qsrc,#qNo{font-size:12.5px}
-#imgSeq,#prePar{font-size:12.5px}
-details.fold summary{font-size:12.5px}
-.sld-h span,.sld-h b{font-size:13.5px}
-#b0Seg small{font-size:12.5px}
-.hbtn{font-size:13px}
+.seg button{font-size:14.5px}
+.playbar button{font-size:14.5px}
+button.opt{font-size:15.5px}
+.ruby{font-size:13px}
+#dTR button,#dTE button{font-size:14.5px}
+.bv,.bn{font-size:15px}
+#modeTabs button{font-size:15.5px}
+.rends span{font-size:15px}
+.grp-h,.grp-h b{font-size:15.5px}
+button.act{font-size:15.5px}
+.chip{font-size:15.5px}
+.qsrc,#qNo{font-size:14.5px}
+#imgSeq,#prePar{font-size:14.5px}
+details.fold summary{font-size:14.5px}
+.sld-h span,.sld-h b{font-size:15.5px}
+#b0Seg small{font-size:14.5px}
+.hbtn{font-size:15px}
 /* 画面に足した印・見出し */
-.relw{margin-left:auto; font-size:13px; font-weight:700; color:var(--teal); padding:2px 10px; border-radius:9px; background:var(--fill)}
-.mk{position:absolute; display:none; transform:translate(-50%,-140%); padding:1px 7px; border-radius:7px; font-size:12px; font-weight:700;
+.relw{margin-left:auto; font-size:15px; font-weight:700; color:var(--teal); padding:2px 10px; border-radius:9px; background:var(--fill)}
+.mk{position:absolute; display:none; transform:translate(-50%,-140%); padding:1px 7px; border-radius:7px; font-size:14px; font-weight:700;
   color:#fff; background:rgba(17,120,143,.92); white-space:nowrap; pointer-events:none}
 .mk::after{content:""; position:absolute; left:50%; top:100%; margin-left:-5px; border:5px solid transparent; border-top-color:rgba(17,120,143,.92)}
 .mk.mkl{background:rgba(190,59,48,.92); transform:translate(-50%,45%)}   /* 病変は点の下に出して、水の印と重ならないように */
 .mk.mkl::after{top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(190,59,48,.92)}
 .strip figure{position:relative}
-.mk.smk{font-size:11px}
+.mk.smk{font-size:12.5px}
 body.markOn .mk.smk{display:block}
 .wflash{box-shadow:0 0 0 3px rgba(17,120,143,.55)}
 /* 用語札：画面の物と同じ色の枠。押すとその物が光る */
@@ -828,7 +828,14 @@ body.markOn .mk.smk{display:block}
 .tw.wire{color:#5E7386} .tw.ang,.tw.echo{color:#11788F} .tw.fan{color:#5E7386} .tw.frame,.tw.relw,.tw.thick{color:#11788F} .tw.water{color:#11788F}
 .ttext b .tw{background:var(--panel)}
 .lab.flash{box-shadow:0 0 0 3px rgba(17,120,143,.5); font-weight:700}
+/* アプリ全体を大きくしたのに合わせて、学習タブの一覧・説明も1段上げる */
+#learnGuide,.tiny{font-size:15px}
+.chap h4{font-size:16.5px} .chap h4 .cno{font-size:14px} .chap .cgoal{font-size:14px}
+ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:13.5px}
+.gloss dt{font-size:15.5px} .gloss dd{font-size:14.5px} .gloss .gl button{font-size:14px} .gloss .gh{font-size:13.5px}
 @media (max-width:560px){
+  .stage .seg button{font-size:12.5px}   /* スマホは 3D の上のボタンが3段にならないよう、ここだけ控えめに */
+  .playbar button{font-size:13px}
   .ttext{font-size:15px}
   #tutCard.dock{width:calc(100vw - 16px)}
 }
@@ -2650,7 +2657,7 @@ function readColors() {
    'gap', 'tagbg', 'env', 'rfDim', 'axisT', 'inputLine'].forEach(k => { C[k] = g('--' + k); });
   C.mut = C.muted;
   /* グラフの字。数字は等幅のまま、日本語は等幅の全角フォントに落ちると字間が空いて読みにくいので、ふつうのゴシックへ回す */
-  MONO = '12.5px "IBM Plex Mono","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
+  MONO = '13.5px "IBM Plex Mono","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
 }
 let MONO = '';
 readColors();
