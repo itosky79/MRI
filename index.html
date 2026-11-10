@@ -2749,7 +2749,12 @@ function drawSeq() {
   if (te) {
     box(X(te.t) - 18, X(te.t) + 18, h * 0.075);
     for (let k = 0; k < 4; k++) { const x = X(te.t) - 34 + k * 1.5; box(x, x + 1, h * 0.018 + k * h * 0.006); }
-    if (P.tag && P.tag.pe) { cx.fillStyle = C.grad; cx.textAlign = 'right'; cx.fillText('位相エンコード（毎回強さを変える）→', X(te.t) - 38, gy - h * 0.02); }
+    if (P.tag && P.tag.pe) {
+      cx.fillStyle = C.grad;
+      const lt = '位相エンコード（毎回強さを変える）→';
+      if (cx.measureText(lt).width < X(te.t) - 38 - L - 6) { cx.textAlign = 'right'; cx.fillText(lt, X(te.t) - 38, gy - h * 0.02); }
+      else { cx.textAlign = 'left'; cx.fillText('↓ 位相エンコード', Math.max(L + 2, X(te.t) - 60), gy - h * 0.12); }   // 狭い画面では短く、上に
+    }
   }
   /* 信号：実際に計算している |Mxy| の記録 */
   const sy = rows[2].y, sh = h * 0.18;
@@ -4327,9 +4332,13 @@ function tutPlace(el) {
 function tutFit(el) {   // 光らせるものが、下に固定したカードに隠れないようにずらす
   if (!el) return;
   const avail = innerHeight - tutCard.offsetHeight - 30, r = el.getBoundingClientRect();
+  /* スマホでは 3D が画面の上に貼りついているので、光らせるものはその下から見せる */
+  let top = 8;
+  const stk = stage.closest('.left') ? [...document.querySelectorAll('.left > *')].find(e => getComputedStyle(e).position === 'sticky') : null;
+  if (stk && !stk.contains(el)) top = stk.getBoundingClientRect().bottom + 8;
   let dy = 0;
-  if (r.bottom > avail) dy = Math.min(r.top - 8, r.bottom - avail);
-  else if (r.top < 8) dy = r.top - 8;
+  if (r.bottom > avail) dy = Math.min(r.top - top, r.bottom - avail);
+  else if (r.top < top) dy = r.top - top;
   if (dy) { window.scrollBy(0, dy); tutPlace(el); }
 }
 function tutShow() {
