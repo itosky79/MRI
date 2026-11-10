@@ -541,7 +541,7 @@ details.fold p{margin:7px 0 0; font-size:12.5px; color:var(--dim); line-height:1
 .kpair>span{display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11.5px; color:var(--dim)}
 .kpair canvas{display:block; height:150px; border-radius:6px; background:#000}
 .tmap{display:grid; gap:0; margin:9px 0 8px}
-.tmap .z{display:grid; grid-template-columns:4.2em 1fr; gap:10px; align-items:center; padding:8px 10px; border-radius:8px; background:var(--fill)}
+.tmap .z{display:grid; grid-template-columns:1.6em 1fr; gap:10px; align-items:center; padding:8px 10px; border-radius:8px; background:var(--fill)}
 .tmap .zl{font-weight:700; color:var(--head); line-height:1.3}
 .tmap .zl small{display:block; font-weight:400; font-size:11px; color:var(--dim)}
 .tmap .zt{line-height:1.6}
@@ -812,8 +812,7 @@ details.fold summary{font-size:12.5px}
 .strip figure{position:relative}
 .mk.smk{font-size:11px}
 body.markOn .mk.smk{display:block}
-.wflash{animation:wfl .55s ease-in-out 3}
-@keyframes wfl{50%{box-shadow:0 0 0 4px rgba(17,120,143,.55)}}
+.wflash{box-shadow:0 0 0 3px rgba(17,120,143,.55)}
 /* 用語札：画面の物と同じ色の枠。押すとその物が光る */
 .tw{display:inline-block; padding:0 7px; margin:1px 2px; border-radius:7px; border:1.5px solid currentColor; background:var(--panel);
   font-weight:700; line-height:1.5; cursor:pointer; white-space:nowrap}
@@ -2342,8 +2341,7 @@ function place(key, x, y, z, txt, on) {
 /* ================= 画面の更新 ================= */
 let labPhase = 0, echoFlash = 0;
 P.tag = {};
-/* ---- 用語と画面の物を結びつける：カードの用語札（[[キー:言葉]]）を押すと、その物がふくらんで光る ----
-   カードが出たときにも、文に出てくる物を順に1回ずつ光らせる */
+/* ---- 用語と画面の物を結びつける：カードの用語札（[[キー:言葉]]）を押すと、その物の色とラベルが静かに明るくなる（大きさは変えない） */
 const WFL = {};
 const WKEYS = ['m', 'm0', 'mxy', 'spins', 'rf', 'b0', 'flux', 'mag', 'h', 'coil', 'band', 'wire', 'ang', 'fan', 'echo', 'thick'];
 const WLAB = { m:['m', 'fVox'], m0:['m0'], mxy:['mxy'], rf:['b1'], b0:['z', 'boreB0'], coil:['coil'], flux:['flux'], mag:['mag'], band:['slBand'],
@@ -2351,7 +2349,7 @@ const WLAB = { m:['m', 'fVox'], m0:['m0'], mxy:['mxy'], rf:['b1'], b0:['z', 'bor
 const WDOM = { frame:'#frameSeg', relw:'#relW', water:'.mkw' };   // 画面の部品（ボタンや印）を光らせる
 function wFlash(k) {
   if (WDOM[k]) {
-    document.querySelectorAll(WDOM[k]).forEach(e => { e.classList.remove('wflash'); void e.offsetWidth; e.classList.add('wflash'); });
+    document.querySelectorAll(WDOM[k]).forEach(e => { e.classList.add('wflash'); setTimeout(() => e.classList.remove('wflash'), 1800); });
     return;
   }
   if (WKEYS.includes(k)) WFL[k] = 1.8;
@@ -2370,16 +2368,23 @@ function wTargets(k) {
   }
   return [];
 }
-function wFlashUpdate(dt) {
+const WSAVE = {};   // 光らせている間だけ変えた発光色を、あとで元に戻すために覚えておく
+function wMats(k) {
+  const ms = new Set();
+  for (const g of wTargets(k)) g.traverse(o => { if (o.material && o.material.emissive) ms.add(o.material); });
+  return [...ms];
+}
+function wFlashUpdate(dt) {   // 跳ねさせない：大きさは変えず、色だけを静かに明るくする
   for (const k of WKEYS) {
     const left = WFL[k] || 0;
-    const p = left > 0 ? Math.abs(Math.sin((1.8 - left) * 5.2)) : 0;
-    if (k === 'coil') { if (left > 0) coilMat.emissive.setRGB(0.15 + 0.5 * p, 0.12 + 0.3 * p, 0.25 + 0.6 * p); }
-    else if (k === 'wire') { BORE_WM.emissive.setRGB(0.25 * p, 0.45 * p, 0.55 * p); }
-    else if (k === 'band') { if (left > 0) slBand.material.opacity = 0.25 + 0.35 * p; }
-    else if (left > 0 || WFL[k] === 0) { for (const g of wTargets(k)) g.scale.setScalar(1 + 0.2 * p); }
+    if (k === 'coil') { if (left > 0) coilMat.emissive.setRGB(0.45, 0.30, 0.70); }
+    else if (k === 'band') { if (left > 0) slBand.material.opacity = 0.5; }
+    else if (k === 'wire') { BORE_WM.emissive.setRGB(left > 0 ? 0.2 : 0, left > 0 ? 0.42 : 0, left > 0 ? 0.52 : 0); }
+    else if (left > 0) {
+      WSAVE[k] = WSAVE[k] || new Map();
+      for (const m of wMats(k)) { if (!WSAVE[k].has(m)) WSAVE[k].set(m, m.emissive.clone()); m.emissive.setRGB(0.30, 0.55, 0.62); }
+    } else if (WSAVE[k]) { WSAVE[k].forEach((c, m) => m.emissive.copy(c)); delete WSAVE[k]; }
     if (left > 0) WFL[k] = Math.max(0, left - dt);
-    else if (WFL[k] === 0) delete WFL[k];          // 元の大きさに戻したら終わり
     (WLAB[k] || []).forEach(id => LABS[id] && LABS[id].classList.toggle('flash', left > 0));
   }
 }
@@ -3099,20 +3104,21 @@ function wellDraw(cv) {
    どのカードも 2 行まで。ただし切り詰めすぎて意味が通らなくなるのは本末転倒なので、
    「何が・どうなる・だから何」が初学者に通じる文にすること（CLAUDE.md） */
 const PRIN = [
-/* 全体の地図：電磁気が出てくるのは機械の側の「入口（電流 → 磁場）」と「出口（磁場の変化 → 電流）」だけで、
-   あいだは体の中の水素の話。この先の手のカードには、どこの話かを小さく示す（zone） */
-L({ nm:'MRI の全体の地図', tg:'入口・体の中・出口', map:true, sel:'#stage',
+/* 全体の地図：① 機械が電流で磁場を作る → ② 水素の M が倒れて回る → ③ 受信コイルに電流（信号）が流れる。
+   電磁気のきまりが出てくるのは ①（電流 → 磁場）と ③（磁場の変化 → 電流）だけで、② は水素の話。
+   （以前は「入口・体の中・出口」と呼び、各カードにも小さく出していたが、分かりにくいのでやめた） */
+L({ nm:'MRI の全体の地図', tg:'磁場 → 水素 → 信号', map:true, sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, showComp:false, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   act:{ label:'流れを通して見る', fn:mapPlay },
   tag:{ m:'M（水素）' },
-  text:'MRI は、[[b0:B₀]] と [[rf:RFパルス]]で [[m:M]]（水素）を動かし、[[coil:受信コイル]]で<b>信号</b>を読む装置です。' +
+  text:'MRI で起きていることは、次の3つです。' +
        '<span class="tmap">' +
-         '<span class="z"><span class="zl">入口<small>機械</small></span><span class="zt">電流で<b>磁場を作る</b>（[[b0:B₀]] と [[rf:RFパルス]]）</span></span>' +
+         '<span class="z"><span class="zl">①</span><span class="zt">機械が電流で磁場を作る（[[b0:B₀]]・RFパルス）</span></span>' +
          '<span class="za">↓</span>' +
-         '<span class="z"><span class="zl">体の中<small>水素</small></span><span class="zt">[[m:M]]（水素）がそろう → 倒れて回る</span></span>' +
+         '<span class="z"><span class="zl">②</span><span class="zt">水素の [[m:M]] が倒れて回る</span></span>' +
          '<span class="za">↓</span>' +
-         '<span class="z"><span class="zl">出口<small>機械</small></span><span class="zt">[[coil:受信コイル]]に電流（<b>信号</b>）が流れる</span></span>' +
+         '<span class="z"><span class="zl">③</span><span class="zt">[[coil:受信コイル]]に電流（信号）が流れる</span></span>' +
        '</span>' }),
 
 L({ nm:'静磁場 B₀ の向き', zone:[0], tg:'体の長い方向 ＝ 画面の上', sel:'#stage',
@@ -3122,7 +3128,7 @@ L({ nm:'静磁場 B₀ の向き', zone:[0], tg:'体の長い方向 ＝ 画面�
 
 L({ nm:'静磁場の中のプロトン', zone:[1], tg:'B₀ と M₀', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
-  text:'[[h:水素の原子核]]は小さな磁石です。[[b0:B₀]] の中では<b>上向きが少しだけ多く</b>なります。<br>薄い矢印 [[m0:M₀]] が、その差の合計です。' }),
+  text:'[[h:水素の原子核]]は小さな磁石で、[[b0:B₀]] の中では上向きが少しだけ多くなります。<br>薄い矢印 [[m0:M₀]] が、その差の合計です。' }),
 
 L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの合計 M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
@@ -3151,7 +3157,7 @@ L({ nm:'RFパルスで倒す', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × �
   tag:{ ang:true },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:false, tissue:'wm', T2p:40 },
   act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
-  text:'[[m:M]] と一緒に回る目線（[[frame:回転座標系]]）で見ると、M は<b>まっすぐ倒れます</b>。<br>[[ang:倒れた角度]]は、[[rf:RFパルス]]の強さ × 当てる時間で決まります。' }),
+  text:'[[m:M]] と一緒に回る目線（回転座標系）で見ると、M はまっすぐ倒れます。<br>[[ang:倒れた角度]]は、[[rf:RFパルス]]の強さ × 当てる時間で決まります。' }),
 
 L({ nm:'電磁誘導：変化が電気を生む', zone:[2], tg:'磁場が変わると電流', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, induct:true, showComp:false, tissue:'csf', T2p:Infinity },
@@ -3160,13 +3166,13 @@ L({ nm:'電磁誘導：変化が電気を生む', zone:[2], tg:'磁場が変わ�
     { label:'磁石を近づける', fn:() => { IND.yT = -5; } },
     { label:'磁石を遠ざける', fn:() => { IND.yT = -12; } },
   ],
-  text:'[[mag:磁石]]を動かすと、[[coil:輪]]を通る磁場（[[flux:紫の矢印]]）が変わり、<b>動いている間だけ</b>電流が流れます。<br>これを電磁誘導といいます。' }),
+  text:'[[mag:磁石]]を動かすと、輪を通る磁場（[[flux:紫の矢印]]）が変わり、<b>動いている間だけ</b>電流が流れます。<br>これを電磁誘導といいます。' }),
 
 L({ nm:'回る M でコイルに電流が流れる', zone:[2], tg:'これが MRI の信号', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   act:{ label:'M を倒す', fn:() => { calm(); later(() => manualPulse(90, 'x', 1.2), 300); } },
-  text:'縦向きの [[m:M]] は止まっていて、[[coil:受信コイル]]に電流は流れません。<br><b>倒して回すと</b>、[[flux:輪を通る分]]が変わり、電流（<b>信号</b>）が流れます。' }),
+  text:'縦向きの [[m:M]] は止まっていて、受信コイルに電流は流れません。<br><b>倒して回すと</b>、[[flux:輪を通る分]]が変わり、電流（信号）が流れます。' }),
 
 L({ nm:'T2：横磁化が短くなる', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
   tag:{ pct:true },
@@ -3176,7 +3182,7 @@ L({ nm:'T2：横磁化が短くなる', zone:[1], tg:'スピン-スピン緩和'
 L({ nm:'T2*：磁場のムラで もっと速く', zone:[1], tg:'ムラの分だけ速く消える', sel:'#stage',
   tag:{ fan:true },
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
-  text:'[[fan:磁場のムラ]]で[[spins:細い矢印]]（水素1つずつ）の速さがばらつくと、[[mxy:横の M]] は <b>T2 より速く</b>消えます（T2*）。' }),
+  text:'[[fan:磁場のムラ]]で細い矢印（水素1つずつ）の速さがばらつくと、[[mxy:横の M]] は <b>T2 より速く</b>消えます（T2*）。' }),
 
 L({ nm:'スピンエコー：180°で呼びもどす', zone:[1], tg:'エコーの高さは T2 だけ', sel:'#stage',
   tag:{ echo:true },
@@ -3185,7 +3191,7 @@ L({ nm:'スピンエコー：180°で呼びもどす', zone:[1], tg:'エコー�
     calm(); manualPulse(90, 'x');
     later(() => manualPulse(180, 'y', 1.2), 2000);   // 180° はゆっくり当てて、オレンジの RF パルスが見えるようにする
   } },
-  text:'[[rf:180° の RFパルス]]で向きを折り返すと、ばらけた[[spins:細い矢印]]が<b>もう一度そろいます</b>（[[echo:エコー]]）。' }),
+  text:'[[rf:180° の RFパルス]]で向きを折り返すと、ばらけた細い矢印が<b>もう一度そろいます</b>（[[echo:エコー]]）。' }),
 
 L({ nm:'T1：縦磁化がもどる', zone:[1], tg:'スピン-格子緩和', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
@@ -3198,7 +3204,7 @@ L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
 
 /* ---------- 撮像法：原理を使って、どう撮るか ---------- */
 const METH = [
-/* 撮像法の入口：T1強調・T2強調を「1台のスマホ」で考える（会話で一番通じた例え）。
+/* コントラストの章の最初：T1強調・T2強調を「井戸とバケツ」で考える（はじめはスマホの例えだったが、スマホで操作していると紛らわしいので替えた）。
    ・信号はいつも横から出る（T1強調も「縦の戻り具合が、次に倒したときの横の長さに表れたもの」）という誤解を先に解いておく */
 L({ nm:'井戸とバケツで考える TR と TE', tg:'汲む間隔と、測るまでの時間', map:true,
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
@@ -4329,17 +4335,13 @@ function tutShow() {
   const counted = x => x.sel || x.map || actsOf(x).length;
   const n = tutList.filter(counted).length;
   const k = tutList.slice(0, tutI + 1).filter(counted).length;
-  /* 原理コースの手は「入口（機械が磁場を作る）・体の中（水素）・出口（機械が信号を読む）」のどこの話かを小さく出す */
-  const zone = st.zone ? ' <span class="tzone">' + ZONES.map((w, i) => '<i' + (st.zone.includes(i) ? ' class="on"' : '') + '>' + w + '</i>').join('') + '</span>' : '';
+  const zone = '';   // 「入口・体の中・出口」の表示は分かりにくいのでやめた
   const chl = curCh >= 0 && tutList === CHAPTERS[curCh].full ? CHAPTERS[curCh].no + '　' : '';
   $('tutStep').innerHTML = (st.head || (counted(st) ? chl + k + ' / ' + n : '')) + zone;
   tutCard.style.width = '';
   const wtxt = st.text.replace(/\[\[(\w+):([^\]]+)\]\]/g, '<span class="tw $1" data-w="$1" role="button" tabindex="0">$2</span>');
   $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + wtxt;
-  {                                               // 文に出てくる物を、画面の上で順に1回ずつ光らせる
-    const ks = [...new Set([...$('tutText').querySelectorAll('.tw')].map(e => e.dataset.w))];
-    ks.forEach((k, i) => setTimeout(() => { if (tutList[tutI] === st) wFlash(k); }, 700 + i * 900));
-  }
+
   $('tutBack').hidden = !(st.back && tutI > 0);
   $('tutSkip').textContent = st.quit || 'スキップ';
   tutBtn(st);
