@@ -2563,8 +2563,9 @@ function updateScene(dt) {
     let sxy = 0; for (let i = 0; i < NISO; i++) sxy += Math.hypot(mx[i], my[i]);
     const coh = sxy > 1e-6 ? txy * NISO / sxy : 1;            // 細い矢印のそろい具合（1＝そろっている）
     place('fan', -0.4, -ML * 1.05, 1.0, '磁場のムラで、速さがばらつく', on && showSpin && !!P.tag.fan && txy > 0.03 && coh < 0.9);
-    place('echo', t.x * 1.1, t.y * 1.1, t.z * 1.1 + 1.3, '<b>エコー</b>（もう一度そろった）',
-      on && showSpin && !!P.tag.echo && R.t180 && performance.now() - R.t180 < 8000 && performance.now() - R.t180 > 600 && coh > 0.93 && txy > 0.15);
+    if (P.tag.echo && !R.nut && R.t180 && performance.now() - R.t180 < 9000 && performance.now() - R.t180 > 1300 && coh > 0.9 && txy > 0.05) R.echoAt = performance.now();
+    place('echo', 0.3, -ML * 0.9, 1.6, '<b>エコー</b>（もう一度そろった）',   // そろうのは一瞬なので、2.5 秒は出しておく
+      on && showSpin && !!P.tag.echo && R.echoAt && performance.now() - R.echoAt < 2500);
   }
   if (onRF) {
     const ax = b1Dir();
@@ -2593,7 +2594,7 @@ function updateScene(dt) {
   } else if (coilGrp.visible) {
     place('mag', 0, 0, 0, '', false);
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    place('coil', COILR * 0.86, 0, COILR * 0.56, Math.hypot(m[0], m[1]) > 0.08 ? '受信コイル：<b>電流（信号）が流れる</b>' : '受信コイル：電流は流れない', P.showLab);
+    place('coil', COILR * 1.02, 0, -COILR * 0.62, Math.hypot(m[0], m[1]) > 0.08 ? '受信コイル：<b>電流（信号）が流れる</b>' : '受信コイル：電流は流れない', P.showLab);
     place('flux', -0.3, _m.y * ML * 1.08, -2.3, '<i>輪を通る分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab);
   } else { place('coil', 0, 0, 0, '', false); place('flux', 0, 0, 0, '', false); place('mag', 0, 0, 0, '', false); }
   place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
@@ -2619,8 +2620,8 @@ function updateScene(dt) {
     place('gB', e + 3.6, GOFF - e, 0, '下の行：遅れる', g && !fq && ph);
     place('gOn', 0, smallScr ? GOFF - e - 3.6 : GOFF + e + 2.1, 0, fq ? '左右の傾斜 ON（読んでいる間）' : '上下の傾斜 ON（一瞬だけ）', g && (fq || GRID.gyLeft > 0));
   }
-  place('boreB0', 24 * Math.cos(-Math.PI / 4) + 6, 24 * Math.sin(-Math.PI / 4), 12, 'B₀（体の長い方向：足 → 頭）', !!P.bore && P.showBody && P.showLab);
-  place('boreW', BORE_R + 1, 6, 18, '筒の電線（電流が流れる）', !!P.bore && P.showBody && P.showLab);
+  place('boreB0', 24 * Math.cos(-Math.PI / 4) + 6, 24 * Math.sin(-Math.PI / 4), -4, 'B₀（体の長い方向：足 → 頭）', !!P.bore && P.showBody && P.showLab);
+  place('boreW', BORE_R + 1, 6, 28, '筒の電線（電流が流れる）', !!P.bore && P.showBody && P.showLab);
 }
 
 /* ================= グラフ ================= */
@@ -3178,10 +3179,10 @@ L({ nm:'T2*：磁場のムラで もっと速く', zone:[1], tg:'ムラの分だ
 
 L({ nm:'スピンエコー：180°で呼びもどす', zone:[1], tg:'エコーの高さは T2 だけ', sel:'#stage',
   tag:{ echo:true },
-  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'csf' },   // T2 の長い脳脊髄液にして、エコーがはっきり見えるようにする
   act:{ label:'90° → 少し待つ → 180°', fn:() => {
     calm(); manualPulse(90, 'x');
-    later(() => manualPulse(180, 'y'), 2000);
+    later(() => manualPulse(180, 'y', 1.2), 2000);   // 180° はゆっくり当てて、オレンジの RF パルスが見えるようにする
   } },
   text:'[[rf:180° の RFパルス]]で向きを折り返すと、ばらけた[[spins:細い矢印]]が<b>もう一度そろいます</b>（[[echo:エコー]]）。' }),
 
