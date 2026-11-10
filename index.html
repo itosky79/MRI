@@ -520,6 +520,9 @@ details.fold p{margin:7px 0 0; font-size:12.5px; color:var(--dim); line-height:1
 .tzone{display:inline-flex; gap:3px; margin-left:8px; vertical-align:1px}
 .tzone i{font-style:normal; font-family:var(--gothic); font-size:10.5px; letter-spacing:0; padding:1px 8px; border-radius:9px; color:var(--dim); background:var(--fill)}
 .tzone i.on{background:var(--sel); color:var(--selT); font-weight:700}
+.kpair{display:flex; gap:12px; justify-content:center; margin:9px 0 8px}
+.kpair>span{display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11.5px; color:var(--dim)}
+.kpair canvas{display:block; height:150px; border-radius:6px; background:#000}
 .tmap{display:grid; gap:0; margin:9px 0 8px}
 .tmap .z{display:grid; grid-template-columns:4.2em 1fr; gap:10px; align-items:center; padding:8px 10px; border-radius:8px; background:var(--fill)}
 .tmap .zl{font-weight:700; color:var(--head); line-height:1.3}
@@ -787,6 +790,9 @@ html[data-theme="light"] .lab{text-shadow:none}
       <p class="key" id="keyBore" hidden>
         <span><i style="background:#40566A"></i><b>濃い矢印＝静磁場 B₀（体の長い方向）</b></span>
         <span><i style="background:#8FA3B2"></i>灰色の輪＝筒の壁に巻いた電線</span>
+      </p>
+      <p class="key" id="keyGrid" hidden>
+        <span><i style="background:var(--sig)"></i>矢印＝断面の中の各ボクセルの横磁化（真上から見ている）</span>
       </p>
       <p class="key" id="keySlab" hidden>
         <span><i style="background:var(--sig)"></i>矢印＝各層の磁化 M</span>
@@ -1865,6 +1871,36 @@ const IND = { y:-12, yT:-12, phi:0, dphi:0, dir:0 };
 const MAG_L = 4.4;
 const indPhi = y => Math.pow(1 + Math.pow((y + MAG_L / 2) / 4.5, 2), -1.5);
 
+/* ---- 断面の中の位置（周波数・位相エンコード）：「場所の区別」コース ----
+   選んだ1枚の断面を真上から見て、GN × GN のボクセルに横磁化 M を1本ずつ置く（もう倒れている）。回転座標なので、
+   傾斜がなければ止まって見える。左右の傾斜 gx：列ごとに回る速さが変わる（周波数エンコード）。
+   上下の傾斜 gy を一瞬だけ：行ごとに回った角度（位相）がずれたまま残る（位相エンコード） */
+const GN = 5, GS = 2.6, GL = 1.15, GW = 0.9;
+const gridGrp = new THREE.Group(); scene.add(gridGrp); gridGrp.visible = false;
+const GRID = { gx:0, gy:0, gyLeft:0, gyAmp:0, ang:new Array(GN * GN).fill(0), arr:[] };
+{
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(GN * GS + 0.6, GN * GS + 0.6),
+    new THREE.MeshPhongMaterial({ color:0xB9C6CF, transparent:true, opacity:0.28, depthWrite:false, side:THREE.DoubleSide }));
+  pl.position.z = -0.3; gridGrp.add(pl);
+  for (let r = 0; r < GN; r++) for (let c = 0; c < GN; c++) {
+    const a = mkArrow(0x11788F, 0.11, 0.32, 0.6); tint(a, 'm');
+    a.grp.position.set((c - (GN - 1) / 2) * GS, (r - (GN - 1) / 2) * GS, 0);
+    gridGrp.add(a.grp); GRID.arr.push(a);
+  }
+}
+function gridInit() { GRID.gx = 0; GRID.gy = 0; GRID.gyLeft = 0; GRID.ang.fill(0); }
+function gridPhase(amp) { GRID.gyAmp = amp; GRID.gyLeft = 1.4; }   // 1.4 秒だけかけて止める
+function gridUpdate(dt) {
+  GRID.gy = GRID.gyLeft > 0 ? GRID.gyAmp : 0;
+  if (GRID.gyLeft > 0) GRID.gyLeft = Math.max(0, GRID.gyLeft - dt);
+  const h = (GN - 1) / 2;
+  for (let r = 0; r < GN; r++) for (let c = 0; c < GN; c++) {
+    const k = r * GN + c;
+    GRID.ang[k] += dt * GW * (GRID.gx * (c - h) + GRID.gy * (r - h));
+    setArrow(GRID.arr[k], -Math.sin(GRID.ang[k]), Math.cos(GRID.ang[k]), 0, GL);
+  }
+}
+
 /* ---- スライス選択（「場所の区別」コース） ----
    体の軸（z ＝ B₀ の向き、足 → 頭）に沿って薄い層を SLN 枚積み、層ごとに M を1本立てる。
    右に各層の周波数を棒で並べる。傾斜磁場の強さ g で、層 k の周波数は f = g·(k − 中央)（中心の周波数からのずれ、刻み単位）。
@@ -2093,6 +2129,9 @@ function applyCam() {
 /* コイルを出すときは、輪を斜めから見る向きにする。輪の法線（y）に正対すると
    「貫く分」が手前向きになって、長さが見えなくなるため */
 function homeCam() {
+  if (P.grid) {                                 // 断面を真上から見る：右が x（左右）、上が y（上下）
+    ctrl.th = -Math.PI / 2; ctrl.phi = 0.32; ctrl.want = smallScr ? 30 : 24; applyCam(); return;
+  }
   if (P.slab) {                                 // 層の積み重ねを正面（-y 側）から少し見下ろす：右が周波数
     ctrl.th = -Math.PI / 2; ctrl.phi = 1.36; ctrl.want = smallScr ? 40 : 34; applyCam(); return;
   }
@@ -2180,7 +2219,7 @@ function mkLab(key, cls) {
 mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
 mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
 mkLab('coil', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
-mkLab('mag', 'm'); mkLab('boreB0', 'axis'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
+mkLab('gL', 'axis'); mkLab('gR', 'axis'); mkLab('gT', 'axis'); mkLab('gB', 'axis'); mkLab('gOn', 'rf'); mkLab('mag', 'm'); mkLab('boreB0', 'axis'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
 ['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm ta'));
 const _p = new THREE.Vector3();
 function place(key, x, y, z, txt, on) {
@@ -2209,7 +2248,7 @@ function updateScene(dt) {
   spinGrp.rotation.z = P.frame === 'lab' ? labPhase : 0;
 
   /* --- スピン1本ずつ --- */
-  const showSpin = !P.quantum && !P.slab && !P.induct;
+  const showSpin = !P.quantum && !P.slab && !P.induct && !P.grid;
   /* 受信コイルを出しているあいだは、見てほしいのは「回る磁化」と「輪を貫く分」の2本だけ。
      細い矢印（虹色）・Mz・Mxy・軌跡は、色が増えて焦点がぼけるのでしまう */
   const coilOn = !!P.coil && P.frame === 'lab' && !(P.showBody && ctrl.dist >= 45);
@@ -2337,18 +2376,21 @@ function updateScene(dt) {
     }
     if (++sliceN % 2 === 0) drawSlice();
   }
-  spinGrp.visible = !far && !P.slab && !P.induct;
+  spinGrp.visible = !far && !P.slab && !P.induct && !P.grid;
   slabGrp.visible = !!P.slab;
   if (P.slab) slabUpdate(dt);
+  gridGrp.visible = !!P.grid;
+  if (P.grid) gridUpdate(dt);
+  $('keyGrid').hidden = !P.grid;
   $('keySlab').hidden = !P.slab;
-  $('key3d').hidden = far || coilOn || P.quantum || !!P.onlyM || !!P.slab;      // 脳全体では細い矢印を出していないので凡例もしまう
+  $('key3d').hidden = far || coilOn || P.quantum || !!P.onlyM || !!P.slab || !!P.grid;      // 脳全体では細い矢印を出していないので凡例もしまう
   $('keyRes').hidden = far || !P.onlyM;
   $('keyCoil').hidden = !coilOn || !!P.induct;
   $('keyInd').hidden = !coilOn || !P.induct;
   $('keyQ').hidden = !P.quantum || far;
   $('keyBore').hidden = !(P.bore && P.showBody);
-  axGrp.visible = (!P.showBody || ctrl.dist < 45) && !P.slab;
-  planeXY.visible = !P.showBody && !P.quantum && !P.slab;
+  axGrp.visible = (!P.showBody || ctrl.dist < 45) && !P.slab && !P.grid;
+  planeXY.visible = !P.showBody && !P.quantum && !P.slab && !P.grid;
 
   /* --- カメラをなめらかに追従 --- */
   ctrl.dist += (ctrl.want - ctrl.dist) * (1 - Math.exp(-dt * 4.5));
@@ -2356,7 +2398,7 @@ function updateScene(dt) {
 
   /* --- ラベル --- */
   const near3d = !P.showBody || ctrl.dist < 45;
-  const on = P.showLab && near3d && !P.slab;
+  const on = P.showLab && near3d && !P.slab && !P.grid;
   const rot = P.frame === 'rot';
   place('z', 1.7, 0, AX - 0.2, 'z ＝ B₀ の向き', on);
   place('b0', 0, 0, 0, '', false);
@@ -2404,6 +2446,14 @@ function updateScene(dt) {
       (Math.hypot(n[0], n[1]) * TIS[TIX[t.id]].PD).toFixed(2) + '</b>'), P.showLab && far && t.hold.visible && !P.nameOnly && !P.bore);
   }
   place('slice', 0, 0, 0, '', false);
+  {
+    const g = !!P.grid && P.showLab, e = (GN - 1) / 2 * GS, fq = Math.abs(GRID.gx) > 0, ph = GRID.ang.some(a => Math.abs(a) > 0.05);
+    place('gL', -e, -e - 2.2, 0, '左：遅く回る', g && fq);
+    place('gR', e, -e - 2.2, 0, '右：速く回る', g && fq);
+    place('gT', e + 3.4, e, 0, '上の行：先に進む', g && !fq && ph);
+    place('gB', e + 3.4, -e, 0, '下の行：遅れる', g && !fq && ph);
+    place('gOn', 0, e + 2.3, 0, fq ? '左右の傾斜 ON（読んでいる間）' : '上下の傾斜 ON（一瞬だけ）', g && (fq || GRID.gyLeft > 0));
+  }
   place('boreB0', 24 * Math.cos(-Math.PI / 4) + 6, 24 * Math.sin(-Math.PI / 4), 12, 'B₀（足 → 頭）', !!P.bore && P.showBody && P.showLab);
   place('boreW', BORE_R + 1, 6, 18, '筒（ボア）の壁の電線', !!P.bore && P.showBody && P.showLab);
 }
@@ -2904,7 +2954,7 @@ L({ nm:'スマホで考える TR と TE', tg:'充電時間と、明るさを測�
        '<span class="tmap">' +
          '<span class="z"><span class="zl">TR<small>つける間隔</small></span><span class="zt">あいだの<b>充電時間</b>。短いと、充電の遅い機種（水）は満タンにならず暗い<small>→ 充電の速さ（T1）の比べっこ＝T1強調</small></span></span>' +
          '<span class="za">　</span>' +
-         '<span class="z"><span class="zl">TE<small>つけてから測るまで</small></span><span class="zt">画面は<b>だんだん暗くなる</b>。長く待つと、暗くなりにくい機種（水）だけ明るい<small>→ 画面の持ち（T2）の比べっこ＝T2強調</small></span></span>' +
+         '<span class="z"><span class="zl">TE<small>測るまで</small></span><span class="zt">画面は<b>だんだん暗くなる</b>。長く待つと、暗くなりにくい機種（水）だけ明るい<small>→ 画面の持ち（T2）の比べっこ＝T2強調</small></span></span>' +
        '</span>' +
        '測っているのは、どちらも<b>画面の明るさ（横の M）</b>です。T1強調も、縦の戻り具合が次の横の明るさに表れたものです。' }),
 L({ nm:'矢印から画像へ', tg:'横の長さ × ρ ＝ 明るさ', sel:'#panBridge', blk:'nearest',
@@ -2956,6 +3006,76 @@ L({ nm:'FLAIR：水を消す', tg:'STIR との違い', sel:'#imgbox',
        '脳室が黒くなり、すぐそばの病変（浮腫）が白く浮かび上がります。' })
 ];
 
+/* ---------- k 空間：今の模擬画像を 256 × 256 にして2次元 FFT し、中心だけ・外側だけで画像に戻す ---------- */
+const KN = 256;
+function fft1(re, im, inv) {          // 長さ KN の基数2 FFT（その場で書き換える）
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+    if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const a = (inv ? 2 : -2) * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const ur = re[i + k], ui = im[i + k];
+        const vr = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci, vi = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr;
+        re[i + k] = ur + vr; im[i + k] = ui + vi; re[i + k + len / 2] = ur - vr; im[i + k + len / 2] = ui - vi;
+        const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
+      }
+    }
+  }
+}
+function fft2(re, im, inv) {
+  const r = new Float64Array(KN), i = new Float64Array(KN);
+  for (let y = 0; y < KN; y++) {
+    for (let x = 0; x < KN; x++) { r[x] = re[y * KN + x]; i[x] = im[y * KN + x]; }
+    fft1(r, i, inv);
+    for (let x = 0; x < KN; x++) { re[y * KN + x] = r[x]; im[y * KN + x] = i[x]; }
+  }
+  for (let x = 0; x < KN; x++) {
+    for (let y = 0; y < KN; y++) { r[y] = re[y * KN + x]; i[y] = im[y * KN + x]; }
+    fft1(r, i, inv);
+    for (let y = 0; y < KN; y++) { re[y * KN + x] = r[y]; im[y * KN + x] = i[y]; }
+  }
+}
+const KS = { re:null, im:null, R0:12 };
+const kFreq = n => (n < KN / 2 ? n : n - KN);   // FFT の番号 → 中心からの距離（符号つき）
+function kInit() {
+  drawImage();
+  const re = new Float64Array(KN * KN), im = new Float64Array(KN * KN), d = imgData.data;
+  const ox = (KN - IW) >> 1, oy = (KN - IH) >> 1;
+  for (let y = 0; y < IH; y++) for (let x = 0; x < IW; x++) re[(y + oy) * KN + x + ox] = d[(y * IW + x) * 4] / 255;
+  fft2(re, im, false);
+  KS.re = re; KS.im = im;
+  kShow('all');
+}
+function kShow(mode) {               // mode：'all' ぜんぶ／'c' 中心だけ／'o' 外側だけ
+  const kc = $('kCv'), ic = $('kImg');
+  if (!kc || !ic || !KS.re) return;
+  const keep = (u, v) => { const r = Math.hypot(kFreq(u), kFreq(v)); return mode === 'all' || (mode === 'c' ? r <= KS.R0 : r > KS.R0); };
+  /* 左：k 空間（明るさ＝log(1 + |F|)、中心を真ん中に。捨てた所は暗く） */
+  const kx = kc.getContext('2d'), kd = kx.createImageData(KN, KN);
+  let mx = 0; const lg = new Float64Array(KN * KN);
+  for (let k = 0; k < KN * KN; k++) { lg[k] = Math.log(1 + Math.hypot(KS.re[k], KS.im[k])); if (lg[k] > mx) mx = lg[k]; }
+  for (let v = 0; v < KN; v++) for (let u = 0; u < KN; u++) {
+    const sx = (u + KN / 2) % KN, sy = (v + KN / 2) % KN, k = v * KN + u, o = (sy * KN + sx) * 4;
+    let g = Math.pow(lg[k] / mx, 1.6) * 255; if (!keep(u, v)) g *= 0.12;
+    kd.data[o] = kd.data[o + 1] = kd.data[o + 2] = g; kd.data[o + 3] = 255;
+  }
+  kx.putImageData(kd, 0, 0);
+  /* 右：残した分だけで画像に戻す（逆 FFT の大きさ） */
+  const re = new Float64Array(KN * KN), im = new Float64Array(KN * KN);
+  for (let v = 0; v < KN; v++) for (let u = 0; u < KN; u++) if (keep(u, v)) { const k = v * KN + u; re[k] = KS.re[k]; im[k] = KS.im[k]; }
+  fft2(re, im, true);
+  const ox = (KN - IW) >> 1, oy = (KN - IH) >> 1, ix = ic.getContext('2d'), id = ix.createImageData(IW, IH);
+  let m2 = 0; const mag = new Float64Array(IW * IH);
+  for (let y = 0; y < IH; y++) for (let x = 0; x < IW; x++) { const k = (y + oy) * KN + x + ox; mag[y * IW + x] = Math.hypot(re[k], im[k]); if (mag[y * IW + x] > m2) m2 = mag[y * IW + x]; }
+  for (let k = 0; k < IW * IH; k++) { const g = Math.min(255, mag[k] / (m2 || 1) * 255); id.data[k * 4] = id.data[k * 4 + 1] = id.data[k * 4 + 2] = g; id.data[k * 4 + 3] = 255; }
+  ix.putImageData(id, 0, 0);
+}
+
 /* ---------- 場所の区別：体のどこから来た信号かを見分ける ----------
    まずはスライス選択（傾斜磁場で層ごとに周波数を変え、共鳴で1枚だけを倒す）。
    断面の中の縦・横の見分け方（周波数・位相エンコード）は、このあとここに足していく */
@@ -2982,7 +3102,38 @@ L({ nm:'スライスの位置と厚さ', zone:[0, 1], tg:'厚さ ＝ 帯域幅 �
   ],
   text:'電波の<b>中心の周波数</b>を変えると、倒れる層（断面の位置）が動きます。周波数の<b>範囲（帯域幅）</b>を広げると、何枚も倒れて断面が<b>厚く</b>なります。<br>' +
        '傾斜を<b>急に</b>すると、層ごとの周波数の差が開くので、同じ範囲に入る層が減り、断面は<b>薄く</b>なります。' +
-       '<span class="eq">スライス厚 ＝ 帯域幅 ÷ 傾斜磁場の強さ</span>' })
+       '<span class="eq">スライス厚 ＝ 帯域幅 ÷ 傾斜磁場の強さ</span>' }),
+
+L({ nm:'周波数エンコード：横は音の高さで', zone:[0, 2], tg:'読んでいる間に左右の傾斜', sel:'#stage',
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
+  on:() => { calm(); gridInit(); },
+  act:{ label:'左右に傾斜をかける（読んでいる間）', fn:() => { GRID.gx = 1; } },
+  text:'選んだ1枚の断面の中にも、ボクセルが縦横に並んでいます（真上から見た図）。信号を<b>読んでいる間</b>に左右の向きに傾斜をかけると、<b>左の列ほど遅く、右の列ほど速く</b>回ります。<br>' +
+       'コイルには高さの違う音が混ざった<b>和音</b>が届き、コンピュータが音の高さごとに分けると（<b>フーリエ変換</b>）、<b>横の位置</b>が分かります。' }),
+
+L({ nm:'位相エンコード：縦は角度のずれで', zone:[0, 1], tg:'読む前に一瞬だけ上下の傾斜', sel:'#stage',
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
+  on:() => { calm(); gridInit(); },
+  acts:[
+    { label:'上下に一瞬だけ傾斜をかける', fn:() => { gridInit(); gridPhase(1); } },
+    { label:'強さを変えて、もう一度', fn:() => { gridInit(); gridPhase(2); } },
+  ],
+  text:'縦も音の高さで分けると横と混ざるので、読む前に<b>一瞬だけ</b>上下に傾斜をかけて止めます。行ごとに<b>回った角度（位相）がずれたまま</b>残り、これが縦の目印になります。<br>' +
+       '1回では分けきれないので、強さを変えて<b>行の数だけくり返します</b>。だから撮像には時間がかかります。' +
+       '<span class="eq">撮像時間 ＝ TR × 位相エンコード数 × 加算回数</span>' }),
+
+L({ nm:'k 空間：集めたデータの表', zone:[2], tg:'中心＝明暗、外側＝輪郭', map:true,
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+  on:() => { calm(); later(kInit, 60); },
+  acts:[
+    { label:'中心だけ残す', fn:() => kShow('c') },
+    { label:'外側だけ残す', fn:() => kShow('o') },
+    { label:'ぜんぶ使う', fn:() => kShow('all') },
+  ],
+  text:'読んだ信号を、位相エンコード1回ごとに<b>1行ずつ並べた表</b>が <b>k 空間</b>です（左）。縦横にフーリエ変換すると画像になります（右）。' +
+       '<span class="kpair"><span><canvas id="kCv" width="256" height="256" style="width:150px"></canvas>k 空間</span>' +
+       '<span><canvas id="kImg" width="176" height="208" style="width:127px"></canvas>画像</span></span>' +
+       '表の<b>中心</b>は大まかな明暗（コントラスト）、<b>外側</b>は細かい輪郭を決めています。' })
 ];
 
 /* コースの定義。list は案内カードに渡す「本編＋おしまいの1枚」 */
@@ -2995,10 +3146,10 @@ const COURSE = [
     end:{ head:'おしまい', nm:'ひととおり見ました', next:'とじる', quit:'とじる',
       text:'ここからは<b>「シーケンス」</b>タブで TR・TE を自分で動かしたり、<b>「問題」</b>タブで国家試験の問題を解いて確かめたりできます。<br>' +
            'この案内は、いつでも「学習」タブから開き直せます。' } },
-  { nm:'場所の区別', lede:'体の<b>どこから来た信号か</b>を、どうやって見分けるのか。まずは、1枚の断面だけを選んで倒す方法（スライス選択）です。',
-    end:{ head:'おしまい', nm:'スライス選択はここまで', next:'とじる', quit:'とじる',
-      text:'傾斜磁場で層ごとに周波数を変え、<b>共鳴</b>を使って1枚だけを倒す。これがスライス選択です。<br>' +
-           '断面の位置は電波の中心の周波数で、厚さは帯域幅と傾斜の強さで決まります。' } }
+  { nm:'場所の区別', lede:'体の<b>どこから来た信号か</b>を、どうやって見分けるのか。断面を選び（スライス選択）、その中の横と縦を見分けて（周波数・位相エンコード）、k 空間から画像にします。',
+    end:{ head:'おしまい', nm:'場所の区別はここまで', next:'とじる', quit:'とじる',
+      text:'<b>どの断面か</b>はスライス選択、<b>横の位置</b>は周波数エンコード、<b>縦の位置</b>は位相エンコードで見分けます。<br>' +
+           '集めたデータの表（k 空間）をフーリエ変換すると、画像になります。' } }
 ];
 COURSE[0].steps = PRIN; COURSE[1].steps = METH; COURSE[2].steps = LOC;
 COURSE.forEach(c => { c.list = c.steps.concat([c.end]); });
@@ -3317,7 +3468,7 @@ function refresh(keep) {
 }
 function applySet(s, hard) {
   if (!s) return;
-  const sbWas = P.showBody, coilWas = P.coil, slabWas = !!P.slab, boreWas = !!P.bore;
+  const sbWas = P.showBody, coilWas = P.coil, slabWas = !!P.slab, boreWas = !!P.bore, gridWas = !!P.grid;
   for (const k in s) P[k] = s[k];
   if ('coil' in s) $('tCoil').checked = P.coil;
   if ('showComp' in s) $('tComp').checked = P.showComp;
@@ -3328,6 +3479,7 @@ function applySet(s, hard) {
   else if ('coil' in s && s.coil !== coilWas) homeCam();
   else if ('slab' in s && !!s.slab !== slabWas) homeCam();
   else if ('bore' in s && !!s.bore !== boreWas) homeCam();
+  else if ('grid' in s && !!s.grid !== gridWas) homeCam();
   if (s.nDisp) buildSpins(s.nDisp);
   if (hard) { equilibrium(); clearTrail(); seqSig = ''; }
   refresh(!hard);
@@ -3344,8 +3496,9 @@ function setMode(m) {
     const wasSlab = !!P.slab;
     P.quantum = false; P.manual = false; P.coil = false; $('tCoil').checked = false;
     const wasBore = !!P.bore;
-    P.slab = false; P.onlyM = false; P.bore = false; P.induct = false;   // 学習の手だけの表示（層の絵・共鳴・筒・磁石）は持ち越さない
-    if (wasSlab || wasBore) homeCam();
+    const wasGrid = !!P.grid;
+    P.slab = false; P.onlyM = false; P.bore = false; P.induct = false; P.grid = false;   // 学習の手だけの表示（層の絵・共鳴・筒・磁石・断面のマス）は持ち越さない
+    if (wasSlab || wasBore || wasGrid) homeCam();
     refresh(true);
   }
   if (mode === 1) markStep();
@@ -3782,7 +3935,7 @@ function tutShow() {
   tutActI = 0;
   if (st.set) {
     learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
-    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false, bore:false, induct:false }, st.set), true);   // コイルは出したい手だけ coil:true で出す
+    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false, bore:false, induct:false, grid:false }, st.set), true);   // コイルは出したい手だけ coil:true で出す
   }
   if (st.on) st.on();
   const counted = x => x.sel || x.map || actsOf(x).length;
