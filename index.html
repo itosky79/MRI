@@ -751,6 +751,43 @@ html[data-theme="light"] .lab{text-shadow:none}
   .playbar button{padding:4px 9px}
   .stopat{display:none}   /* 「t = ○ ms で止める」は細かい操作なので、狭い画面では出さない */
 }
+
+/* ---- 読みやすさ：文字を大きくする（本文 13 → 15.5px、補足 11〜11.5 → 12.5〜13px） ---- */
+.ttext{font-size:15.5px; line-height:1.85}
+.ttext .big{font-size:18px; margin-bottom:8px}
+.tstep{font-size:12.5px}
+.tzone i{font-size:12px; padding:2px 9px}
+.ttext .eq,.ttext .eq2{font-size:13.5px}
+.tmap .zl{font-size:15px}
+.tmap .zl small,.tmap .zt small{font-size:12.5px}
+.kpair>span{font-size:13px}
+.kpair canvas{height:180px}
+#tutNext{font-size:15.5px; padding:11px 8px}
+#tutSkip,#tutBack{font-size:14px; padding:9px 14px}
+#tutCard.dock{width:min(560px,calc(100vw - 20px))}
+.ttext canvas.well{max-width:100%}
+#learnGuide,.tiny{font-size:13.5px}
+.chap h4{font-size:15.5px}
+.chap h4 .cno{font-size:13px}
+.chap .cgoal{font-size:13px}
+ol.seq button{font-size:14px}
+ol.seq .no{font-size:13px}
+ol.seq .tg2{font-size:12.5px}
+.gloss dt{font-size:14.5px}
+.gloss dd{font-size:13.5px}
+.gloss .gl button{font-size:13px}
+.gloss .gh{font-size:12.5px}
+.lab{font-size:13px}
+.lab i{font-size:12px}
+.lab b{font-size:14.5px}
+.lab.axis{font-size:12.5px}
+.lab.ta i{font-size:11px}
+.lab.ta b{font-size:12.5px}
+.key{font-size:12.5px; height:23px}
+@media (max-width:560px){
+  .ttext{font-size:15px}
+  #tutCard.dock{width:calc(100vw - 16px)}
+}
 </style>
 </head>
 <body>
@@ -2496,7 +2533,7 @@ function readColors() {
    'gap', 'tagbg', 'env', 'rfDim', 'axisT', 'inputLine'].forEach(k => { C[k] = g('--' + k); });
   C.mut = C.muted;
   /* グラフの字。数字は等幅のまま、日本語は等幅の全角フォントに落ちると字間が空いて読みにくいので、ふつうのゴシックへ回す */
-  MONO = '11px "IBM Plex Mono","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
+  MONO = '12.5px "IBM Plex Mono","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
 }
 let MONO = '';
 readColors();
@@ -2910,13 +2947,13 @@ function wellDraw(cv) {
   const font = css.getPropertyValue('--gothic').trim() || 'sans-serif';
   const line = '#9AAAB6', water = '#4F9CCB';
   x.clearRect(0, 0, W, H);
-  x.font = '11.5px ' + font; x.fillStyle = dim; x.textAlign = 'right';
+  x.font = '12.5px ' + font; x.fillStyle = dim; x.textAlign = 'right';
   x.fillText('TR ' + WELL.TR + ' ms ／ TE ' + WELL.TE + ' ms', W - 6, 15);
   WELL_IDS.forEach((id, k) => {
     const t = TIS[TIX[id]], w = WELL.s[id], c0 = k * W / 2 + 10, pd = t.PD;
-    x.textAlign = 'left'; x.fillStyle = ink; x.font = 'bold 12.5px ' + font;
+    x.textAlign = 'left'; x.fillStyle = ink; x.font = 'bold 14px ' + font;
     x.fillText(t.nm.replace(/（.*）/, ''), c0, 30);
-    x.font = '11px ' + font;
+    x.font = '12.5px ' + font;
     /* 井戸：深さ＝水素の量、水位＝縦の M */
     const wy = 40, ww = 48, wh = 92 * pd, wx = c0;
     x.fillStyle = water; x.fillRect(wx, wy + 92 - wh * w.z, ww, wh * w.z);
@@ -2938,7 +2975,7 @@ function wellDraw(cv) {
     const mv = w.meas == null ? 0 : Math.min(1, w.meas * pd), sy = 160;
     x.fillStyle = dim; x.fillText('TE で測った明るさ', c0, sy + 11);
     const g = Math.round(20 + 225 * mv); x.fillStyle = 'rgb(' + g + ',' + g + ',' + g + ')';
-    x.fillRect(c0 + 104, sy - 2, 40, 17); x.strokeStyle = line; x.lineWidth = 1; x.strokeRect(c0 + 104, sy - 2, 40, 17);
+    x.fillRect(c0 + 116, sy - 3, 40, 18); x.strokeStyle = line; x.lineWidth = 1; x.strokeRect(c0 + 116, sy - 3, 40, 18);
   });
 }
 
