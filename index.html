@@ -596,6 +596,7 @@ body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足�
   .stage{
     order:1; position:sticky; top:0; z-index:6;
     height:clamp(230px,40vh,400px);
+    transition:height .25s;
     box-shadow:0 12px 20px -14px var(--shadow4);
   }
   .rail{order:2; display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); align-items:start;
@@ -836,6 +837,7 @@ body.markOn .mk.smk{display:block}
 .chap h4{font-size:16.5px} .chap h4 .cno{font-size:14px} .chap .cgoal{font-size:14px}
 ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:13.5px}
 .gloss dt{font-size:15.5px} .gloss dd{font-size:14.5px} .gloss .gl button{font-size:14px} .gloss .gh{font-size:13.5px}
+@media (max-width:900px){ body.tutPanel .stage{height:clamp(190px,28vh,300px)} }
 @media (max-width:560px){
   .stage .seg button{font-size:12.5px}   /* スマホは 3D の上のボタンが3段にならないよう、ここだけ控えめに */
   .playbar button{font-size:13px}
@@ -4376,9 +4378,12 @@ function tutShow() {
   /* 先に対象を画面の真ん中へ運んでから測る。なめらかスクロールだと
      測り終える前に位置が変わるので、ここでは一息に動かす */
   /* blk:'nearest' は「見えていれば動かさない」。3D と画像を見せたまま右の欄を光らせたいときに使う */
+  /* スマホで 3D 以外（グラフ・図）を見せるときは、上に貼りついた 3D を低くして、図とカードが収まるようにする */
+  document.body.classList.toggle('tutPanel', !!el && !stage.contains(el) && !el.contains(stage));
   if (el) el.scrollIntoView({ block:st.blk || 'center', inline:'nearest', behavior:'auto' });
   tutPlace(el);
   tutFit(el);
+  setTimeout(() => { tutPlace(el); tutFit(el); }, 320);   // 3D の高さが変わったあと（.25 秒）にもう一度合わせる
   requestAnimationFrame(() => tutPlace(el));
   setTimeout(() => tutPlace(el), 160);
   if (tutWaiting) { tutWaiting.el.removeEventListener('click', tutWaiting.fn); tutWaiting = null; }
@@ -4406,7 +4411,7 @@ function tutNext() { tutI++; if (tutI >= tutList.length) tutEnd(); else tutShow(
 function tutBack() { if (tutI > 0) { tutI--; tutShow(); } }
 function tutEnd() {
   if (tutWaiting) { tutWaiting.el.removeEventListener('click', tutWaiting.fn); tutWaiting = null; }
-  tutI = -1; tutEl.hidden = true; document.body.classList.remove('tutOn');
+  tutI = -1; tutEl.hidden = true; document.body.classList.remove('tutOn', 'tutPanel');
   P.tag = {}; layoutImg();
   const f = tutAfter; tutAfter = null;
   if (f) f();
