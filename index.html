@@ -2228,7 +2228,7 @@ function homeCam() {
   }
   ctrl.th = P.showBody || !P.coil ? -1.05 : -0.42;
   ctrl.phi = P.showBody ? 0.8 : 1.15;
-  ctrl.want = P.showBody ? 82 : (P.coil ? (smallScr ? 38 : 30) : 23);
+  ctrl.want = P.showBody ? 82 : (P.coil ? (smallScr ? 38 : 30) : (smallScr ? 29 : 23));   // スマホは上のボタンに M の先が隠れないよう少し引く
   applyCam();
 }
 let drag = null, pinch = 0;
