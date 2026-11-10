@@ -808,7 +808,8 @@ details.fold summary{font-size:12.5px}
 .tw:hover{background:var(--fill)}
 .tw.m,.tw.m0,.tw.h,.tw.mag{color:#11788F}
 .tw.mxy{color:#BE3B30}
-.tw.spins{color:#5F4FB5}
+.tw.spins{color:#8A97A1; }
+.tw.spins{background:linear-gradient(90deg,#1C8A5C,#A3700F,#5F4FB5); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
 .tw.rf,.tw.band{color:#A3700F}
 .tw.b0{color:#40566A}
 .tw.coil{color:#5E7386}
@@ -2349,7 +2350,7 @@ function wFlashUpdate(dt) {
     const p = left > 0 ? Math.abs(Math.sin((1.8 - left) * 5.2)) : 0;
     if (k === 'coil') { if (left > 0) coilMat.emissive.setRGB(0.15 + 0.5 * p, 0.12 + 0.3 * p, 0.25 + 0.6 * p); }
     else if (k === 'band') { if (left > 0) slBand.material.opacity = 0.25 + 0.35 * p; }
-    else if (left > 0 || WFL[k] === 0) { for (const g of wTargets(k)) g.scale.setScalar(1 + 0.3 * p); }
+    else if (left > 0 || WFL[k] === 0) { for (const g of wTargets(k)) g.scale.setScalar(1 + 0.2 * p); }
     if (left > 0) WFL[k] = Math.max(0, left - dt);
     else if (WFL[k] === 0) delete WFL[k];          // 元の大きさに戻したら終わり
     (WLAB[k] || []).forEach(id => LABS[id] && LABS[id].classList.toggle('flash', left > 0));
@@ -3096,7 +3097,7 @@ L({ nm:'共鳴：リズムが合うと倒れる', zone:[0, 1], tg:'周波数が�
        '<span class="eq">共鳴周波数 f ＝ 42.58 MHz × B₀〔T〕（1.5 T で約 64 MHz）</span>' }),
 
 L({ nm:'RFパルスで倒す', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × 時間', sel:'#stage',
-  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm', T2p:40 },
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:false, tissue:'wm', T2p:40 },
   act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
   text:'[[m:M]] と一緒に回る目線（回転座標）で見ると、M は<b>まっすぐ倒れます</b>。<br>倒れる角度は、[[rf:RFパルス]]の強さ × 当てる時間です。' }),
 
