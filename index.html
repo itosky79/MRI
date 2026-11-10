@@ -2753,7 +2753,7 @@ function drawSeq() {
       cx.fillStyle = C.grad;
       const lt = '位相エンコード（毎回強さを変える）→';
       if (cx.measureText(lt).width < X(te.t) - 38 - L - 6) { cx.textAlign = 'right'; cx.fillText(lt, X(te.t) - 38, gy - h * 0.02); }
-      else { cx.textAlign = 'left'; cx.fillText('↓ 位相エンコード', Math.max(L + 2, X(te.t) - 60), gy - h * 0.12); }   // 狭い画面では短く、上に
+      else { cx.textAlign = 'left'; cx.fillText('← 位相エンコード', X(te.t) + 24, gy - h * 0.03); }   // 狭い画面では、空いている右側に短く
     }
   }
   /* 信号：実際に計算している |Mxy| の記録 */
