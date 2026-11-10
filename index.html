@@ -802,6 +802,19 @@ details.fold summary{font-size:12.5px}
 .sld-h span,.sld-h b{font-size:13.5px}
 #b0Seg small{font-size:12.5px}
 .hbtn{font-size:13px}
+/* 用語札：画面の物と同じ色の枠。押すとその物が光る */
+.tw{display:inline-block; padding:0 7px; margin:1px 2px; border-radius:7px; border:1.5px solid currentColor; background:var(--panel);
+  font-weight:700; line-height:1.5; cursor:pointer; white-space:nowrap}
+.tw:hover{background:var(--fill)}
+.tw.m,.tw.m0,.tw.h,.tw.mag{color:#11788F}
+.tw.mxy{color:#BE3B30}
+.tw.spins{color:#5F4FB5}
+.tw.rf,.tw.band{color:#A3700F}
+.tw.b0{color:#40566A}
+.tw.coil{color:#5E7386}
+.tw.flux{color:#7E57C9}
+.ttext b .tw{background:var(--panel)}
+.lab.flash{box-shadow:0 0 0 3px rgba(17,120,143,.5); font-weight:700}
 @media (max-width:560px){
   .ttext{font-size:15px}
   #tutCard.dock{width:calc(100vw - 16px)}
@@ -856,8 +869,8 @@ details.fold summary{font-size:12.5px}
         <span><i style="background:var(--teal); opacity:.35"></i><b>薄い矢印＝M₀（差を全部足したもの）</b></span>
       </p>
       <p class="key" id="keyCoil" hidden>
-        <span><i style="background:var(--sig)"></i>太い矢印＝磁化 M</span>
-        <span><i style="background:#B08BE0"></i><b>紫＝輪を貫く分。この変化が信号（コイルが光る）</b></span>
+        <span><i style="background:var(--sig)"></i>太い矢印＝M</span>
+        <span><i style="background:#B08BE0"></i><b>紫＝輪を通る分。この変化が信号（コイルが光る）</b></span>
       </p>
       <p class="key" id="keyInd" hidden>
         <span><i style="background:var(--sig)"></i>磁石</span>
@@ -875,14 +888,14 @@ details.fold summary{font-size:12.5px}
         <span><i style="background:var(--amber)"></i><b>オレンジ＝電波の周波数の範囲と、そこに入った層</b></span>
       </p>
       <p class="key" id="keyRes" hidden>
-        <span><i style="background:var(--sig)"></i>太い矢印＝磁化 M</span>
-        <span><i style="background:var(--amber)"></i><b>オレンジ＝電波の磁場 B₁</b></span>
+        <span><i style="background:var(--sig)"></i>太い矢印＝M</span>
+        <span><i style="background:var(--amber)"></i><b>オレンジ＝RFパルス（B₁）</b></span>
       </p>
       <p class="key" id="key3d">
-        <span><i style="background:linear-gradient(90deg,var(--grass),var(--amber),var(--violet))"></i>細い矢印＝スピン（色＝位相）</span>
-        <span><i style="background:var(--sig)"></i>太い矢印＝合計 M</span>
-        <span><i style="background:var(--grass)"></i>Mz（縦）</span>
-        <span><i style="background:var(--alert)"></i><b>Mxy（横）＝信号</b></span>
+        <span><i style="background:linear-gradient(90deg,var(--grass),var(--amber),var(--violet))"></i>細い矢印＝水素1つずつ（色＝向き）</span>
+        <span><i style="background:var(--sig)"></i>太い矢印＝M（合計）</span>
+        <span><i style="background:var(--grass)"></i>縦の M</span>
+        <span><i style="background:var(--alert)"></i><b>横の M（＝信号）</b></span>
       </p>
 
       <div class="playbar">
@@ -1821,8 +1834,9 @@ axGrp.add(tint(line([new THREE.Vector3(-AX, 0, 0), new THREE.Vector3(AX, 0, 0)],
 axGrp.add(tint(line([new THREE.Vector3(0, -AX, 0), new THREE.Vector3(0, AX, 0)], 0x3d566b, .9), 'ax'));
 axGrp.add(tint(line([new THREE.Vector3(0, 0, -AX * .8), new THREE.Vector3(0, 0, AX)], 0x4d6a80, .9), 'axz'));
 axGrp.add(tint(dashCircle(ML, 72, 0x2b3f4f, .75), 'ring'));
+let B0AX = null;
 {
-  const b0 = mkArrow(0x6d93a6, 0.045, 0.20, 0.7); tint(b0, 'b0');
+  const b0 = mkArrow(0x6d93a6, 0.045, 0.20, 0.7); tint(b0, 'b0'); B0AX = b0;
   setArrow(b0, 0, 0, 1, AX + 1.1);
   b0.grp.position.set(0, 0, 0);
   axGrp.add(b0.grp);
@@ -2309,6 +2323,38 @@ function place(key, x, y, z, txt, on) {
 
 /* ================= 画面の更新 ================= */
 let labPhase = 0, echoFlash = 0;
+/* ---- 用語と画面の物を結びつける：カードの用語札（[[キー:言葉]]）を押すと、その物がふくらんで光る ----
+   カードが出たときにも、文に出てくる物を順に1回ずつ光らせる */
+const WFL = {};
+const WKEYS = ['m', 'm0', 'mxy', 'spins', 'rf', 'b0', 'flux', 'mag', 'h', 'coil', 'band'];
+const WLAB = { m:['m'], m0:['m0'], mxy:['mxy'], rf:['b1'], b0:['z', 'boreB0'], coil:['coil'], flux:['flux'], mag:['mag'], band:['slBand'] };
+function wFlash(k) { if (WKEYS.includes(k)) WFL[k] = 1.8; }
+function wTargets(k) {
+  switch (k) {
+    case 'm': return [mArrow.grp].concat(SLB.arr.map(a => a.grp), GRID.arr.map(a => a.grp), tisArr.map(t => t.a.grp), mField.children, P.quantum ? [m0Ghost.grp] : []);
+    case 'm0': return [m0Ghost.grp];
+    case 'mxy': return [mxyArrow.grp];
+    case 'spins': return spins.map(a => a.grp);
+    case 'rf': return [b1Arrow.grp];
+    case 'b0': return boreB0.map(a => a.grp).concat(B0AX ? [B0AX.grp] : []);
+    case 'flux': return [fluxArrow.grp];
+    case 'mag': return [magArrow.grp];
+    case 'h': return cons.map(a => a.grp);
+  }
+  return [];
+}
+function wFlashUpdate(dt) {
+  for (const k of WKEYS) {
+    const left = WFL[k] || 0;
+    const p = left > 0 ? Math.abs(Math.sin((1.8 - left) * 5.2)) : 0;
+    if (k === 'coil') { if (left > 0) coilMat.emissive.setRGB(0.15 + 0.5 * p, 0.12 + 0.3 * p, 0.25 + 0.6 * p); }
+    else if (k === 'band') { if (left > 0) slBand.material.opacity = 0.25 + 0.35 * p; }
+    else if (left > 0 || WFL[k] === 0) { for (const g of wTargets(k)) g.scale.setScalar(1 + 0.3 * p); }
+    if (left > 0) WFL[k] = Math.max(0, left - dt);
+    else if (WFL[k] === 0) delete WFL[k];          // 元の大きさに戻したら終わり
+    (WLAB[k] || []).forEach(id => LABS[id] && LABS[id].classList.toggle('flash', left > 0));
+  }
+}
 function b1Dir() {   // いま当てている B₁ の向き（M と一緒に回る座標で）
   if (R.nut.off) { const f = R.nut.ph * Math.PI / 180; return [Math.cos(f), Math.sin(f), 0]; }
   return R.nut.ax === 'x' ? [1, 0, 0] : [0, 1, 0];
@@ -2465,6 +2511,7 @@ function updateScene(dt) {
   axGrp.visible = (!P.showBody || ctrl.dist < 45) && !P.slab && !P.grid;
   planeXY.visible = !P.showBody && !P.quantum && !P.slab && !P.grid;
 
+  wFlashUpdate(dt);
   /* --- カメラをなめらかに追従 --- */
   ctrl.dist += (ctrl.want - ctrl.dist) * (1 - Math.exp(-dt * 4.5));
   applyCam();
@@ -2473,21 +2520,21 @@ function updateScene(dt) {
   const near3d = !P.showBody || ctrl.dist < 45;
   const on = P.showLab && near3d && !P.slab && !P.grid;
   const rot = P.frame === 'rot';
-  place('z', 1.7, 0, AX - 0.2, 'z ＝ B₀ の向き', on);
+  place('z', 1.7, 0, AX - 0.2, 'B₀ の向き（上）', on);
   place('b0', 0, 0, 0, '', false);
   place('x', AX + 0.5, 0, 0, rot ? "x'" : 'x', on && !P.showBody);
   place('y', 0, AX + 0.5, 0, rot ? "y'" : 'y', on && !P.showBody);
   {
     const t = new THREE.Vector3(m[0] * ML, m[1] * ML, m[2] * ML).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('m', t.x * 1.13, t.y * 1.13, t.z * 1.13 + 0.35, 'M', on && showSpin && L > 0.4);
-    place('mz', 0.55, 0.55, m[2] * ML, 'Mz', on && comp && Math.abs(m[2]) > 0.18);
+    place('mz', 0.55, 0.55, m[2] * ML, '縦の M', on && comp && Math.abs(m[2]) > 0.18);
     const q = new THREE.Vector3(m[0] * ML, m[1] * ML, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    place('mxy', q.x * 1.18, q.y * 1.18, -0.5, 'Mxy', on && comp && txy > 0.18);
+    place('mxy', q.x * 1.18, q.y * 1.18, -0.5, '横の M', on && comp && txy > 0.18);
   }
   if (onRF) {
     const ax = b1Dir();
     const b = new THREE.Vector3(ax[0] * 3.3, ax[1] * 3.3, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    place('b1', b.x, b.y, 0.5, 'B₁', on);
+    place('b1', b.x, b.y, 0.5, 'RFパルス（B₁）', on);
   } else place('b1', 0, 0, 0, '', false);
   {
     const sl = !!P.slab && P.showLab, top = SLC * SLDZ;
@@ -2509,7 +2556,7 @@ function updateScene(dt) {
     place('mag', 0, 0, 0, '', false);
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('coil', COILR * 0.86, 0, COILR * 0.56, '受信コイル', P.showLab);
-    place('flux', -0.3, _m.y * ML * 1.08, -2.3, '<i>輪を貫く分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab);
+    place('flux', -0.3, _m.y * ML * 1.08, -2.3, '<i>輪を通る分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab);
   } else { place('coil', 0, 0, 0, '', false); place('flux', 0, 0, 0, '', false); place('mag', 0, 0, 0, '', false); }
   place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
   for (const t of tisArr) {
@@ -3009,31 +3056,31 @@ L({ nm:'MRI の全体の地図', tg:'入口・体の中・出口', map:true, sel
   act:{ label:'流れを通して見る', fn:mapPlay },
   text:'MRI は、<b>磁場で水素を動かし、その変化を電流として読む</b>装置です。' +
        '<span class="tmap">' +
-         '<span class="z"><span class="zl">入口<small>機械</small></span><span class="zt">電流で<b>磁場を作る</b>（B₀・B₁）</span></span>' +
+         '<span class="z"><span class="zl">入口<small>機械</small></span><span class="zt">電流で<b>磁場を作る</b>（[[b0:B₀]] と [[rf:RFパルス]]）</span></span>' +
          '<span class="za">↓</span>' +
-         '<span class="z"><span class="zl">体の中<small>水素</small></span><span class="zt">M がそろう → 倒れて回る</span></span>' +
+         '<span class="z"><span class="zl">体の中<small>水素</small></span><span class="zt">[[m:M]] がそろう → 倒れて回る</span></span>' +
          '<span class="za">↓</span>' +
-         '<span class="z"><span class="zl">出口<small>機械</small></span><span class="zt">磁場の変化で電流が流れる＝<b>信号</b></span></span>' +
+         '<span class="z"><span class="zl">出口<small>機械</small></span><span class="zt">[[coil:受信コイル]]に電流が流れる＝<b>信号</b></span></span>' +
        '</span>' }),
 
 L({ nm:'静磁場 B₀ の向き', zone:[0], tg:'体の長い方向 ＝ 画面の上', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, bore:true, showComp:false, tissue:'wm' },
   on:() => { calm(); },
-  text:'筒の電線に電流を流すと、<b>体の長い方向</b>に強い磁場 B₀ ができます。<br>画面では、この向きを「上」として描きます。' }),
+  text:'筒の電線に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。<br>画面では、この向きを「上」として描きます。' }),
 
 L({ nm:'静磁場の中のプロトン', zone:[1], tg:'B₀ と M₀', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
-  text:'水素の原子核は小さな磁石です。B₀ の中では<b>上向きが少しだけ多く</b>なります。<br>薄い矢印 M₀ が、その差の合計です。' }),
+  text:'[[h:水素の原子核]]は小さな磁石です。[[b0:B₀]] の中では<b>上向きが少しだけ多く</b>なります。<br>薄い矢印 [[m0:M₀]] が、その差の合計です。' }),
 
 L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの合計 M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
-  text:'上と下は打ち消し合い、<b>余った上向きの分</b>だけが M として残ります。<br>実際の差は、100万個に約5個です。' }),
+  text:'上と下は打ち消し合い、<b>余った上向きの分</b>だけが [[m:M]] として残ります。<br>実際の差は、100万個に約5個です。' }),
 
 L({ nm:'脳のどこにも M がある', zone:[1], tg:'ボクセルごとに1本', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
   on:() => { calm(); },
-  text:'脳の<b>どのボクセルにも M が1本ずつ</b>あり、すべて上を向いています。' }),
+  text:'脳の<b>どのボクセルにも</b> [[m:M]] が1本ずつあり、すべて上を向いています。' }),
 
 /* 共鳴：B₁ の速さが M と合えば倒れ、ずれれば少しぐらつくだけ。
    ずれの量は、パルスの終わりに M がちょうど真上へ戻る値にしている（M から見た実効磁場のまわりの回転がちょうど1周：
@@ -3045,13 +3092,13 @@ L({ nm:'共鳴：リズムが合うと倒れる', zone:[0, 1], tg:'周波数が�
     { label:'同じ速さの電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0); } },
     { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
   ],
-  text:'M と<b>同じ速さで回る電波</b>だけが M を倒せます。速さがずれると、少し揺れるだけです。' +
+  text:'[[m:M]] と<b>同じ速さで回る</b> [[rf:RFパルス（電波）]]だけが、M を倒せます。速さがずれると、少し揺れるだけです。' +
        '<span class="eq">共鳴周波数 f ＝ 42.58 MHz × B₀〔T〕（1.5 T で約 64 MHz）</span>' }),
 
 L({ nm:'RFパルスで倒す', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × 時間', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, tissue:'wm', T2p:40 },
   act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
-  text:'M と一緒に回る目線（回転座標）で見ると、M は<b>まっすぐ倒れます</b>。<br>倒れる角度は、電波の強さ × 当てる時間です。' }),
+  text:'[[m:M]] と一緒に回る目線（回転座標）で見ると、M は<b>まっすぐ倒れます</b>。<br>倒れる角度は、[[rf:RFパルス]]の強さ × 当てる時間です。' }),
 
 L({ nm:'電磁誘導：変化が電気を生む', zone:[2], tg:'磁場が変わると電流', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, induct:true, showComp:false, tissue:'csf', T2p:Infinity },
@@ -3060,21 +3107,21 @@ L({ nm:'電磁誘導：変化が電気を生む', zone:[2], tg:'磁場が変わ�
     { label:'磁石を近づける', fn:() => { IND.yT = -5; } },
     { label:'磁石を遠ざける', fn:() => { IND.yT = -12; } },
   ],
-  text:'磁石を動かすと、輪を通る磁場が変わり、<b>動いている間だけ</b>電流が流れます。<br>これを電磁誘導といいます。' }),
+  text:'[[mag:磁石]]を動かすと、[[coil:輪]]を通る磁場（[[flux:紫の矢印]]）が変わり、<b>動いている間だけ</b>電流が流れます。<br>これを電磁誘導といいます。' }),
 
 L({ nm:'回る M でコイルに電流が流れる', zone:[2], tg:'これが MRI の信号', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   act:{ label:'M を倒す', fn:() => { calm(); later(() => manualPulse(90, 'x', 1.2), 300); } },
-  text:'縦向きの M は止まっているので、信号は出ません。<br><b>倒して回すと</b>、輪を通る磁場が変わり、電流（信号）が流れます。' }),
+  text:'縦向きの [[m:M]] は止まっているので、信号は出ません。<br><b>倒して回すと</b>、[[coil:輪]]を通る磁場（[[flux:紫の矢印]]）が変わり、電流（信号）が流れます。' }),
 
 L({ nm:'T2：横磁化が短くなる', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
-  text:'横の矢印は、時間とともに<b>短くなります</b>（T2）。<br>37% まで減る時間が、その組織の T2 です。' }),
+  text:'[[mxy:横の M]] は、時間とともに<b>短くなります</b>（T2）。<br>37% まで減る時間が、その組織の T2 です。' }),
 
 L({ nm:'T2*：磁場のムラで もっと速く', zone:[1], tg:'ムラの分だけ速く消える', sel:'#stage',
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
-  text:'磁場のムラで回る速さがばらつくと、横の矢印は <b>T2 より速く</b>消えます（T2*）。' }),
+  text:'磁場のムラで[[spins:細い矢印]]（水素1つずつ）の速さがばらつくと、[[mxy:横の M]] は <b>T2 より速く</b>消えます（T2*）。' }),
 
 L({ nm:'スピンエコー：180°で呼びもどす', zone:[1], tg:'エコーの高さは T2 だけ', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
@@ -3082,7 +3129,7 @@ L({ nm:'スピンエコー：180°で呼びもどす', zone:[1], tg:'エコー�
     calm(); manualPulse(90, 'x');
     later(() => manualPulse(180, 'y'), 2000);
   } },
-  text:'180° で向きを折り返すと、ばらけた矢印が<b>もう一度そろいます</b>（エコー）。' }),
+  text:'180° で向きを折り返すと、ばらけた[[spins:細い矢印]]が<b>もう一度そろいます</b>（エコー）。' }),
 
 L({ nm:'T1：縦磁化がもどる', zone:[1], tg:'スピン-格子緩和', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
@@ -3111,7 +3158,7 @@ L({ nm:'井戸とバケツで考える TR と TE', tg:'汲む間隔と、測る�
 L({ nm:'矢印から画像へ', tg:'横の長さ × ρ ＝ 明るさ', sel:'#panBridge', blk:'nearest',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
   act:{ label:'組織ごとに塗ってみる', fn:() => paintDemo() },
-  text:'ボクセルごとの<b>横の矢印の長さ × 水素の量</b>が、その場所の明るさです。' }),
+  text:'ボクセルごとの<b>[[m:M]] の横の長さ × 水素の量</b>が、その場所の明るさです。' }),
 
 L({ nm:'TR：次に倒すまでの待ち時間', tg:'T1 の差をつける', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
@@ -3233,7 +3280,7 @@ L({ nm:'スライス選択：1枚だけ倒す', zone:[0, 1], tg:'傾斜磁場 �
     { label:'傾斜磁場をかける', fn:() => { slabSet({ g:1 }); } },
     { label:'電波を当てる', fn:() => { slabRF(); } },
   ],
-  text:'傾斜磁場で層ごとに周波数をずらすと、電波の範囲に入った<b>1枚だけ</b>が倒れます。' }),
+  text:'傾斜磁場で層ごとに周波数をずらすと、[[band:電波の範囲]]に入った<b>1枚だけ</b>の [[m:M]] が倒れます。' }),
 
 L({ nm:'スライスの位置と厚さ', zone:[0, 1], tg:'厚さ ＝ 帯域幅 ÷ 傾斜', sel:'#stage',
   set:SLSET,
@@ -3250,7 +3297,7 @@ L({ nm:'周波数エンコード：横は音の高さで', zone:[0, 2], tg:'読�
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
   on:() => { calm(); gridInit(); },
   act:{ label:'左右に傾斜をかける（読んでいる間）', fn:() => { GRID.gx = 1; } },
-  text:'読む間に左右の傾斜をかけると、<b>列ごとに回る速さ</b>が変わります。<br>この速さ（音の高さ）で、横の位置が分かります。' }),
+  text:'読む間に左右の傾斜をかけると、<b>列ごとに</b> [[m:M]] の回る速さが変わります。<br>この速さ（音の高さ）で、横の位置が分かります。' }),
 
 L({ nm:'位相エンコード：縦は角度のずれで', zone:[0, 1], tg:'読む前に一瞬だけ上下の傾斜', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
@@ -3259,7 +3306,7 @@ L({ nm:'位相エンコード：縦は角度のずれで', zone:[0, 1], tg:'読�
     { label:'上下に一瞬だけ傾斜をかける', fn:() => { gridInit(); gridPhase(1); } },
     { label:'強さを変えて、もう一度', fn:() => { gridInit(); gridPhase(2); } },
   ],
-  text:'読む前に一瞬だけ上下の傾斜をかけると、<b>行ごとに角度がずれて</b>残ります。<br>強さを変えて行の数だけくり返すので、時間がかかります。' +
+  text:'読む前に一瞬だけ上下の傾斜をかけると、<b>行ごとに</b> [[m:M]] の角度がずれて残ります。<br>強さを変えて行の数だけくり返すので、時間がかかります。' +
        '<span class="eq">撮像時間 ＝ TR × 位相エンコード数 × 加算回数</span>' }),
 
 L({ nm:'k 空間：集めたデータの表', zone:[2], tg:'中心＝明暗、外側＝輪郭', map:true,
@@ -4207,7 +4254,12 @@ function tutShow() {
   const chl = curCh >= 0 && tutList === CHAPTERS[curCh].full ? CHAPTERS[curCh].no + '　' : '';
   $('tutStep').innerHTML = (st.head || (counted(st) ? chl + k + ' / ' + n : '')) + zone;
   tutCard.style.width = '';
-  $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + st.text;
+  const wtxt = st.text.replace(/\[\[(\w+):([^\]]+)\]\]/g, '<span class="tw $1" data-w="$1" role="button" tabindex="0">$2</span>');
+  $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + wtxt;
+  {                                               // 文に出てくる物を、画面の上で順に1回ずつ光らせる
+    const ks = [...new Set([...$('tutText').querySelectorAll('.tw')].map(e => e.dataset.w))];
+    ks.forEach((k, i) => setTimeout(() => { if (tutList[tutI] === st) wFlash(k); }, 700 + i * 900));
+  }
   $('tutBack').hidden = !(st.back && tutI > 0);
   $('tutSkip').textContent = st.quit || 'スキップ';
   tutBtn(st);
@@ -4263,6 +4315,7 @@ function tutSync() {
   tutPlace(st.sel ? document.querySelector(st.sel) : null);
 }
 $('tutNext').addEventListener('click', tutHit);
+$('tutText').addEventListener('click', e => { const t = e.target.closest('.tw'); if (t) wFlash(t.dataset.w); });
 $('tutBack').addEventListener('click', tutBack);
 $('tutSkip').addEventListener('click', tutEnd);
 $('bGuide').addEventListener('click', tutStart);
