@@ -381,6 +381,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset
 .cmpbar button i{width:10px; height:10px; border-radius:50%}
 .cmpbar button[aria-pressed="true"]{background:var(--sel); color:var(--selT); font-weight:700}
 .cmplay{margin-right:6px; flex:none}
+.cmplay[hidden]{display:none}
 .cmplay button{padding:3px 10px; font-size:13px}
 .cmpfade{position:absolute; left:16px; bottom:64px; z-index:3; width:min(380px,calc(100% - 32px)); padding:6px 12px 4px; border-radius:12px;
   background:var(--scrim); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px)}
@@ -892,7 +893,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
 <div class="work">
   <div class="left">
     <div class="stage" id="stage">
-      <div class="cmpbar" id="cmpBar" hidden><span>比べる組織（3つまで）</span></div>
+      <div class="cmpbar" id="cmpBar" hidden><span>組織（1〜3つ）</span></div>
       <div class="cmpfade" id="cmpFade" hidden><input type="range" id="cmpFadeR" min="0" max="100" step="1" value="50" aria-label="重ねた組織の濃さを入れ替える"><div class="cmpfade-l" id="cmpFadeL"></div></div>
       <canvas id="gl"></canvas>
       <div id="labels"></div>
@@ -914,8 +915,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
           </div>
           <div class="seg" id="scaleSeg">
             <button type="button" data-sc="brain" aria-pressed="true">脳全体</button>
-            <button type="button" data-sc="vox">1つのボクセル</button>
-            <button type="button" data-sc="cmp">組織を比べる</button>
+            <button type="button" data-sc="vox">組織を見る</button>
           </div>
           <div class="seg" id="frameSeg">
             <button type="button" data-f="rot" aria-pressed="true">回転座標系</button>
@@ -2028,7 +2028,7 @@ for (let k = 0; k < CMP_N; k++) {
 }
 if (matchMedia('(max-width:560px)').matches) {   // スマホは上のボタンが3段にならないよう、言葉を短く
   const sc = document.querySelectorAll('#scaleSeg button');
-  if (sc.length === 3) { sc[0].textContent = '全体'; sc[1].textContent = 'ボクセル'; sc[2].textContent = '比べる'; }
+  if (sc.length === 2) { sc[0].textContent = '全体'; sc[1].textContent = '組織'; }
 }
 function cmpBarBuild() {   // 3D の上の「比べる組織」のボタン（はじめて使うときに作る）
   const bar = document.getElementById('cmpBar');
@@ -2046,11 +2046,12 @@ function cmpBarBuild() {   // 3D の上の「比べる組織」のボタン（�
     b.type = 'button'; b.dataset.t = id;
     b.innerHTML = '<i style="background:' + tcol(t) + '"></i>' + t.nm.replace(/（.*）/, '');
     if (id === 'les') b.hidden = !lesOn;
-    b.addEventListener('click', () => setTissue(id));
+    b.addEventListener('click', () => cmpToggle(id));
     bar.appendChild(b);
   });
 }
-const cmpActive = () => !!(P.cmp && P.cmp.length >= 2) && !P.showBody && !P.quantum && !P.slab && !P.grid && !P.induct && !P.coil && !P.bore;
+const cmpPlain = () => !P.showBody && !P.quantum && !P.slab && !P.grid && !P.induct && !P.coil && !P.bore;   // ふつうの「組織を見る」表示か
+const cmpActive = () => !!(P.cmp && P.cmp.length >= 2) && cmpPlain();                                      // 2〜3つを比べているか
 
 /* ---- 静磁場の筒（ボア）：原理「静磁場 B₀ の向き」 ----
    筒の壁に巻いた電線（灰色の輪）に電流を流すと、筒の中に体の長い方向（足 → 頭）の磁場 B₀ ができる。
@@ -2357,6 +2358,7 @@ function homeCam() {
   ctrl.th = P.showBody || !P.coil ? -1.05 : -0.42;
   ctrl.phi = P.showBody ? 0.8 : 1.15;
   ctrl.want = P.showBody ? 82 : (P.coil ? (smallScr ? 38 : 30) : (smallScr ? 29 : 23));   // スマホは上のボタンに M の先が隠れないよう少し引く
+  if (!P.showBody && !document.body.classList.contains('tutOn') && cmpPlain()) ctrl.want += smallScr ? 5 : 3;   // 組織ボタンが出ている分だけ引く
   applyCam();
 }
 let drag = null, pinch = 0;
@@ -2720,7 +2722,8 @@ function updateScene(dt) {
   const near3d = !P.showBody || ctrl.dist < 45;
   const on = P.showLab && near3d && !P.slab && !P.grid && !cmpOn;
   const rot = P.frame === 'rot';
-  place('z', 1.7, 0, AX - 0.2, 'B₀ の向き（上）', on);
+  const cbOn = !$('cmpBar').hidden;   // 組織ボタンが出ているときは、ボタンに隠れないよう少し下に（スマホは場所がないので出さない）
+  place('z', 1.7, 0, cbOn ? AX * 0.72 : AX - 0.2, 'B₀ の向き（上）', on && !(cbOn && smallScr));
   place('b0', 0, 0, 0, '', false);
   place('x', AX + 0.5, 0, 0, rot ? "x'" : 'x', on && !P.showBody);
   place('y', 0, AX + 0.5, 0, rot ? "y'" : 'y', on && !P.showBody);
@@ -3810,7 +3813,6 @@ function updateTis() {
     const g = Math.round(255 * Math.pow(Math.min(1, sg[id] / (mxs * 1.04)), 0.92));
     b.querySelector('i').style.background = 'rgb(' + g + ',' + g + ',' + g + ')';
     b.setAttribute('aria-pressed', P.cmp ? P.cmp.includes(id) : id === P.tissue);
-    b.disabled = !!P.cmp && BANK_IDS.indexOf(id) < 0;   // 比べられるのは、3D で動かしている組織だけ
   });
   if ($('cmpBar')) cmpBarSync();
   const t = TIS[TIX[P.tissue]];
@@ -3877,16 +3879,22 @@ function paintDemo() {
 }
 $('bPaint').addEventListener('click', paintDemo);
 
+/* 3D の上の組織ボタン：1〜3つを選ぶ（押すたびに足す／外す。3つまで、1つは残す）。1つなら詳しい表示、2〜3つなら比べる表示 */
+function cmpToggle(id) {
+  const L = ((P.cmp && P.cmp.length) ? P.cmp.slice() : [P.tissue]).filter(t => BANK_IDS.indexOf(t) >= 0);   // 比べられるのは、3D で動かしている組織だけ
+  const i = L.indexOf(id);
+  if (i >= 0) { if (L.length > 1) L.splice(i, 1); }
+  else { L.push(id); if (L.length > CMP_N) L.shift(); }
+  P.cmp = L.length >= 2 ? L : null; P.cmpFade = null;
+  applyTissue(L[L.length - 1]);
+  homeCam(); cmpBarSync(); layoutImg();
+}
+/* 右の「見ている組織」・④の行：その1つだけを見る */
 function setTissue(id) {
-  if (P.cmp) {                                   // 並べて比べる：押した組織を足す／外す（3つまで、1つは残す）
-    if (BANK_IDS.indexOf(id) < 0) return;
-    const i = P.cmp.indexOf(id);
-    if (i >= 0) { if (P.cmp.length > 1) P.cmp.splice(i, 1); }
-    else { P.cmp.push(id); if (P.cmp.length > CMP_N) P.cmp.shift(); }
-    id = P.cmp[P.cmp.length - 1];
-    P.cmpFade = null;
-    homeCam(); cmpBarSync();
-  }
+  if (P.cmp) { P.cmp = null; homeCam(); cmpBarSync(); }
+  applyTissue(id);
+}
+function applyTissue(id) {
   P.tissue = id;
   if (REP[id]) xhairPx = REP[id].slice();
   clearTrail();
@@ -3899,8 +3907,9 @@ function layoutImg() {
   const w = stage.clientWidth, h = stage.clientHeight;
   if (P.view === 0 || (smallScr && cmpActive())) { imgbox.style.display = 'none'; return; }   // スマホで組織を比べているときは、矢印のために画像をしまう   // スマホで組織を並べているときは、並べた矢印のために画像をしまう
   imgbox.style.display = '';
-  const ih = Math.min(h * 0.50, (w * 0.26) * IH / IW, h - 96), iw = ih * IW / IH;
-  imgbox.style.left = (w - iw - 12).toFixed(0) + 'px'; imgbox.style.top = '46px';
+  const cb = $('cmpBar'), top = smallScr && !cb.hidden ? cb.offsetTop + cb.offsetHeight + 8 : 46;   // スマホは組織ボタンの下に置く（重ならないように）
+  const ih = Math.min(h * 0.50, (w * 0.26) * IH / IW, h - top - 50), iw = ih * IW / IH;
+  imgbox.style.left = (w - iw - 12).toFixed(0) + 'px'; imgbox.style.top = top + 'px';
   imgbox.style.width = iw.toFixed(0) + 'px'; imgbox.style.height = ih.toFixed(0) + 'px';
   $('imgPar').style.display = iw < 200 ? 'none' : '';
   const px = xhairPx || REP[P.tissue];
@@ -3956,7 +3965,7 @@ function refresh(keep) {
   $('wTI').style.display = P.seq === 'IR' ? '' : 'none';
   $('wFA').style.display = (P.seq === 'GRE' || P.manual) ? '' : 'none';
   segSet($('seqSeg'), P.seq, 'q'); segSet($('b0Seg'), P.B0, 'b'); segSet($('phSeg'), phantomKind, 'ph');
-  segSet($('viewSeg'), P.view, 'v'); segSet($('frameSeg'), P.frame, 'f'); segSet($('scaleSeg'), P.cmp && !P.showBody ? 'cmp' : P.showBody ? 'brain' : 'vox', 'sc'); cmpBarSync();
+  segSet($('viewSeg'), P.view, 'v'); segSet($('frameSeg'), P.frame, 'f'); segSet($('scaleSeg'), P.showBody ? 'brain' : 'vox', 'sc'); cmpBarSync();
   segSet($('nSeg'), P.nDisp, 'n'); segSet($('spdSeg'), P.spd, 's');
   const pr = presetOf();
   [...$('preGrid').children].forEach(b => b.setAttribute('aria-pressed', !!pr && b.dataset.k === pr.k));
@@ -4229,26 +4238,23 @@ $('spdSeg').addEventListener('click', e => { const b = e.target.closest('button'
 const chk = (id, key, after) => $(id).addEventListener('change', e => { P[key] = e.target.checked; if (after) after(); refresh(); });
 function setScale(brain) {
   P.showBody = brain; $('tBody').checked = brain;
-  if (brain) P.cmp = null;
-  homeCam(); placeHead(); segSet($('scaleSeg'), P.cmp ? 'cmp' : brain ? 'brain' : 'vox', 'sc');
+  homeCam(); placeHead(); segSet($('scaleSeg'), brain ? 'brain' : 'vox', 'sc');
   cmpBarSync(); layoutImg();
-}
-/* 「組織を比べる」：1つのボクセルの表示で、組織ごとの M を横に並べる（はじめは差の大きい 脂肪・白質・脳脊髄液 の3つ） */
-function setCompare(on) {
-  P.cmp = on ? (P.cmp || ['fat', 'wm', 'csf']) : null;
-  if (on) P.tissue = P.cmp[0];
-  setScale(false); updateTis(); drawRel();
 }
 function cmpBarSync() {
   cmpBarBuild();
-  const bar = $('cmpBar'), on = cmpActive();
+  const bar = $('cmpBar'), on = cmpPlain() && !document.body.classList.contains('tutOn');   // 学習の案内の間は出さない（カードに集中できるように）
   bar.hidden = !on;
-  if (!on) { $('cmpFade').hidden = true; return; }
+  const L = (P.cmp && P.cmp.length) ? P.cmp : [P.tissue];
+  if (!on || L.length < 2) { $('cmpFade').hidden = true; $('cmpLay').hidden = true; }
+  else $('cmpLay').hidden = false;
+  if (!on) return;
   bar.style.top = ($('stage').querySelector('.bar').offsetHeight + 8) + 'px';   // 上のボタンのすぐ下に置く（スマホは2段なので高さで測る）
-  [...bar.querySelectorAll('button[data-t]')].forEach(b => { b.setAttribute('aria-pressed', String(P.cmp.includes(b.dataset.t))); if (b.dataset.t === 'les') b.hidden = !lesOn; });
+  [...bar.querySelectorAll('button[data-t]')].forEach(b => { b.setAttribute('aria-pressed', String(L.includes(b.dataset.t))); if (b.dataset.t === 'les') b.hidden = !lesOn; });
   [...$('cmpLay').children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === P.cmpLay)));
+  if (L.length < 2) return;
   /* 重ねたときだけ、濃さを入れ替えるスライダーを出す。両端と途中に、並べた組織の名前 */
-  const fd = $('cmpFade'), over = P.cmpLay === 'over', n = P.cmp.length;
+  const fd = $('cmpFade'), over = P.cmpLay === 'over', n = L.length;
   fd.hidden = !over;
   if (over) {
     const r = $('cmpFadeR'); r.max = (n - 1) * 100;
@@ -4258,8 +4264,7 @@ function cmpBarSync() {
 chk('tBody', 'showBody', () => setScale(P.showBody));
 $('scaleSeg').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.sc === 'cmp') setCompare(true);
-  else { P.cmp = null; setScale(b.dataset.sc === 'brain'); updateTis(); }
+  setScale(b.dataset.sc === 'brain'); updateTis();
 });
 chk('tComp', 'showComp'); chk('tTrail', 'showTrail', clearTrail); chk('tLab', 'showLab'); chk('tCoil', 'coil', () => homeCam());
 chk('tEcho', 'echoStop'); chk('tSlow', 'slowPulse'); chk('tNoise', 'noise'); chk('tSpoil', 'spoil', () => refresh());
@@ -4543,7 +4548,7 @@ function tutFit(el) {   // 光らせるものが、下に固定したカード�
 }
 function tutShow() {
   const st = tutList[tutI];
-  tutEl.hidden = false; document.body.classList.add('tutOn');
+  tutEl.hidden = false; document.body.classList.add('tutOn'); cmpBarSync();
   tutActI = 0;
   if (st.set) {
     learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
@@ -4615,7 +4620,7 @@ function tutBack() { if (tutI > 0) { tutI--; tutShow(); } }
 function tutEnd() {
   if (tutWaiting) { tutWaiting.el.removeEventListener('click', tutWaiting.fn); tutWaiting = null; }
   tutI = -1; tutEl.hidden = true; document.body.classList.remove('tutOn', 'tutPanel');
-  P.tag = {}; layoutImg();
+  P.tag = {}; cmpBarSync(); layoutImg();
   const f = tutAfter; tutAfter = null;
   if (f) f();
 }
