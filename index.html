@@ -142,7 +142,8 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
   gap:9px; padding:24px; background:var(--glerr); color:var(--muted); font-size:15.5px; line-height:1.85}
 .glerr b{color:var(--alert); font-size:16px; font-weight:700}
 .glinfo{margin:9px 0 0; font-family:var(--mono); font-size:12.5px; line-height:1.7; color:var(--dim); word-break:break-all}
-#labels{position:absolute; inset:0; pointer-events:none}
+#labels{position:absolute; inset:0; pointer-events:none; transition:opacity .2s}
+#labels.quiet{opacity:0}
 .lab{
   position:absolute; top:0; left:0; white-space:nowrap;
   font-size:13px; font-weight:500; letter-spacing:.04em;
@@ -2353,6 +2354,14 @@ function showSliceTip() {
   clearTimeout(sliceTipTm); sliceTipTm = setTimeout(() => t.classList.remove('on'), 900);
 }
 canvas.addEventListener('contextmenu', e => e.preventDefault());   // 右クリックのメニューを出さない
+/* 視点を回している・拡大しているあいだは、3D の文字（ラベル）を消して物だけを見せる。
+   文字が一緒に動き回ると、回している物に集中できないため。手を離して少したつと戻す */
+let labQuietTm = null;
+function labQuiet(on) {
+  clearTimeout(labQuietTm);
+  if (on) labelBox.classList.add('quiet');
+  else labQuietTm = setTimeout(() => labelBox.classList.remove('quiet'), 450);
+}
 let nPtr = 0;   // 画面に触れている指の数。2本目が触れたら回転はやめる（2本指の操作に任せる）
 canvas.addEventListener('pointerdown', e => {
   canvas.setPointerCapture(e.pointerId);
@@ -2365,17 +2374,19 @@ canvas.addEventListener('pointermove', e => {
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
   drag.x = e.clientX; drag.y = e.clientY;
   if (drag.slice) { sliceNudge(dy); return; }
+  if (Math.abs(dx) + Math.abs(dy) > 0) labQuiet(true);
   ctrl.th -= dx * 0.008;
   ctrl.phi = Math.max(0.12, Math.min(Math.PI - 0.12, ctrl.phi - dy * 0.008));
   applyCam();
 });
-const endDrag = e => { drag = null; if (e.pointerType === 'touch') nPtr = Math.max(0, nPtr - 1); };
+const endDrag = e => { drag = null; if (e.pointerType === 'touch') nPtr = Math.max(0, nPtr - 1); labQuiet(false); };
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
 canvas.addEventListener('dblclick', homeCam);
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
   ctrl.want = Math.max(7, Math.min(220, ctrl.want * (1 + Math.sign(e.deltaY) * 0.11)));
+  labQuiet(true); labQuiet(false);                // 回し終わってから 0.45 秒で文字を戻す
 }, { passive:false });
 /* 2本指：指の間が開く・閉じる → 拡大縮小、2本そろって上下 → 断面を動かす。
    最初の動きでどちらかに決め、指を離すまで切り替えない */
@@ -2390,11 +2401,11 @@ canvas.addEventListener('touchmove', e => {
     const dd = Math.abs(d - two.d0), dm = Math.abs(my - two.y0);
     if (dd > 12 || dm > 12) { two.mode = dm > dd * 1.2 && sliceOK() ? 'slice' : 'zoom'; sliceAcc = 0; if (two.mode === 'slice') showSliceTip(); }
   }
-  if (two.mode === 'zoom') ctrl.want = Math.max(7, Math.min(220, ctrl.want * two.d / d));
+  if (two.mode === 'zoom') { ctrl.want = Math.max(7, Math.min(220, ctrl.want * two.d / d)); labQuiet(true); }
   else if (two.mode === 'slice') { e.preventDefault(); sliceNudge(my - two.y); }
   two.d = d; two.y = my;
 }, { passive:false });
-canvas.addEventListener('touchend', e => { if (e.touches.length < 2) two = null; pinch = 0; });
+canvas.addEventListener('touchend', e => { if (e.touches.length < 2) two = null; pinch = 0; labQuiet(false); });
 
 /* ---- ラベル ---- */
 const LABS = {};
