@@ -372,6 +372,8 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset
 
 /* ---------- 組織チップ ---------- */
 .chips{display:flex; flex-wrap:wrap; gap:5px}
+.cmpseg{display:grid; grid-template-columns:1fr 1.6fr; margin:2px 0 9px}
+.chip[disabled]{opacity:.35; cursor:default}
 .chip{
   display:flex; align-items:center; gap:6px; padding:4px 9px 4px 5px; background:var(--panel2);
   border:1px solid var(--line); border-radius:3px; color:var(--muted);
@@ -920,6 +922,9 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
         <span><i style="background:#40566A"></i><b>濃い矢印＝静磁場 B₀（体の長い方向）</b></span>
         <span><i style="background:#8FA3B2"></i>灰色の輪＝筒の壁に巻いた電線</span>
       </p>
+      <p class="key" id="keyCmp" hidden>
+        <span><b>矢印＝組織ごとの M</b>（長さに水素の量をかけてある＝画像の明るさのもと）</span>
+      </p>
       <p class="key" id="keyGrid" hidden>
         <span><i style="background:var(--sig)"></i>矢印＝断面の中の各ボクセルの横磁化（真上から見ている）</span>
       </p>
@@ -1116,6 +1121,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
     <!-- ===== 組織 ===== -->
     <div class="grp">
       <p class="grp-h">見ている組織 <b id="tisSub"></b></p>
+      <div class="seg cmpseg" id="cmpSeg"><button type="button" data-c="0" aria-pressed="true">1つを見る</button><button type="button" data-c="1">並べて比べる（3つまで）</button></div>
       <div class="chips" id="tisChips"></div>
       <div id="cusBox" style="display:none; margin-top:8px">
         <div class="sld"><div class="sld-h"><span>T1</span><b><input type="number" id="nCT1" class="numin" min="10" max="6000" step="1" value="500"> ms <i id="vCT1" style="font-style:normal"></i></b></div><input type="range" id="sCT1" min="0" max="1" value="0"></div>
@@ -1973,6 +1979,23 @@ function pushTrail(x, y, z) {
 }
 function clearTrail() { trailN = 0; trailGeo.setDrawRange(0, 0); }
 
+/* ---- 組織を並べて比べる（1つのボクセルの表示で、最大3つ） ----
+   組織ごとの「ボクセル」を横に並べ、それぞれの M（組織ごとの磁化の束 BANKS から）を同時に動かす。
+   長さには水素の量（PD）をかけて、脳全体の矢印・画像の明るさと同じ物差しにする */
+const CMP_N = 3, CMP_GAP = 11.5;
+const cmpGrp = new THREE.Group(); scene.add(cmpGrp); cmpGrp.visible = false;
+const CMP = [];
+for (let k = 0; k < CMP_N; k++) {
+  const g = new THREE.Group(); cmpGrp.add(g);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(ML * 0.95, 48),
+    new THREE.MeshBasicMaterial({ color:0xB9C6CF, transparent:true, opacity:0.22, depthWrite:false, side:THREE.DoubleSide }));
+  g.add(disc);
+  g.add(line([new THREE.Vector3(0, 0, -1.5), new THREE.Vector3(0, 0, ML + 1.2)], 0x8FA3B2, .8));
+  const a = mkArrow(0x11788F, 0.16, 0.48, 1.3); g.add(a.grp);
+  CMP.push({ g, a });
+}
+const cmpActive = () => !!(P.cmp && P.cmp.length >= 2) && !P.showBody && !P.quantum && !P.slab && !P.grid && !P.induct && !P.coil && !P.bore;
+
 /* ---- 静磁場の筒（ボア）：原理「静磁場 B₀ の向き」 ----
    筒の壁に巻いた電線（灰色の輪）に電流を流すと、筒の中に体の長い方向（足 → 頭）の磁場 B₀ ができる。
    この画面ではその向きを z（上）として描いている。実物の筒の内径は 60〜70 cm ほどだが、頭が入って見える大きさに縮めてある */
@@ -2260,6 +2283,9 @@ function applyCam() {
 /* コイルを出すときは、輪を斜めから見る向きにする。輪の法線（y）に正対すると
    「貫く分」が手前向きになって、長さが見えなくなるため */
 function homeCam() {
+  if (cmpActive()) {                            // 並べた組織が全部入るよう、並べた数だけ引く
+    ctrl.th = -1.05; ctrl.phi = 1.15; ctrl.want = (smallScr ? 30 : 24) + (P.cmp.length - 1) * (smallScr ? 11 : 8); applyCam(); return;
+  }
   if (P.grid) {                                 // 断面を真上から見る：右が x（左右）、上が y（上下）
     ctrl.th = -Math.PI / 2; ctrl.phi = 0.32; ctrl.want = smallScr ? 38 : 33; applyCam(); return;
   }
@@ -2350,6 +2376,7 @@ function mkLab(key, cls) {
 mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
 mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
 mkLab('coil', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
+mkLab('cmp0', 'm'); mkLab('cmp1', 'm'); mkLab('cmp2', 'm');
 mkLab('ang', 'm'); mkLab('fan', 'axis'); mkLab('echo', 'm'); mkLab('fBrain', 'axis'); mkLab('fVox', 'm'); mkLab('slThick', 'rf');
 mkLab('gL', 'axis'); mkLab('gR', 'axis'); mkLab('gT', 'axis'); mkLab('gB', 'axis'); mkLab('gOn', 'rf'); mkLab('mag', 'm'); mkLab('boreB0', 'axis'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
 ['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm ta'));
@@ -2428,7 +2455,8 @@ function updateScene(dt) {
   spinGrp.rotation.z = P.frame === 'lab' ? labPhase : 0;
 
   /* --- スピン1本ずつ --- */
-  const showSpin = !P.quantum && !P.slab && !P.induct && !P.grid;
+  const cmpOn = cmpActive();
+  const showSpin = !P.quantum && !P.slab && !P.induct && !P.grid && !cmpOn;
   /* 受信コイルを出しているあいだは、見てほしいのは「回る磁化」と「輪を貫く分」の2本だけ。
      細い矢印（虹色）・Mz・Mxy・軌跡は、色が増えて焦点がぼけるのでしまう */
   const coilOn = !!P.coil && P.frame === 'lab' && !(P.showBody && ctrl.dist >= 45);
@@ -2556,21 +2584,37 @@ function updateScene(dt) {
     }
     if (++sliceN % 2 === 0) drawSlice();
   }
-  spinGrp.visible = !far && !P.slab && !P.induct && !P.grid;
+  spinGrp.visible = !far && !P.slab && !P.induct && !P.grid && !cmpOn;
+  cmpGrp.visible = cmpOn;
+  $('keyCmp').hidden = !cmpOn;
+  if (cmpOn) {                                    // 画面の横方向に並べる（視点を回しても横並びのまま）
+    const n = P.cmp.length, rx = -Math.sin(ctrl.th), ry = Math.cos(ctrl.th);
+    CMP.forEach((c, k) => {
+      c.g.visible = k < n;
+      if (k >= n) { place('cmp' + k, 0, 0, 0, '', false); return; }
+      const id = P.cmp[k], t = TIS[TIX[id]], b = BANKS[BANK_IDS.indexOf(id)], v = bankM(b), pd = t.PD;
+      const off = (k - (n - 1) / 2) * CMP_GAP;
+      c.g.position.set(rx * off, ry * off, 0);
+      c.g.rotation.z = spinGrp.rotation.z;
+      c.a.mat.color.set(tcol(t)); c.a.mat.emissive.set(tcol(t)).multiplyScalar(0.12);
+      setArrow(c.a, v[0] * pd, v[1] * pd, v[2] * pd, ML);
+      place('cmp' + k, rx * off, ry * off, -2.6, '<i>' + t.nm.replace(/（.*）/, '') + '</i>' + (smallScr ? '<br>' : '') + '<b>横 ' + (Math.hypot(v[0], v[1]) * pd).toFixed(2) + '</b>', P.showLab);
+    });
+  } else for (let k = 0; k < CMP_N; k++) place('cmp' + k, 0, 0, 0, '', false);
   slabGrp.visible = !!P.slab;
   if (P.slab) slabUpdate(dt);
   gridGrp.visible = !!P.grid;
   if (P.grid) gridUpdate(dt);
   $('keyGrid').hidden = !P.grid;
   $('keySlab').hidden = !P.slab;
-  $('key3d').hidden = far || coilOn || P.quantum || !!P.onlyM || !!P.slab || !!P.grid;      // 脳全体では細い矢印を出していないので凡例もしまう
+  $('key3d').hidden = far || coilOn || P.quantum || !!P.onlyM || !!P.slab || !!P.grid || cmpOn;      // 脳全体では細い矢印を出していないので凡例もしまう
   $('keyRes').hidden = far || !P.onlyM;
   $('keyCoil').hidden = !coilOn || !!P.induct;
   $('keyInd').hidden = !coilOn || !P.induct;
   $('keyQ').hidden = !P.quantum || far;
   $('keyBore').hidden = !(P.bore && P.showBody);
-  axGrp.visible = (!P.showBody || ctrl.dist < 45) && !P.slab && !P.grid;
-  planeXY.visible = !P.showBody && !P.quantum && !P.slab && !P.grid;
+  axGrp.visible = (!P.showBody || ctrl.dist < 45) && !P.slab && !P.grid && !cmpOn;
+  planeXY.visible = !P.showBody && !P.quantum && !P.slab && !P.grid && !cmpOn;
 
   wFlashUpdate(dt);
   /* --- カメラをなめらかに追従 --- */
@@ -2579,7 +2623,7 @@ function updateScene(dt) {
 
   /* --- ラベル --- */
   const near3d = !P.showBody || ctrl.dist < 45;
-  const on = P.showLab && near3d && !P.slab && !P.grid;
+  const on = P.showLab && near3d && !P.slab && !P.grid && !cmpOn;
   const rot = P.frame === 'rot';
   place('z', 1.7, 0, AX - 0.2, 'B₀ の向き（上）', on);
   place('b0', 0, 0, 0, '', false);
@@ -3670,8 +3714,10 @@ function updateTis() {
     const id = b.dataset.t;
     const g = Math.round(255 * Math.pow(Math.min(1, sg[id] / (mxs * 1.04)), 0.92));
     b.querySelector('i').style.background = 'rgb(' + g + ',' + g + ',' + g + ')';
-    b.setAttribute('aria-pressed', id === P.tissue);
+    b.setAttribute('aria-pressed', P.cmp ? P.cmp.includes(id) : id === P.tissue);
+    b.disabled = !!P.cmp && BANK_IDS.indexOf(id) < 0;   // 比べられるのは、3D で動かしている組織だけ
   });
+  [...$('cmpSeg').children].forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.c === (P.cmp ? 1 : 0))));
   const t = TIS[TIX[P.tissue]];
   const T2s = 1 / (1 / T2of(t) + (isFinite(P.T2p) ? 1 / P.T2p : 0));
   $('cusBox').style.display = P.tissue === 'cus' ? '' : 'none';
@@ -3736,7 +3782,25 @@ function paintDemo() {
 }
 $('bPaint').addEventListener('click', paintDemo);
 
+$('cmpSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (+b.dataset.c === 1 && !P.cmp) {
+    const first = BANK_IDS.indexOf(P.tissue) >= 0 ? P.tissue : 'wm';
+    P.cmp = [first, first === 'csf' ? 'wm' : 'csf'];   // はじめから2つ並べて、比べられることが分かるように
+    P.tissue = first;
+    if (P.showBody) setScale(false);              // 比べるのは「1つのボクセル」の表示で
+  } else if (+b.dataset.c === 0) P.cmp = null;
+  homeCam(); updateTis(); layoutImg(); drawRel();
+});
 function setTissue(id) {
+  if (P.cmp) {                                   // 並べて比べる：押した組織を足す／外す（3つまで、1つは残す）
+    if (BANK_IDS.indexOf(id) < 0) return;
+    const i = P.cmp.indexOf(id);
+    if (i >= 0) { if (P.cmp.length > 1) P.cmp.splice(i, 1); }
+    else { P.cmp.push(id); if (P.cmp.length > CMP_N) P.cmp.shift(); }
+    id = P.cmp[P.cmp.length - 1];
+    homeCam();
+  }
   P.tissue = id;
   if (REP[id]) xhairPx = REP[id].slice();
   clearTrail();
@@ -3747,7 +3811,7 @@ function setTissue(id) {
 const imgbox = $('imgbox'), xhair = $('xhair');
 function layoutImg() {
   const w = stage.clientWidth, h = stage.clientHeight;
-  if (P.view === 0) { imgbox.style.display = 'none'; return; }
+  if (P.view === 0 || (smallScr && cmpActive())) { imgbox.style.display = 'none'; return; }   // スマホで組織を並べているときは、並べた矢印のために画像をしまう
   imgbox.style.display = '';
   const ih = Math.min(h * 0.50, (w * 0.26) * IH / IW, h - 96), iw = ih * IW / IH;
   imgbox.style.left = (w - iw - 12).toFixed(0) + 'px'; imgbox.style.top = '46px';
@@ -3824,6 +3888,7 @@ function applySet(s, hard) {
   for (const k in s) P[k] = s[k];
   if ('coil' in s) $('tCoil').checked = P.coil;
   if ('showComp' in s) $('tComp').checked = P.showComp;
+  if ('cmp' in s) homeCam();
   if ('tissue' in s) xhairPx = REP[P.tissue] ? REP[P.tissue].slice() : null;
   /* 脳全体 ↔ 1つのボクセルで見る距離がまったく違うので、切り替えたらカメラも寄せ直す。
      これをしないと、ボクセルに切り替えたのに脳全体の距離のままで小さく見える */
@@ -4368,7 +4433,7 @@ function tutShow() {
   tutActI = 0;
   if (st.set) {
     learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
-    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false, bore:false, induct:false, grid:false }, st.set), true);
+    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false, bore:false, induct:false, grid:false, cmp:null }, st.set), true);
     P.tag = st.tag || {};                        // この手だけで画面に出すラベル（カードに出てくる言葉を、画面にも出す）
     layoutImg();   // コイルは出したい手だけ coil:true で出す
   }
