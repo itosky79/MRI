@@ -843,7 +843,13 @@ body.markOn .mk.smk{display:block}
 ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:13.5px}
 .gloss dt{font-size:15.5px} .gloss dd{font-size:14.5px} .gloss .gl button{font-size:14px} .gloss .gh{font-size:13.5px}
 @media (max-width:900px){ body.tutPanel .stage{height:clamp(190px,28vh,300px)} }
+/* 「エコーで止める」は、となりの「最初から」「一時停止」と同じ大きさ・見た目にする（目立たせすぎない） */
+.echotg span{display:inline-block; line-height:normal; padding:4px 11px; font-size:14.5px; font-weight:400; font-family:var(--gothic); border:none; border-radius:999px;
+  background:var(--scrim); color:var(--muted); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px)}
+.echotg input:checked + span{background:var(--sel); color:var(--selT); font-weight:400}
+.echotg input:checked + span::before{content:'● '; color:var(--teal)}
 @media (max-width:560px){
+  .echotg span{padding:4px 9px; font-size:13px}
   #tutSkip,#tutBack,#tutHint{padding:9px 8px; font-size:13px}   /* ボタンが4つ並ぶので、次へ（やること）の幅を残す */
   .tnav{gap:6px}
   .stage .seg button{font-size:12.5px}   /* スマホは 3D の上のボタンが3段にならないよう、ここだけ控えめに */
