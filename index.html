@@ -3424,17 +3424,20 @@ L({ nm:'k 空間：集めたデータの表', hint:'k 空間は、画像を作�
 ];
 
 /* ---------- 章立てのために足した手（序章・第6章の答え合わせ・終章） ---------- */
-const shoot2 = () => {
-  const shoot = () => $('bShot').click();
-  applySet(pre('t1'), true); shoot();
-  setTimeout(() => { applySet(pre('t2'), true); shoot(); }, 900);
-};
 const EXTRA = [
-L({ nm:'T1強調と T2強調を撮り比べる', hint:'下に並んだ2枚の「水」の印のところを比べてください。片方では黒く、もう片方では白く写っています。', tg:'水の白黒が逆になる', sel:'#strip',
+L({ nm:'T1強調と T2強調を撮り比べる', hint:'左の1枚目（T1強調）と右の2枚目（T2強調）で、「水」の印のところを比べてください。黒と白が入れ替わっています。', tg:'水の白黒が逆になる', sel:'#strip',
   tag:{ mark:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
-  act:{ label:'2枚つづけて撮る', fn:shoot2 },
-  text:'同じ脳でも、T1強調では[[water:水]]が<b>黒</b>、T2強調では<b>白</b>に写ります。<br>この理由を、第6章までで順に見ていきます。' }),
+  /* 1枚ずつ自分で撮る（2枚を続けて自動で撮ると、2枚目がいつ出たのか分かりにくかった）。
+     「撮影した画像」の帯は新しいものが左に並ぶので、2枚目を撮ったら入れ替えて、文と同じ「左が T1強調・右が T2強調」にする */
+  acts:[
+    { label:'① T1強調で撮る', fn:() => { applySet(pre('t1'), true); $('bShot').click(); } },
+    { label:'② T2強調で撮る', fn:() => {
+      applySet(pre('t2'), true); $('bShot').click();
+      if (shots.length > 1) { const t = shots[0]; shots[0] = shots[1]; shots[1] = t; renderStrip(); }
+    } },
+  ],
+  text:'同じ脳を、撮り方だけ変えて1枚ずつ撮ります。T1強調では[[water:水]]が<b>黒</b>、T2強調では<b>白</b>に写ります。<br>この理由を、第6章までで順に見ていきます。' }),
 L({ nm:'水の白黒が逆になる理由', hint:'T1強調では上のグラフ①、T2強調では下のグラフ②で、脳脊髄液の線の高さをほかの線と比べてください。', tg:'序章の答え', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
   acts:[
