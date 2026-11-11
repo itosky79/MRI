@@ -638,6 +638,7 @@ body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足�
 }
 #b0Seg button small{display:block; font-size:13px; opacity:.72; letter-spacing:.02em}
 .numin{width:70px; font:inherit; color:inherit; background:transparent; border:1px solid var(--inputLine); border-radius:3px; padding:1px 4px; text-align:right}
+.stopat[hidden]{display:none !important}
 .stopat{display:inline-flex; align-items:center; gap:4px; font-size:14px; color:var(--mut, var(--muted))}
 .echotg{display:inline-flex; align-items:center; cursor:pointer}
 .echotg input{position:absolute; opacity:0; pointer-events:none}
@@ -941,7 +942,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
         <button type="button" id="bStep">最初から</button>
         <button type="button" id="bPause">一時停止</button>
         <label class="echotg"><input type="checkbox" id="tEcho" checked><span>エコーで止める</span></label>
-        <label class="stopat">t =<input type="number" id="nStop" min="0" step="1" value="300" inputmode="numeric">ms<button type="button" id="bStop">で止める</button></label>
+        <label class="stopat" hidden>t =<input type="number" id="nStop" min="0" step="1" value="300" inputmode="numeric">ms<button type="button" id="bStop">で止める</button></label>   <!-- 「t = ○ ms で止める」は使わないので出さない（仕組みは残してある） -->
       </div>
     </div>
 
