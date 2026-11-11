@@ -1994,7 +1994,8 @@ function clearTrail() { trailN = 0; trailGeo.setDrawRange(0, 0); }
    組織ごとの「ボクセル」を横に並べ、それぞれの M（組織ごとの磁化の束 BANKS から）を同時に動かす。
    長さには水素の量（PD）をかけて、脳全体の矢印・画像の明るさと同じ物差しにする */
 const CMP_N = 3, CMP_GAP = 15, CMP_S = ML * 1.3;   // 比べるときは間をあける
-let cmpNorm = 1;   // 並べた組織のうち、いちばん大きい M を円いっぱいにする倍率（3つとも同じ倍率なので、長さの比は変わらない）
+let cmpNorm = 1;
+const cmpLab = [null, null, null];   // 比べる組織のラベル（カメラを動かしたあとで置く）   // 並べた組織のうち、いちばん大きい M を円いっぱいにする倍率（3つとも同じ倍率なので、長さの比は変わらない）
 const cmpGrp = new THREE.Group(); scene.add(cmpGrp); cmpGrp.visible = false;
 const CMP = [];
 for (let k = 0; k < CMP_N; k++) {
@@ -2306,6 +2307,7 @@ function applyCam() {
   const sp = Math.sin(ctrl.phi), cp = Math.cos(ctrl.phi);
   camera.position.set(ctrl.dist * sp * Math.cos(ctrl.th), ctrl.dist * sp * Math.sin(ctrl.th), ctrl.dist * cp);
   camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld();   // ラベルの位置（project）は、この行列で計算する。描画まで待つと1コマ遅れて文字がついてくる
 }
 /* 受信コイルを出すときは、真横に近い角度から引いて見る。そうしないとコイルが画面の下に落ちて、
    横長で背の低いスマホの画面で切れてしまう */
@@ -2410,16 +2412,20 @@ mkLab('ang', 'm'); mkLab('fan', 'axis'); mkLab('echo', 'm'); mkLab('fBrain', 'ax
 mkLab('gL', 'axis'); mkLab('gR', 'axis'); mkLab('gT', 'axis'); mkLab('gB', 'axis'); mkLab('gOn', 'rf'); mkLab('mag', 'm'); mkLab('boreB0', 'axis'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
 ['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm ta'));
 const _p = new THREE.Vector3();
+let labW = 0, labH = 0;   // 3D の大きさ（1コマに1回だけ測る）
 function place(key, x, y, z, txt, on) {
   const el = LABS[key];
-  if (!on) { el.style.display = 'none'; return; }
+  if (!on) { if (el.style.display !== 'none') el.style.display = 'none'; return; }
   _p.set(x, y, z).project(camera);
-  if (_p.z > 1) { el.style.display = 'none'; return; }
-  el.style.display = '';
-  if (txt.indexOf('<') >= 0) el.innerHTML = txt; else el.textContent = txt;
+  if (_p.z > 1) { if (el.style.display !== 'none') el.style.display = 'none'; return; }
+  if (el.style.display) el.style.display = '';
+  if (el._t !== txt) {                            // 中身が変わったときだけ書き直す（毎コマ作り直すと、ちらついたり幅が揺れたりする）
+    el._t = txt;
+    if (txt.indexOf('<') >= 0) el.innerHTML = txt; else el.textContent = txt;
+  }
+  if (!labW) { labW = stage.clientWidth; labH = stage.clientHeight; }
   el.style.transform = 'translate(-50%,-50%) translate(' +
-    ((_p.x * .5 + .5) * stage.clientWidth).toFixed(1) + 'px,' +
-    ((-_p.y * .5 + .5) * stage.clientHeight).toFixed(1) + 'px)';
+    ((_p.x * .5 + .5) * labW).toFixed(1) + 'px,' + ((-_p.y * .5 + .5) * labH).toFixed(1) + 'px)';
 }
 
 /* ================= 画面の更新 ================= */
@@ -2478,6 +2484,7 @@ function b1Dir() {   // いま当てている B₁ の向き（M と一緒に回
 }
 const _m = new THREE.Vector3(), ZAX = new THREE.Vector3(0, 0, 1);
 function updateScene(dt) {
+  labW = 0;                                      // 3D の大きさは、このコマで測り直す
   /* 受信コイルを出しているあいだは歳差を速めに見せる。遅いままだと 1 周 7 秒かかり、
      「貫く分が増えたり減ったりする」のが見えないまま T2 で消えてしまう */
   if (P.frame === 'lab' && !P.paused) labPhase += dt * 0.85 * P.spd * (P.coil ? 4 : 1);
@@ -2616,14 +2623,14 @@ function updateScene(dt) {
   spinGrp.visible = !far && !P.slab && !P.induct && !P.grid && !cmpOn;
   cmpGrp.visible = cmpOn;
   $('keyCmp').hidden = !cmpOn;
-  if (cmpOn) {                                    // 画面の横方向に並べる（視点を回しても横並びのまま）
-    const n = P.cmp.length, rx = -Math.sin(ctrl.th), ry = Math.cos(ctrl.th);
+  if (cmpOn) {                                    // はじめの視点から見て横に並ぶ向きに、場所を固定して並べる（視点についてこさせない）
+    const n = P.cmp.length, rx = -Math.sin(-1.05), ry = Math.cos(-1.05);
     let cmpMax = 1e-6; CHIPS.forEach(id => { const q = imgSig(TIS[TIX[id]]); if (q > cmpMax) cmpMax = q; });
     let big = 0.2; P.cmp.forEach(id => { const v = bankM(BANKS[BANK_IDS.indexOf(id)]); big = Math.max(big, Math.hypot(v[0], v[1], v[2]) * TIS[TIX[id]].PD); });
     cmpNorm += (1 / big - cmpNorm) * Math.min(1, dt * 4);   // なめらかに追う
     CMP.forEach((c, k) => {
       c.g.visible = k < n;
-      if (k >= n) { place('cmp' + k, 0, 0, 0, '', false); return; }
+      if (k >= n) { cmpLab[k] = null; return; }
       const id = P.cmp[k], t = TIS[TIX[id]], b = BANKS[BANK_IDS.indexOf(id)], v = bankM(b), pd = t.PD;
       const off = (k - (n - 1) / 2) * CMP_GAP - (!smallScr && P.view === 1 ? CMP_GAP * 0.4 : 0);   // PC で右上に画像を出しているときは、少し左へ
       c.g.position.set(rx * off, ry * off, 0);
@@ -2632,10 +2639,10 @@ function updateScene(dt) {
       setArrow(c.a, v[0] * pd, v[1] * pd, v[2] * pd, CMP_S * cmpNorm);
       setArrow(c.xy, v[0] * pd, v[1] * pd, 0, CMP_S * cmpNorm);
       const gv = Math.round(255 * Math.pow(Math.min(1, imgSig(t) / (cmpMax * 1.04)), 0.92));   // 画像での明るさ（右の組織の四角と同じ）
-      place('cmp' + k, rx * off, ry * off, -3.4, '<b>' + t.nm.replace(/（.*）/, '') + '</b>' + (smallScr ? '<br>' : '') +
-        '<span class="sw" style="background:rgb(' + gv + ',' + gv + ',' + gv + ')"></span>' + (smallScr ? '' : '<i>画像の明るさ</i>'), P.showLab);
+      cmpLab[k] = [rx * off, ry * off, '<b>' + t.nm.replace(/（.*）/, '') + '</b>' + (smallScr ? '<br>' : '') +
+        '<span class="sw" style="background:rgb(' + gv + ',' + gv + ',' + gv + ')"></span>' + (smallScr ? '' : '<i>画像の明るさ</i>')];
     });
-  } else for (let k = 0; k < CMP_N; k++) place('cmp' + k, 0, 0, 0, '', false);
+  } else cmpLab.fill(null);
   slabGrp.visible = !!P.slab;
   if (P.slab) slabUpdate(dt);
   gridGrp.visible = !!P.grid;
@@ -2657,6 +2664,7 @@ function updateScene(dt) {
   applyCam();
 
   /* --- ラベル --- */
+  for (let k = 0; k < CMP_N; k++) { const q = cmpLab[k]; q ? place('cmp' + k, q[0], q[1], -3.4, q[2], P.showLab) : place('cmp' + k, 0, 0, 0, '', false); }
   const near3d = !P.showBody || ctrl.dist < 45;
   const on = P.showLab && near3d && !P.slab && !P.grid && !cmpOn;
   const rot = P.frame === 'rot';
