@@ -844,6 +844,7 @@ details.fold summary{font-size:14.5px}
 .mk.mkl::after{top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(190,59,48,.92)}
 .strip figure{position:relative}
 .mk.smk{font-size:12.5px}
+body.imgBig #gl, body.imgBig #labels, body.imgBig .stage .key, body.imgBig .stage .playbar{visibility:hidden}
 body.markOn .mk.smk{display:block}
 .wflash{box-shadow:0 0 0 3px rgba(17,120,143,.55)}
 /* 用語札：画面の物と同じ色の枠。押すとその物が光る */
@@ -858,7 +859,7 @@ body.markOn .mk.smk{display:block}
 .tw.b0{color:#40566A}
 .tw.coil{color:#5E7386}
 .tw.flux{color:#7E57C9}
-.tw.wire{color:#5E7386} .tw.ang,.tw.echo{color:#11788F} .tw.fan{color:#5E7386} .tw.frame,.tw.relw,.tw.thick{color:#11788F} .tw.water{color:#11788F}
+.tw.wire{color:#5E7386} .tw.ang,.tw.echo{color:#11788F} .tw.fan{color:#5E7386} .tw.frame,.tw.relw,.tw.thick{color:#11788F} .tw.water,.tw.duct,.tw.bile{color:#11788F}
 .ttext b .tw{background:var(--panel)}
 .lab.flash{box-shadow:0 0 0 3px rgba(17,120,143,.5); font-weight:700}
 /* アプリ全体を大きくしたのに合わせて、学習タブの一覧・説明も1段上げる */
@@ -904,6 +905,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
         <canvas id="mri" width="176" height="208"></canvas>
         <div class="xh" id="xhair"></div>
         <span class="mk mkw" id="mkW">脳脊髄液（水）</span><span class="mk mkl" id="mkL">病変</span>
+        <span class="mk mkw" id="mkB">胆管</span><span class="mk mkl" id="mkP">膵管</span><span class="mk mkw" id="mkG">胆嚢の胆汁</span>
       </div>
 
       <div class="bar">
@@ -1062,6 +1064,16 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
         </div>
         <p class="tiny">強いほど T1 が長くなります。ボタンの下の数字は水素の共鳴周波数（ラーモア周波数、静磁場に比例）。</p>
 
+        <p class="grp-h" style="margin-top:13px">画像の部位</p>
+        <div class="seg" id="regSeg" style="display:grid; grid-template-columns:repeat(2,1fr); background:var(--ink2)">
+          <button type="button" data-r="head" aria-pressed="true">頭部</button>
+          <button type="button" data-r="abd">腹部（模式図）</button>
+        </div>
+        <div id="abdOpt" hidden>
+          <button type="button" class="act" id="bStone" aria-pressed="false" style="margin-top:8px; width:100%">＋ 総胆管に結石（模型）を入れる</button>
+          <p class="tiny">腹部は、楕円体と管を数式で組み立てた模式図です（実在の人ではありません）。肝臓・脾臓・膵臓・腎臓と、胆管・膵管・胆嚢・胃や腸の水が入っています。</p>
+        </div>
+        <div id="headOpt">
         <p class="grp-h" style="margin-top:13px">頭部の画像</p>
         <div class="seg" id="phSeg" style="display:grid; grid-template-columns:repeat(2,1fr); background:var(--ink2)">
           <button type="button" data-ph="colin27" aria-pressed="true">Colin 27</button>
@@ -1069,9 +1081,10 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
         </div>
         <button type="button" class="act" id="bLes" aria-pressed="false" style="margin-top:8px; width:100%">＋ 病変（浮腫）を追加</button>
         <p class="tiny">はじめは 6 組織（脂肪・白質・灰白質・脳脊髄液・筋肉・皮質骨）。病変は Colin 27 にはないので、ボタンで白質の中に描き足します。Colin 27＝公開のデジタル脳ファントム（BrainWeb と同じ人の脳）／簡易図形＝数式で組み立てた以前の画像。どちらも明暗は同じ式で計算します。</p>
+        </div>
 
         <div id="sliceBox">
-          <p class="grp-h" style="margin-top:13px">断面（Colin 27）</p>
+          <p class="grp-h" style="margin-top:13px" id="sliceH">断面（Colin 27）</p>
           <div class="seg" id="oriSeg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2)">
             <button type="button" data-o="ax" aria-pressed="true">横断</button>
             <button type="button" data-o="cor">冠状断</button>
@@ -1082,6 +1095,15 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
             <input type="range" id="sPos" min="-60" max="80" step="1.5" value="20">
           </div>
           <p class="tiny">3D の上で<b>右ドラッグ</b>（スマホは<b>2本指で上下</b>）でも動かせます。問題の画像と同じ向き・高さにしてから、撮像法や TR・TE を変えて見え方を比べます。</p>
+          <div class="sld" style="margin-top:8px">
+            <div class="sld-h"><span>MIP の厚さ</span><b id="vMip">なし（断面1枚）</b></div>
+            <input type="range" id="sMip" min="0" max="120" step="2" value="0">
+          </div>
+          <div class="sld" style="margin-top:8px">
+            <div class="sld-h"><span>MIP を回す</span><b id="vRot">0°</b></div>
+            <input type="range" id="sRot" min="-90" max="90" step="5" value="0">
+          </div>
+          <p class="tiny">MIP＝厚い板を手前から見て、視線の上で<b>いちばん明るい所だけ</b>を集めて1枚にする方法。回すと見る向きが変わります。</p>
         </div>
 
         <div class="sld" style="margin-top:13px">
@@ -1261,13 +1283,28 @@ const TIS = [
   { id:'mus',  nm:'筋肉',       col:'#B07A7A', colL:'#96403F', T1:870,  T2:45,   PD:0.75, e1:0.70 },
   { id:'les',  nm:'病変（浮腫）',col:'#C4A6E8', colL:'#6341AC', T1:1200, T2:180,  PD:0.85, e1:0.45 },
   { id:'bone', nm:'皮質骨',     col:'#46545F', colL:'#55636E', T1:250,  T2:1,    PD:0.05, e1:0.30 },
-  { id:'cus',  nm:'自由な組織', col:'#E3D35A', colL:'#8A7A05', T1:500,  T2:100,  PD:1.00, e1:0 }    // T1・T2・プロトン密度を自分で決める（静磁場で T1 は変えない）。画像には出ない
+  { id:'cus',  nm:'自由な組織', col:'#E3D35A', colL:'#8A7A05', T1:500,  T2:100,  PD:1.00, e1:0 },   // T1・T2・プロトン密度を自分で決める（静磁場で T1 は変えない）。画像には出ない
+  /* 腹部（模式図）の組織。並びを変えると頭部の立体データの番号がずれるので、必ず後ろに足す。
+     T1・T2 は 1.5 T と 3.0 T で測った報告（de Bazelaire CM, et al. Radiology 2004;230:652-659）を目安にした値で、
+     e1 は 1.5 T → 3.0 T の T1 の伸びから決めた。報告によって幅がある。胆汁・水の値は模型としての目安 */
+  { id:'liv',  nm:'肝臓',       col:'#B98A64', colL:'#7A4A22', T1:586,  T2:46,   PD:0.75, e1:0.47 },
+  { id:'spl',  nm:'脾臓',       col:'#C58AA8', colL:'#9A3A6E', T1:1057, T2:79,   PD:0.80, e1:0.33 },
+  { id:'pan',  nm:'膵臓',       col:'#9FBF8A', colL:'#4F7A35', T1:584,  T2:46,   PD:0.75, e1:0.31 },
+  { id:'kid',  nm:'腎臓',       col:'#A79BD6', colL:'#4D4396', T1:966,  T2:87,   PD:0.85, e1:0.24 },
+  { id:'wat',  nm:'胆汁・水',   col:'#6FA8C9', colL:'#13679A', T1:3000, T2:1000, PD:1.00, e1:0.05 }
 ];
 const TIX = {}; TIS.forEach((t, i) => TIX[t.id] = i);
 /* 明るい配色では、暗い地むけの色は白地に埋もれるので別の色を使う */
 const tcol = t => document.documentElement.dataset.theme === 'light' ? t.colL : t.col;
 /* 画像の中にある組織（十字カーソルを置けるもの） */
 const INIMG = { fat:1, wm:1, gm:1, csf:1, mus:1, les:0, bone:1 };   // 病変ははじめは無し（「病変を追加」で入れる）
+/* 部位ごとの組織。head＝頭部（Colin 27）、abd＝腹部（数式で組み立てた模式図） */
+const REG_TIS = { head:['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'bone'], abd:['fat', 'liv', 'spl', 'pan', 'kid', 'wat', 'mus', 'csf', 'bone'] };
+function setInimg() {
+  for (const t of TIS) INIMG[t.id] = 0;
+  for (const id of REG_TIS[P.region]) INIMG[id] = 1;
+  if (P.region === 'head') INIMG.les = lesOn ? 1 : 0;
+}
 const GAMMA = 42.58;   // MHz/T 水素のジャイロ磁気比
 
 function T1of(t, B0) { return t.T1 * Math.pow(B0 / 1.5, t.e1); }
@@ -1284,12 +1321,15 @@ const P = {
   echoStop:true, spoil:true, nDisp:24, showBody:true,   // はじめから脳全体（部位ごとの磁化ベクトルと断面）を出す
   showComp:true, showTrail:false, showLab:true,
   slowPulse:true, noise:true, quantum:false, coil:false, nameOnly:false,
-  view:1           // 0=3D / 1=3D+画像 / 2=画像
+  view:1,          // 0=3D / 1=3D+画像 / 2=画像
+  region:'head',   // 画像の部位：head＝頭部 / abd＝腹部（模式図）
+  mip:0,           // MIP の厚さ（mm）。0 は断面1枚
+  mipRot:0         // MIP を縦の軸のまわりに回す角度（°）
 };
 
 /* スライダの刻み（きりのよい値だけを通す） */
 const TRV = [50,100,150,200,300,400,500,600,700,800,1000,1200,1500,2000,2500,3000,4000,5000,6000,8000,9000,12000];
-const TEV = [2,4,6,8,10,12,15,20,25,30,40,50,60,70,80,90,100,120,140,160,200,250];
+const TEV = [2,4,6,8,10,12,15,20,25,30,40,50,60,70,80,90,100,120,140,160,200,250,300,400,500,600,800,1000];   // 長い方は MRCP（水だけを残す）用
 const TIV = [50,80,110,150,180,220,280,350,400,450,550,700,900,1100,1400,1700,2000,2400,2500,2800,3200,3600];
 const TPV = [5,10,15,20,30,40,60,90,150,300,600,Infinity];
 const near = (arr, v) => { if (!isFinite(v)) { const j = arr.indexOf(Infinity); if (j >= 0) return j; } let k = 0; for (let i = 1; i < arr.length; i++) if (Math.abs(arr[i] - v) < Math.abs(arr[k] - v)) k = i; return k; };
@@ -1324,7 +1364,7 @@ function sigTis(t, p) { return sigOf(T1of(t, p.B0), T2of(t), t.PD, p); }
 /* 画像の明るさ。GRE でスポイラを外したとき（前の TR の横磁化が残る）は閉じた式がないので、組織ごとの矢印の
    直近のエコーの高さ × プロトン密度を使う（矢印のない皮質骨は式のまま） */
 function imgSig(t) {
-  if (P.seq === 'GRE' && P.spoil === false) { const b = BANKS.find(x => x.id === t.id); if (b) return b.echo * t.PD; }
+  if (P.seq === 'GRE' && P.spoil === false) { const b = BANKA.find(x => x.id === t.id); if (b) return b.echo * t.PD; }
   return sigTis(t, P);
 }
 
@@ -1385,9 +1425,12 @@ function setDisp(n) {
 }
 /* 組織ごとの磁化（脳全体の表示用）：選んでいる組織（mx, my, mz）とは別に、画像の組織ごとに同じアイソクロマットの組を持ち、
    同じパルス・同じ時間の進み方で、それぞれの T1・T2 で動かす。断面の明るさと部位ごとの矢印はここから作る */
-const BANK_IDS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les'];
+const BANK_IDS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'liv', 'spl', 'pan', 'kid', 'wat'];
 const BANKS = BANK_IDS.map(id => ({ id, x:new Float64Array(NISO), y:new Float64Array(NISO), z:new Float64Array(NISO), T1:1000, T2:100, echo:0 }));
-function bankParams() { for (const b of BANKS) { const t = TIS[TIX[b.id]]; b.T1 = T1of(t, P.B0); b.T2 = T2of(t); } }
+/* 動かすのは、いまの部位の組織の束だけ（計算を増やさないため）。頭部と腹部で入れ替える */
+const BANK_REG = { head:['fat', 'wm', 'gm', 'csf', 'mus', 'les'], abd:['fat', 'liv', 'spl', 'pan', 'kid', 'wat', 'mus'] };
+let BANKA = BANKS.filter(b => BANK_REG.head.includes(b.id));
+function bankParams() { for (const b of BANKA) { const t = TIS[TIX[b.id]]; b.T1 = T1of(t, P.B0); b.T2 = T2of(t); } }
 const _cs = new Float64Array(NISO), _sn = new Float64Array(NISO);
 function freeArr(X, Y, Z, dt, T1, T2) {
   const E1 = Math.exp(-dt / T1), E2 = Math.exp(-dt / T2);
@@ -1400,12 +1443,12 @@ function freeArr(X, Y, Z, dt, T1, T2) {
 }
 function equilibrium() {
   for (let i = 0; i < NISO; i++) { mx[i] = 0; my[i] = 0; mz[i] = 1; }
-  for (const b of BANKS) { b.x.fill(0); b.y.fill(0); b.z.fill(1); b.echo = 0; }
+  for (const b of BANKA) { b.x.fill(0); b.y.fill(0); b.z.fill(1); b.echo = 0; }
 }
 function freeStep(dt, T1, T2) {
   for (let i = 0; i < NISO; i++) { const a = dw[i] * dt; _cs[i] = Math.cos(a); _sn[i] = Math.sin(a); }
   freeArr(mx, my, mz, dt, T1, T2);
-  for (const b of BANKS) freeArr(b.x, b.y, b.z, dt, b.T1, b.T2);
+  for (const b of BANKA) freeArr(b.x, b.y, b.z, dt, b.T1, b.T2);
 }
 /* x' 軸まわり: (0,0,1) は α=90° で +y へ倒れる。y' 軸まわりの180°は位相を折り返す */
 function pulseArr(X, Y, Z, c, s, ax) {
@@ -1418,7 +1461,7 @@ function pulseArr(X, Y, Z, c, s, ax) {
 function pulse(aDeg, ax) {
   const a = aDeg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
   pulseArr(mx, my, mz, c, s, ax);
-  for (const b of BANKS) pulseArr(b.x, b.y, b.z, c, s, ax);
+  for (const b of BANKA) pulseArr(b.x, b.y, b.z, c, s, ax);
 }
 /* 横向きの任意の軸 (cos φ, sin φ, 0) のまわりに倒す。φ = 0 で pulse(a, 'x') と同じ向き。
    共鳴の手で、周波数のずれた B₁（M から見ると φ が回っていく）を当てるのに使う */
@@ -1434,7 +1477,7 @@ function pulsePhi(aDeg, phiDeg) {
   const a = aDeg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
   const f = phiDeg * Math.PI / 180, nx = Math.cos(f), ny = Math.sin(f);
   pulsePhiArr(mx, my, mz, c, s, nx, ny);
-  for (const b of BANKS) pulsePhiArr(b.x, b.y, b.z, c, s, nx, ny);
+  for (const b of BANKA) pulsePhiArr(b.x, b.y, b.z, c, s, nx, ny);
 }
 function spoilArr(X, Y) {   // 傾斜磁場で位相をばらす（大きさは変えない）
   for (let i = 0; i < NISO; i++) {
@@ -1443,10 +1486,10 @@ function spoilArr(X, Y) {   // 傾斜磁場で位相をばらす（大きさは�
     X[i] = x * c - y * s; Y[i] = x * s + y * c;
   }
 }
-function spoil() { spoilArr(mx, my); for (const b of BANKS) spoilArr(b.x, b.y); }
+function spoil() { spoilArr(mx, my); for (const b of BANKA) spoilArr(b.x, b.y); }
 /* クラッシャー（SE・IR の TR の終わり）：残った横磁化を 0 にする。spoil() のように毎回同じ位相のばらし方にすると、
    180°パルスで位相が折り返されたあと次の周期の spoil() で打ち消され、前の横磁化がエコーに戻ってくるため */
-function crush() { mx.fill(0); my.fill(0); for (const b of BANKS) { b.x.fill(0); b.y.fill(0); } }
+function crush() { mx.fill(0); my.fill(0); for (const b of BANKA) { b.x.fill(0); b.y.fill(0); } }
 function netArr(X, Y, Z) {
   let sx = 0, sy = 0, sz = 0;
   for (let i = 0; i < NISO; i++) { sx += X[i]; sy += Y[i]; sz += Z[i]; }
@@ -1486,7 +1529,7 @@ function warmup() {
       else if (e.k === 'crush') crush();
       else if (e.k === 'echo') {
         const m = netM(); R.echoPeak = Math.hypot(m[0], m[1]);
-        for (const b of BANKS) { const n = bankM(b), v = Math.hypot(n[0], n[1]); if (Math.abs(v - b.echo) > 1e-5) steady = false; b.echo = v; }
+        for (const b of BANKA) { const n = bankM(b), v = Math.hypot(n[0], n[1]); if (Math.abs(v - b.echo) > 1e-5) steady = false; b.echo = v; }
       }
     }
     freeStep(P.TR - t, T1, T2);
@@ -1579,7 +1622,7 @@ function fire(e) {
   if (e.k === 'echo') {
     const m = netM(); R.echoPeak = Math.hypot(m[0], m[1]);
     let steady = true;
-    for (const b of BANKS) { const n = bankM(b), v = Math.hypot(n[0], n[1]); if (Math.abs(v - b.echo) > 0.002 + 0.005 * v) steady = false; b.echo = v; }
+    for (const b of BANKA) { const n = bankM(b), v = Math.hypot(n[0], n[1]); if (Math.abs(v - b.echo) > 0.002 + 0.005 * v) steady = false; b.echo = v; }
     if (P.echoStop && steady && R.cycles >= 1) R.holdEcho = true;   // エコーで自動停止：値が前の TR と変わらなくなった（定常状態）エコーで止める
     if (P.seq === 'GRE' && P.spoil === false) { drawImage(); updateTis(); }
     echoFlash = 0.55;
@@ -1629,8 +1672,13 @@ const PHANTOM_RLE = 'AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wAdBQ8AnAUYAJMFIgCLBQw
 /* 断面：Colin 27 の 1.5 mm の立体（head3d.js、tools/colin27_volume.py）から、横断・冠状断・矢状断の好きな位置で切る。
    画像の 1 画素は 1.25 mm、横 220 mm × 縦 260 mm。画像の左は患者の右（放射線科の表示）。
    横断：上が前。冠状断：上が頭側。矢状断：左が前、上が頭側。位置は Talairach 座標（mm）。 */
-const SLICE = { ori:'ax', pos:{ ax:20, cor:-18, sag:0 } };
-const SL_RANGE = { ax:[-60, 80], cor:[-100, 70], sag:[-70, 70] };
+let SLICE = { ori:'ax', pos:{ ax:20, cor:-18, sag:0 } };
+let SL_RANGE = { ax:[-60, 80], cor:[-100, 70], sag:[-70, 70] };
+/* 部位ごとの断面。腹部は胆管・膵管が入る冠状断から始める（座標は 右＝+x、前＝+y、頭側＝+z、mm） */
+const REG = {
+  head:{ slice:SLICE, range:SL_RANGE, mm:FOVX / IW },
+  abd:{ slice:{ ori:'cor', pos:{ ax:40, cor:-8, sag:30 } }, range:{ ax:[-190, 190], cor:[-100, 90], sag:[-150, 150] }, mm:2 }
+};
 const SL_ZC = 15;                                   // 冠状断・矢状断で画像の縦の中心にする高さ（mm）
 let VOL = null;
 if (typeof HEAD3D !== 'undefined') {
@@ -1638,11 +1686,25 @@ if (typeof HEAD3D !== 'undefined') {
   const bin = atob(HEAD3D.rle); let p = 0;
   for (let k = 0; k < bin.length; k += 2) { const v = bin.charCodeAt(k), n = bin.charCodeAt(k + 1); VOL.fill(v, p, p + n); p += n; }
 }
-function pixTal(fi, fj) {   // 画像の位置（画素の単位。端が 0）→ Talairach 座標（mm）
-  const xm = (fi - IW / 2) * FOVX / IW, ym = (fj - IH / 2) * FOVY / IH, h = SLICE.pos[SLICE.ori];
-  if (SLICE.ori === 'cor') return [-xm, h, SL_ZC - ym];
-  if (SLICE.ori === 'sag') return [h, -18 - xm, SL_ZC - ym];
-  return [-xm, -18 - ym, h];
+/* 断面の置き方：中心 c、画像の右向き u・下向き v（1 mm あたり）、板の厚さの向き n。
+   MIP を回すときは、縦の軸（v）のまわりに u と n を回す */
+function sliceBasis() {
+  const ab = P.region === 'abd', o = SLICE.ori, h = SLICE.pos[o], zc = ab ? 0 : SL_ZC, yc = ab ? 0 : -18;
+  let c, u, v, n;
+  if (o === 'cor') { c = [0, h, zc]; u = [-1, 0, 0]; v = [0, 0, -1]; n = [0, 1, 0]; }
+  else if (o === 'sag') { c = [h, yc, zc]; u = [0, -1, 0]; v = [0, 0, -1]; n = [1, 0, 0]; }
+  else { c = [0, yc, h]; u = [-1, 0, 0]; v = [0, -1, 0]; n = [0, 0, 1]; }
+  const a = (P.mipRot || 0) * Math.PI / 180;
+  if (a) { const ca = Math.cos(a), sa = Math.sin(a), u0 = u, n0 = n; u = u0.map((x, k) => x * ca + n0[k] * sa); n = n0.map((x, k) => x * ca - u0[k] * sa); }
+  return { c, u, v, n, mm:REG[P.region].mm };
+}
+function pixTal(fi, fj) {   // 画像の位置（画素の単位。端が 0）→ 立体の座標（頭部は Talairach、腹部は模式図の座標。mm）
+  const B = sliceBasis(), xm = (fi - IW / 2) * B.mm, ym = (fj - IH / 2) * B.mm;
+  return [0, 1, 2].map(k => B.c[k] + xm * B.u[k] + ym * B.v[k]);
+}
+function talPix(q) {        // 立体の座標 → 画像の位置（画素）。板の厚さの向きは無視する（MIP では手前から見た位置）
+  const B = sliceBasis(), d = [0, 1, 2].map(k => q[k] - B.c[k]);
+  return [IW / 2 + (d[0] * B.u[0] + d[1] * B.u[1] + d[2] * B.u[2]) / B.mm, IH / 2 + (d[0] * B.v[0] + d[1] * B.v[1] + d[2] * B.v[2]) / B.mm];
 }
 function volAt(x, y, z) {
   const H = HEAD3D, i = Math.round((x - H.x0) / H.d), j = Math.round((y - H.y0) / H.d), k = Math.round((z - H.z0) / H.d);
@@ -1657,6 +1719,155 @@ function buildPhantomColin27() {
     return;
   }
   for (let j = 0; j < IH; j++) for (let i = 0; i < IW; i++) { const t = pixTal(i + .5, j + .5); LABM[j * IW + i] = volAt(t[0], t[1], t[2]); }
+}
+/* ---- 腹部の模式図 ----
+   実在の人ではなく、楕円体と管を数式で組み立てた模型（2 mm の立体）。座標は 右＝+x、前＝+y、頭側＝+z（mm）。
+   臓器の大きさ・位置はおおよそで、解剖の細部（血管の枝、肋骨など）は省いている。
+   MRCP と MIP を見せるため、胆管・胆嚢・膵管・十二指腸・胃の水・腎盂と尿管・小腸の水・脊柱管の脳脊髄液を入れてある。
+   流れている血液（大動脈・下大静脈・門脈）は信号が抜けるので 0（黒）にする */
+const ABD = { nx:176, ny:130, nz:208, d:2, x0:-175, y0:-129, z0:-207, vol:null };
+/* 総胆管の結石（模型）。信号が出ないので黒く抜ける。結石を入れたときは、その上の胆管を太くする（太い胆管の中に小さな結石）。
+   こうすると、断面1枚では黒い点が見えるのに、厚い MIP では手前と奥の胆汁に埋もれて見えにくくなる */
+let stoneOn = false;
+const CBD = [[30, 4, 92], [28, 2, 72], [27, -2, 55], [29, -10, 38], [33, -11, 26], [36, -6, 19], [44, -2, 20], [49, -1, 21]];
+const STONE = [29.6, -10.2, 35], STONE_R = 3.4, CBD_WIDE = 6.5;
+function buildAbd() {
+  const A = ABD, V = A.vol = new Uint8Array(A.nx * A.ny * A.nz), NXY = A.nx * A.ny;
+  const L = id => TIX[id] + 1;
+  const FAT = L('fat'), MUS = L('mus'), BONE = L('bone'), CSF = L('csf'), LIV = L('liv'), SPL = L('spl'), PAN = L('pan'), KID = L('kid'), WAT = L('wat');
+  const BA = 160, BB = 108, BN = 2.6;                 // 体の断面（角の丸い楕円）
+  const se = (x, y, a, b) => Math.pow(Math.abs(x / a), BN) + Math.pow(Math.abs(y / b), BN);
+  const inCav = (x, y) => se(x, y, BA - 22, BB - 22) <= 1;   // 腹壁の筋肉より内側
+  /* 体の外形・皮下脂肪・腹壁の筋肉は高さによらないので、1枚作って全部の高さに写す */
+  const sl = new Uint8Array(NXY);
+  for (let j = 0; j < A.ny; j++) for (let i = 0; i < A.nx; i++) {
+    const x = A.x0 + i * A.d, y = A.y0 + j * A.d;
+    sl[j * A.nx + i] = se(x, y, BA, BB) > 1 ? 0 : se(x, y, BA - 14, BB - 14) > 1 ? FAT : !inCav(x, y) ? MUS : FAT;
+  }
+  for (let k = 0; k < A.nz; k++) V.set(sl, k * NXY);
+  /* 箱の中だけ調べて塗る。f は 塗る組織の番号（-1 なら塗らない）を返す */
+  function paint(b, f) {
+    const i0 = Math.max(0, Math.floor((b[0] - A.x0) / A.d)), i1 = Math.min(A.nx - 1, Math.ceil((b[1] - A.x0) / A.d));
+    const j0 = Math.max(0, Math.floor((b[2] - A.y0) / A.d)), j1 = Math.min(A.ny - 1, Math.ceil((b[3] - A.y0) / A.d));
+    const k0 = Math.max(0, Math.floor((b[4] - A.z0) / A.d)), k1 = Math.min(A.nz - 1, Math.ceil((b[5] - A.z0) / A.d));
+    for (let k = k0; k <= k1; k++) for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const v = f(A.x0 + i * A.d, A.y0 + j * A.d, A.z0 + k * A.d);
+      if (v >= 0) V[k * NXY + j * A.nx + i] = v;
+    }
+  }
+  const lab = (l, x, y, z) => typeof l === 'function' ? l(x, y, z) : l;
+  const ell = (c, r, l, cav) => paint([c[0] - r[0], c[0] + r[0], c[1] - r[1], c[1] + r[1], c[2] - r[2], c[2] + r[2]], (x, y, z) => {
+    const q = ((x - c[0]) / r[0]) ** 2 + ((y - c[1]) / r[1]) ** 2 + ((z - c[2]) / r[2]) ** 2;
+    return q <= 1 && (!cav || inCav(x, y)) ? lab(l, x, y, z) : -1;
+  });
+  /* 折れ線の管。半径は始め r0 → 終わり r1 に変える。wall を指定すると、その厚さの壁（筋肉）を先に塗る */
+  function tube(pts, r0, r1, l, wall) {
+    let tot = 0; const seg = [];
+    for (let s = 0; s + 1 < pts.length; s++) { const a = pts[s], b = pts[s + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]); seg.push([a, b, len, tot]); tot += len; }
+    const pass = (lw, rr) => seg.forEach(([a, b, len, t0]) => {
+      const R = Math.max(r0, r1) + rr;
+      paint([Math.min(a[0], b[0]) - R, Math.max(a[0], b[0]) + R, Math.min(a[1], b[1]) - R, Math.max(a[1], b[1]) + R, Math.min(a[2], b[2]) - R, Math.max(a[2], b[2]) + R], (x, y, z) => {
+        const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+        let t = ((x - a[0]) * dx + (y - a[1]) * dy + (z - a[2]) * dz) / (len * len); t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const d = Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy, z - a[2] - t * dz);
+        const r = r0 + (r1 - r0) * (t0 + t * len) / tot + rr;
+        return d <= r ? lab(lw, x, y, z) : -1;
+      });
+    });
+    if (wall) pass(MUS, wall);
+    pass(l, 0);
+  }
+  const zcyl = (cx, cy, r, z0, z1, l) => paint([cx - r, cx + r, cy - r, cy + r, z0, z1], (x, y) => (x - cx) ** 2 + (y - cy) ** 2 <= r * r ? l : -1);
+  /* 胸（肺は空気なので 0）と心臓 */
+  ell([70, -5, 235], [66, 84, 95], 0, true); ell([-70, -5, 235], [66, 84, 95], 0, true);
+  ell([-15, 35, 222], [60, 48, 52], MUS, true);
+  /* 肝臓（右葉と左葉）・脾臓・腎臓 */
+  ell([68, 5, 100], [85, 90, 75], LIV, true); ell([-10, 35, 118], [70, 48, 40], LIV, true);
+  ell([-100, -35, 110], [30, 50, 55], SPL, true);
+  for (const s of [1, -1]) {
+    const zc = s > 0 ? 20 : 35;
+    ell([70 * s, -52, zc], [26, 22, 50], KID, true);
+    ell([56 * s, -48, zc], [10, 9, 26], FAT);                       // 腎洞の脂肪
+    ell([52 * s, -46, zc], [7, 6, 11], WAT);                         // 腎盂の尿
+    tube([[50 * s, -45, zc - 8], [45 * s, -40, -60], [40 * s, -35, -207]], 2, 2, WAT);   // 尿管
+  }
+  /* 胃（空気は前＝上に、水は後ろ＝下にたまる） */
+  const gas = (x, y) => y > 15 ? 0 : WAT;
+  ell([-58, 20, 110], [42, 38, 52], MUS, true); ell([-58, 20, 110], [38, 34, 48], gas, true);
+  tube([[-50, 30, 80], [-25, 38, 68], [0, 35, 66]], 20, 14, gas, 4);
+  /* 膵臓 → 十二指腸 → 胆嚢 → 胆管・膵管 の順に塗る（後から塗ったものが前に出る） */
+  tube([[38, -2, 25], [18, 0, 30], [0, 2, 38], [-30, -5, 48], [-60, -15, 56], [-88, -26, 64]], 16, 9, PAN);
+  tube([[0, 35, 66], [25, 30, 70], [48, 18, 62], [57, 8, 45], [56, 5, 22], [48, 3, 2], [20, -5, -10], [-10, -10, -8], [-28, -12, 12]], 8, 8, WAT, 3);   // 十二指腸（胆管より外側＝右を下る）
+  tube([[52, 6, 84], [82, 34, 52]], 8, 13, WAT);                       // 胆嚢（頸部 → 底部）。十二指腸より前・外側
+  const D = WAT;
+  tube(CBD, 3.0, 3.4, D);                                                          // 総肝管 → 総胆管 → 十二指腸へ
+  tube([[52, 6, 84], [42, 6, 82], [33, 4, 78], [28.5, 2, 72]], 1.9, 1.9, D);       // 胆嚢管
+  tube([[30, 4, 92], [48, 2, 98]], 2.6, 2.3, D);                                    // 右肝管
+  tube([[48, 2, 98], [78, 14, 110], [105, 20, 122]], 2.2, 1.8, D);
+  tube([[48, 2, 98], [75, -20, 96], [100, -32, 92]], 2.2, 1.8, D);
+  tube([[78, 14, 110], [92, 40, 130]], 1.8, 1.8, D); tube([[75, -20, 96], [88, -15, 72]], 1.8, 1.8, D);
+  tube([[30, 4, 92], [8, 12, 100]], 2.6, 2.3, D);                                   // 左肝管
+  tube([[8, 12, 100], [-18, 28, 112], [-48, 32, 120]], 2.2, 1.8, D);
+  tube([[-18, 28, 112], [-28, 52, 104]], 1.8, 1.8, D); tube([[8, 12, 100], [-2, 40, 126]], 1.8, 1.8, D);
+  tube([[36, -6, 19], [22, -4, 26], [2, 0, 36], [-30, -6, 47], [-60, -16, 56], [-86, -27, 63]], 2.0, 1.8, D);   // 主膵管
+  /* 大腸（空気）と小腸（水のたまった所とつぶれた所）、膀胱 */
+  tube([[78, 0, -130], [80, 5, -20], [78, 20, 20], [40, 60, 25], [-20, 62, 30], [-70, 40, 45], [-82, -5, 20], [-80, 0, -130]], 16, 16, 0, 3);
+  const SB = [[-50, 30, -40], [0, 40, -35], [45, 30, -50], [40, 10, -80], [-10, 20, -85], [-50, 10, -95], [-45, 40, -125], [10, 45, -130], [50, 30, -145], [30, 0, -160], [-20, 10, -165]];
+  for (let s = 0; s + 1 < SB.length; s++) tube([SB[s], SB[s + 1]], 10, 10, s % 3 === 1 ? MUS : WAT, 2.5);
+  ell([0, 25, -205], [40, 32, 30], WAT, true);
+  /* 背骨・脊柱管・背中と腰の筋肉 */
+  zcyl(0, -55, 21, -207, 207, BONE); zcyl(0, -55, 18.5, -207, 207, FAT);           // 椎体（中は骨髄＝脂肪）
+  zcyl(0, -86, 13, -207, 207, BONE); zcyl(0, -86, 9, -207, 207, CSF);              // 脊柱管の脳脊髄液
+  ell([0, -102, 0], [6, 9, 207], BONE);
+  for (const s of [1, -1]) {
+    ell([38 * s, -86, 0], [24, 16, 230], MUS);
+    paint([42 * s - 26, 42 * s + 26, -74, -22, -207, 40], (x, y, z) => { const r = Math.min(24, 6 + (40 - z) * 0.12); return (x - 42 * s) ** 2 + (y + 48) ** 2 <= r * r ? MUS : -1; });   // 大腰筋
+  }
+  /* 流れている血液：信号が抜ける（0） */
+  zcyl(-12, -30, 11, -110, 207, 0);
+  tube([[-12, -30, -110], [-45, -25, -207]], 7, 7, 0); tube([[-12, -30, -110], [25, -25, -207]], 7, 7, 0);
+  zcyl(22, -28, 12, -120, 175, 0);
+  tube([[-5, -12, 52], [25, -5, 75], [50, 0, 88]], 7, 6, 0);
+  tube([[50, 0, 88], [80, 5, 102]], 5, 4, 0); tube([[25, -5, 75], [0, 20, 102]], 4.5, 4, 0);
+}
+function cbdDist(x, y, z) {   // 総胆管（結石より上）の中心線までの距離
+  let best = 1e9;
+  for (let s = 0; s < 4; s++) {
+    const a = CBD[s], b = CBD[s + 1], dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+    let t = ((x - a[0]) * dx + (y - a[1]) * dy + (z - a[2]) * dz) / (dx * dx + dy * dy + dz * dz); t = t < 0 ? 0 : t > 1 ? 1 : t;
+    best = Math.min(best, Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy, z - a[2] - t * dz));
+  }
+  return best;
+}
+function abdAt(x, y, z) {
+  if (stoneOn && x > 15 && x < 45 && y > -20 && y < 14 && z > STONE[2] - 6 && z < 100) {
+    if ((x - STONE[0]) ** 2 + (y - STONE[1]) ** 2 + (z - STONE[2]) ** 2 <= STONE_R * STONE_R) return 0;
+    if (cbdDist(x, y, z) <= CBD_WIDE) return TIX.wat + 1;
+  }
+  const A = ABD, i = Math.round((x - A.x0) / A.d), j = Math.round((y - A.y0) / A.d), k = Math.round((z - A.z0) / A.d);
+  if (i < 0 || j < 0 || k < 0 || i >= A.nx || j >= A.ny || k >= A.nz) return 0;
+  return A.vol[(k * A.ny + j) * A.nx + i];
+}
+/* 立体（頭部の Colin 27・腹部の模式図）から、断面1枚、または MIP の板を切り出す。
+   MIP では、画素ごとに「板の厚さの向きに並ぶ点に、どの組織があるか」を印（ビット）で持っておく。
+   明るさは条件で変わるので、描くときに印の中で一番明るい組織を選ぶ（drawImage） */
+const MIPM = new Uint32Array(IW * IH);
+const mipOn = () => P.mip > 0 && (P.region === 'abd' || (phantomKind !== 'simple' && !!VOL));
+function buildPhantomVol() {
+  const ab = P.region === 'abd', at = ab ? abdAt : volAt, B = sliceBasis();
+  const LES = TIX.les + 1, WM = TIX.wm + 1, fix = l => (!ab && !lesOn && l === LES) ? WM : l;
+  const T = mipOn() ? P.mip : 0, ns = T > 0 ? Math.max(2, Math.round(T / (ab ? 2 : 1.5)) + 1) : 0;
+  for (let j = 0; j < IH; j++) for (let i = 0; i < IW; i++) {
+    const xm = (i + .5 - IW / 2) * B.mm, ym = (j + .5 - IH / 2) * B.mm;
+    const px = B.c[0] + xm * B.u[0] + ym * B.v[0], py = B.c[1] + xm * B.u[1] + ym * B.v[1], pz = B.c[2] + xm * B.u[2] + ym * B.v[2];
+    const ix = j * IW + i;
+    LABM[ix] = fix(at(px, py, pz));
+    if (ns) {
+      let m = 0;
+      for (let k = 0; k < ns; k++) { const t = -T / 2 + T * k / (ns - 1), l = at(px + t * B.n[0], py + t * B.n[1], pz + t * B.n[2]); if (l) m |= 1 << fix(l); }
+      MIPM[ix] = m;
+    }
+  }
 }
 /* 以前の簡易画像（頭部の軸位断を数式で組み立てたもの）。詳細タブの「頭部の画像」でいつでも切り替えられる */
 function buildPhantomSimple() {
@@ -1726,7 +1937,10 @@ try { const q = new URLSearchParams(location.search).get('phantom'); const v = q
 let lesOn = false;
 function buildPhantom() {
   LABM.fill(0);
-  if (phantomKind === 'simple') buildPhantomSimple(); else buildPhantomColin27();
+  if (P.region === 'abd') { if (!ABD.vol) buildAbd(); buildPhantomVol(); return; }
+  if (phantomKind === 'simple') buildPhantomSimple();
+  else if (!VOL) buildPhantomColin27();          // 立体のデータがないときは、以前の 1 断面
+  else buildPhantomVol();
   if (!lesOn) for (let i = 0; i < LABM.length; i++) if (LABM[i] === TIX.les + 1) LABM[i] = TIX.wm + 1;
 }
 buildPhantom();
@@ -1772,10 +1986,16 @@ function drawImage() {
       noiseBuf[i] = (s / 3 - 0.5) * 2;
     }
   }
-  const d = imgData.data;
+  const d = imgData.data, mip = mipOn(), mc = new Map();
+  const mipV = m => {   // 視線の上にある組織のうち、いちばん明るいもの（MIP）
+    let v = mc.get(m); if (v !== undefined) return v;
+    v = 0; for (let l = 1; l <= TIS.length; l++) if (m & (1 << l) && sg[l] > v) v = sg[l];
+    v *= norm; mc.set(m, v); return v;
+  };
   for (let i = 0; i < IW * IH; i++) {
     const l = LABM[i];
-    let v = l && (!paintOnly || paintOnly.has(l)) ? sg[l] * norm : 0.012;   // paintOnly ＝「塗ってみる」の途中。まだ塗っていない組織は地のまま
+    let v = mip ? (MIPM[i] ? Math.max(0.012, mipV(MIPM[i])) : 0.012)
+      : l && (!paintOnly || paintOnly.has(l)) ? sg[l] * norm : 0.012;   // paintOnly ＝「塗ってみる」の途中。まだ塗っていない組織は地のまま
     if (P.noise) v += noiseBuf[i] * 0.026;
     v = v < 0 ? 0 : v > 1 ? 1 : v;
     const g = Math.round(255 * Math.pow(v, 0.92));
@@ -2293,7 +2513,7 @@ function drawSlice() {
   let mxs = 1e-6;
   for (const t of TIS) if (INIMG[t.id]) { const v = imgSig(t); if (v > mxs) mxs = v; }
   const norm = 1 / (mxs * 1.04), lut = new Uint8ClampedArray(TIS.length + 1);
-  for (const b of BANKS) {
+  for (const b of BANKA) {
     const n = bankM(b), t = TIS[TIX[b.id]];
     lut[TIX[b.id] + 1] = Math.round(255 * Math.pow(Math.min(1, t.PD * Math.hypot(n[0], n[1]) * norm), 0.92));
   }
@@ -2476,7 +2696,7 @@ const WFL = {};
 const WKEYS = ['m', 'm0', 'mxy', 'spins', 'rf', 'b0', 'flux', 'mag', 'h', 'coil', 'band', 'wire', 'ang', 'fan', 'echo', 'thick'];
 const WLAB = { m:['m', 'fVox'], m0:['m0'], mxy:['mxy'], rf:['b1'], b0:['z', 'boreB0'], coil:['coil'], flux:['flux'], mag:['mag'], band:['slBand'],
   wire:['boreW'], ang:['ang'], fan:['fan'], echo:['echo'], thick:['slThick'] };
-const WDOM = { frame:'#frameSeg', relw:'#relW', water:'.mkw' };   // 画面の部品（ボタンや印）を光らせる
+const WDOM = { frame:'#frameSeg', relw:'#relW', water:'#mkW', duct:'#mkB, #mkP', bile:'#mkG' };   // 画面の部品（ボタンや印）を光らせる
 function wFlash(k) {
   if (WDOM[k]) {
     document.querySelectorAll(WDOM[k]).forEach(e => { e.classList.add('wflash'); setTimeout(() => e.classList.remove('wflash'), 1800); });
@@ -3031,7 +3251,7 @@ function drawFA() {
   $('faNote').textContent = '線＝組織ごとの信号（いまの TR・TE）。点線＝いまの α。点＝' + t.nm + 'のエルンスト角 ' + ae.toFixed(0) + '°（信号が最大になる角度）。';
 }
 function drawRel() {
-  const base = lesOn ? CURVE0 : CURVE0.filter(id => id !== 'les');
+  const base = P.region === 'abd' ? ['fat', 'liv', 'spl', 'kid', 'wat'] : lesOn ? CURVE0 : CURVE0.filter(id => id !== 'les');
   CURVE = P.tissue === 'cus' ? base.concat('cus') : base;
   const cv = document.getElementById('relCv');
   const { cx, w, h } = fitCv(cv);
@@ -3432,7 +3652,22 @@ L({ nm:'FLAIR：水を消す', hint:'画像の「脳脊髄液（水）」の印�
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:180, T2p:40 },
   on:() => { if (!lesOn) $('bLes').click(); },   // 文で「病変が浮かぶ」と言うので、病変を入れておく
   act:{ label:'FLAIR（TI 2400 ms）に切り替える', fn:() => applySet(pre('flair'), true) },
-  text:'TI を長く（約 2400 ms）すると<b>[[water:脳脊髄液（水）]]が消え</b>、そばの病変が白く浮かびます。' })
+  text:'TI を長く（約 2400 ms）すると<b>[[water:脳脊髄液（水）]]が消え</b>、そばの病変が白く浮かびます。' }),
+
+L({ nm:'強いT2強調：水だけを残す', hint:'右の画像は腹部の模式図（体を前から見た冠状断）です。3D は左が肝臓、右が胆汁（水）の M です。TE の間に、肝臓の横の M だけが消えるのを見てください。', tg:'TE をうんと長く', sel:'#imgbox',
+  tag:{ gb:true },
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:false, region:'abd', sl:{ ori:'cor', pos:2 }, seq:'SE', TR:6000, TE:100, T2p:40, tissue:'wat', cmp:['liv', 'wat'], cmpLay:'side' },
+  act:{ label:'TE を 100 → 800 ms にする', fn:() => applySet({ TE:800 }, true) },
+  text:'TE をうんと長くすると、T2 の短い肝臓は黒く消え、<br>T2 の長い[[bile:胆汁などの水]]だけが<b>白く残ります</b>。' }),
+
+L({ nm:'MIP：重ねて1枚にする', hint:'厚くするほど管が長くつながって見えます。そのかわり、胃や腸の水も重なって写ります。細かいところは、もとの断面1枚ずつでも確かめます（「詳細」で結石の模型を入れて比べられます）。', tg:'いちばん明るい所を集める', sel:'#imgbox',
+  tag:{ duct:true, big:true },
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:false, region:'abd', sl:{ ori:'cor', pos:-4 }, mip:0, seq:'SE', TR:6000, TE:800, T2p:40, tissue:'wat' },
+  acts:[
+    { label:'板を 0 → 60 mm に厚くする', fn:() => animGeom('mip', [0, 60], 2400) },
+    { label:'縦の軸のまわりに回す', fn:() => { P.mip = 60; animGeom('mipRot', [0, 60, -60, 0], 6000); } },
+  ],
+  text:'視線の上で<b>いちばん明るい所だけ</b>を1枚に集めます（MIP）。<br>途切れていた[[duct:胆管と膵管]]が、つながって見えます。' })
 ];
 
 /* ---------- k 空間：今の模擬画像を 256 × 256 にして2次元 FFT し、中心だけ・外側だけで画像に戻す ---------- */
@@ -3617,8 +3852,8 @@ const CHAPTERS = [
   { no:'第5章', nm:'位置の決め方と画像の再構成', goal:'傾斜磁場で位置を決め、k 空間から画像を作る。',
     steps:['スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表', '矢印から画像へ'],
     end:'<b>傾斜磁場で位置を決め</b>、k 空間から画像を作ります。<br>次の章：白黒の差（コントラスト）と序章の答え' },
-  { no:'第6章', nm:'コントラスト', goal:'TR・TE・TI の選び方で、T1強調・T2強調・FLAIR が決まる。',
-    steps:['TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'GRE：180° を使わない', 'IR：狙った組織を消す', 'FLAIR：水を消す'],
+  { no:'第6章', nm:'コントラスト', goal:'TR・TE・TI の選び方で、T1強調・T2強調・FLAIR・MRCP が決まる。',
+    steps:['TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'GRE：180° を使わない', 'IR：狙った組織を消す', 'FLAIR：水を消す', '強いT2強調：水だけを残す', 'MIP：重ねて1枚にする'],
     end:'<b>TR で T1 の差、TE で T2 の差</b>が明るさに出ます。<br>最後の章：1枚の画像ができるまで' },
   { no:'終章', nm:'撮像の流れ', goal:'1枚の画像ができるまでを通して見る。',
     steps:['1枚の画像ができるまで'],
@@ -3663,6 +3898,9 @@ const PRE = [
 { k:'flair',nm:'FLAIR（水抑制）', ruby:'IR', s:{ seq:'IR', TR:9000, TE:100, TI:2400 },
   lede:'IR で、水の縦磁化がちょうど 0 を通る時刻（TI 約 2400 ms）に倒して、水を消す撮り方です。',
   note:`脳室の水が黒くなるので、T2強調では水と見分けにくい、脳室のすぐそばの病変が見えるようになります。` },
+{ k:'mrcp', nm:'MRCP', ruby:'腹部・HEAVY T2 + MIP', s:{ seq:'SE', TR:6000, TE:800 }, g:{ region:'abd', sl:{ ori:'cor', pos:-8 }, mip:60, mipRot:0 },
+  lede:'TE をうんと長くして水だけを残し（強い T2強調）、厚い板の MIP で胆管・膵管を1枚にまとめる撮り方です。',
+  note:`胆汁や膵液は T2 がとても長い水なので白く残り、T2 の短い肝臓や膵臓は黒く消えます。「詳細」の <b>MIP の厚さ・回す</b> で見え方が変わります。実際の装置では高速スピンエコーで撮ります。` },
 { k:'t2h',  nm:'強いT2強調', ruby:'HEAVY T2', s:{ seq:'SE', TR:6000, TE:200 },
   lede:'TE をさらに長くして、T2 の長い水以外をほとんど消す撮り方です。',
   note:`胆管・膵管を写す MRCP や、内耳を見るときの考え方です。全体の信号は小さくなるので、ノイズとの兼ね合いになります。` }
@@ -3739,6 +3977,7 @@ function presetOf() {
     if (p.s.TR !== P.TR || p.s.TE !== P.TE) continue;
     if (p.s.TI !== undefined && p.s.TI !== P.TI) continue;
     if (p.s.FA !== undefined && p.s.FA !== P.FA) continue;
+    if (p.g && p.g.region !== P.region) continue;
     return p;
   }
   return null;
@@ -3767,7 +4006,8 @@ function weightName() {
 }
 
 /* ---- 組織チップ：四角の明るさが、いまの条件での画像上の明るさ ---- */
-const CHIPS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'bone', 'cus'];
+const CHIPS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'bone', 'liv', 'spl', 'pan', 'kid', 'wat', 'cus'];
+const chipList = () => REG_TIS[P.region].filter(id => id !== 'les' || lesOn).concat('cus');   // いまの部位で出す組織（この順に並べる）
 const tisChips = $('tisChips');
 CHIPS.forEach(id => {
   const b = document.createElement('button');
@@ -3807,9 +4047,11 @@ function eqText() {
 function updateTis() {
   const sg = {};
   let mxs = 1e-6;
-  CHIPS.forEach(id => { const v = imgSig(TIS[TIX[id]]); sg[id] = v; if (v > mxs) mxs = v; });
+  const CL = chipList();
+  CL.forEach(id => { const v = imgSig(TIS[TIX[id]]); sg[id] = v; if (v > mxs) mxs = v; });
   [...tisChips.children].forEach(b => {
-    const id = b.dataset.t;
+    const id = b.dataset.t, k = CL.indexOf(id);
+    b.style.display = k < 0 ? 'none' : ''; b.style.order = k; if (k < 0) return;
     const g = Math.round(255 * Math.pow(Math.min(1, sg[id] / (mxs * 1.04)), 0.92));
     b.querySelector('i').style.background = 'rgb(' + g + ',' + g + ',' + g + ')';
     b.setAttribute('aria-pressed', P.cmp ? P.cmp.includes(id) : id === P.tissue);
@@ -3825,7 +4067,7 @@ function updateTis() {
    画像の濃度を決めているのもこの値。四角の色は、その値を画像とまったく同じ正規化・同じガンマで灰色にしたもの。
    （いまこの瞬間の長さではなく「エコーのときの長さ」を出す。信号を読むのはエコーの瞬間だけなので、
    途中の値を見せると「棒＝明るさ」が成り立たなくなる。動いているところは 3D の矢印で見る） */
-const BR_IDS = ['fat', 'wm', 'gm', 'csf', 'les'];
+const BR_IDS = ['fat', 'wm', 'gm', 'csf', 'les', 'liv', 'spl', 'pan', 'kid', 'wat'];
 const bRows = $('bRows');
 BR_IDS.forEach(id => {
   const b = document.createElement('button');
@@ -3881,7 +4123,7 @@ $('bPaint').addEventListener('click', paintDemo);
 
 /* 3D の上の組織ボタン：1〜3つを選ぶ（押すたびに足す／外す。3つまで、1つは残す）。1つなら詳しい表示、2〜3つなら比べる表示 */
 function cmpToggle(id) {
-  const L = ((P.cmp && P.cmp.length) ? P.cmp.slice() : [P.tissue]).filter(t => BANK_IDS.indexOf(t) >= 0);   // 比べられるのは、3D で動かしている組織だけ
+  const L = ((P.cmp && P.cmp.length) ? P.cmp.slice() : [P.tissue]).filter(t => BANK_REG[P.region].includes(t));   // 比べられるのは、3D で動かしている組織だけ
   const i = L.indexOf(id);
   if (i >= 0) { if (L.length > 1) L.splice(i, 1); }
   else { L.push(id); if (L.length > CMP_N) L.shift(); }
@@ -3905,15 +4147,17 @@ function applyTissue(id) {
 const imgbox = $('imgbox'), xhair = $('xhair');
 function layoutImg() {
   const w = stage.clientWidth, h = stage.clientHeight;
-  if (P.view === 0 || (smallScr && cmpActive())) { imgbox.style.display = 'none'; return; }   // スマホで組織を比べているときは、矢印のために画像をしまう   // スマホで組織を並べているときは、並べた矢印のために画像をしまう
+  const big = !!(P.tag && P.tag.big);   // 画像が主役の手（MIP など）：3D をしまい、画像を大きく真ん中に出す
+  document.body.classList.toggle('imgBig', big);
+  if (!big && (P.view === 0 || (smallScr && cmpActive()))) { imgbox.style.display = 'none'; return; }   // スマホで組織を比べているときは、矢印のために画像をしまう   // スマホで組織を並べているときは、並べた矢印のために画像をしまう
   imgbox.style.display = '';
-  const cb = $('cmpBar'), top = smallScr && !cb.hidden ? cb.offsetTop + cb.offsetHeight + 8 : 46;   // スマホは組織ボタンの下に置く（重ならないように）
-  const ih = Math.min(h * 0.50, (w * 0.26) * IH / IW, h - top - 50), iw = ih * IW / IH;
-  imgbox.style.left = (w - iw - 12).toFixed(0) + 'px'; imgbox.style.top = top + 'px';
+  const cb = $('cmpBar'), top = smallScr && !cb.hidden ? cb.offsetTop + cb.offsetHeight + 8 : big ? $('stage').querySelector('.bar').offsetHeight + 10 : 46;   // スマホは組織ボタンの下に置く（重ならないように）
+  const ih = big ? Math.min(h - top - 16, (w - 24) * IH / IW) : Math.min(h * 0.50, (w * 0.26) * IH / IW, h - top - 50), iw = ih * IW / IH;
+  imgbox.style.left = (big ? (w - iw) / 2 : w - iw - 12).toFixed(0) + 'px'; imgbox.style.top = top + 'px';
   imgbox.style.width = iw.toFixed(0) + 'px'; imgbox.style.height = ih.toFixed(0) + 'px';
   $('imgPar').style.display = iw < 200 ? 'none' : '';
   const px = xhairPx || REP[P.tissue];
-  if (px && INIMG[P.tissue]) {
+  if (px && INIMG[P.tissue] && !big) {
     xhair.style.display = '';
     xhair.style.left = ((px[0] + .5) / IW * 100) + '%';
     xhair.style.top = ((px[1] + .5) / IH * 100) + '%';
@@ -3925,6 +4169,14 @@ function layoutImg() {
     el.style.display = 'block'; el.style.left = ((q[0] + .5) / IW * 100) + '%'; el.style.top = ((q[1] + .5) / IH * 100) + '%';
   };
   mk($('mkW'), 'csf', !!(P.tag && P.tag.mark));
+  /* 腹部：胆管・膵管・胆嚢の印（立体の中の決まった点を、いまの断面・MIP の向きで画像に写す） */
+  const mk3 = (el, q, on) => {
+    if (!on || P.region !== 'abd') { el.style.display = 'none'; return; }
+    const f = talPix(q); el.style.display = 'block';
+    el.style.left = (f[0] / IW * 100) + '%'; el.style.top = (f[1] / IH * 100) + '%';
+  };
+  const dt = !!(P.tag && P.tag.duct);
+  mk3($('mkB'), [28, 2, 66], dt); mk3($('mkP'), [-30, -6, 47], dt); mk3($('mkG'), [57, 7, 80], !!(P.tag && P.tag.gb));
   mk($('mkL'), 'les', !!(P.tag && P.tag.mark) && lesOn);
   document.body.classList.toggle('markOn', !!(P.tag && P.tag.mark));
 }
@@ -3949,7 +4201,7 @@ function refresh(keep) {
   if (sig !== seqSig || keep === false) { seqSig = sig; warmup(); if (P.echoStop) P.paused = false; }   // 撮像条件が変わったとき、最初からやり直すときは定常状態から始める（エコーで止める設定なら次のエコーまで進めて止める）
   $('imgSeq').textContent = weightName();
   $('relW').textContent = 'いま：' + weightName();
-  $('imgPar').textContent = parText();
+  $('imgPar').textContent = parText() + (mipOn() ? '・MIP ' + P.mip + ' mm' : '');
   $('preName').textContent = weightName();
   $('prePar').textContent = parText();
   $('vTR').textContent = Math.round(P.TR) + ' ms';
@@ -3964,7 +4216,7 @@ function refresh(keep) {
   paintSliders();
   $('wTI').style.display = P.seq === 'IR' ? '' : 'none';
   $('wFA').style.display = (P.seq === 'GRE' || P.manual) ? '' : 'none';
-  segSet($('seqSeg'), P.seq, 'q'); segSet($('b0Seg'), P.B0, 'b'); segSet($('phSeg'), phantomKind, 'ph');
+  segSet($('seqSeg'), P.seq, 'q'); segSet($('b0Seg'), P.B0, 'b'); segSet($('phSeg'), phantomKind, 'ph'); segSet($('regSeg'), P.region, 'r');
   segSet($('viewSeg'), P.view, 'v'); segSet($('frameSeg'), P.frame, 'f'); segSet($('scaleSeg'), P.showBody ? 'brain' : 'vox', 'sc'); cmpBarSync();
   segSet($('nSeg'), P.nDisp, 'n'); segSet($('spdSeg'), P.spd, 's');
   const pr = presetOf();
@@ -3980,7 +4232,10 @@ function refresh(keep) {
 function applySet(s, hard) {
   if (!s) return;
   const sbWas = P.showBody, coilWas = P.coil, slabWas = !!P.slab, boreWas = !!P.bore, gridWas = !!P.grid;
-  for (const k in s) P[k] = s[k];
+  if ('region' in s) setRegion(s.region, true);
+  for (const k in s) if (k !== 'sl' && k !== 'region') P[k] = s[k];
+  if (s.sl) { SLICE.ori = s.sl.ori; SLICE.pos[s.sl.ori] = s.sl.pos; }
+  if ('region' in s || 'mip' in s || 'mipRot' in s || s.sl) applyGeom();
   if ('coil' in s) $('tCoil').checked = P.coil;
   if ('showComp' in s) $('tComp').checked = P.showComp;
   if ('cmp' in s) homeCam();
@@ -4132,7 +4387,7 @@ PRE.forEach(p => {
   b.type = 'button'; b.className = 'opt'; b.dataset.k = p.k;
   b.innerHTML = p.nm + '<span class="ruby">' + p.ruby + '</span>';
   b.addEventListener('click', () => {
-    applySet(Object.assign({ TI:P.TI, FA:P.FA }, p.s, { manual:false, quantum:false }), true);
+    applySet(Object.assign({ TI:P.TI, FA:P.FA }, p.s, p.g || {}, { manual:false, quantum:false }), true);
   });
   preGrid.appendChild(b);
 });
@@ -4162,21 +4417,68 @@ $('bLes').addEventListener('click', () => {
 /* 断面の向きと位置 */
 function posText() {
   const o = SLICE.ori, h = SLICE.pos[o], a = Math.abs(h).toFixed(h % 1 ? 1 : 0);
+  if (P.region === 'abd' && o === 'sag') return h === 0 ? '正中' : (h > 0 ? '右 ' : '左 ') + a + ' mm';
   if (o === 'ax') return (h >= 0 ? '頭側 ' : '尾側 ') + a + ' mm';
   if (o === 'cor') return (h >= 0 ? '前 ' : '後ろ ') + a + ' mm';
   return h === 0 ? '正中' : (h > 0 ? '左 ' : '右 ') + a + ' mm';
 }
 function syncSliceUI() {
-  const on = phantomKind !== 'simple' && !!VOL;
+  const ab = P.region === 'abd', on = ab || (phantomKind !== 'simple' && !!VOL);
   $('sliceBox').style.display = on ? '' : 'none';
+  $('sliceH').textContent = ab ? '断面（腹部の模式図）' : '断面（Colin 27）';
   segSet($('oriSeg'), SLICE.ori, 'o');
   const r = SL_RANGE[SLICE.ori], sp = $('sPos');
   sp.min = r[0]; sp.max = r[1]; sp.value = SLICE.pos[SLICE.ori];
-  $('vPos').textContent = posText() + '（Talairach）';
+  $('vPos').textContent = posText() + (ab ? '' : '（Talairach）');
+  $('sMip').value = P.mip; $('vMip').textContent = P.mip > 0 ? P.mip + ' mm' : 'なし（断面1枚）';
+  $('sRot').value = P.mipRot; $('vRot').textContent = P.mipRot + '°';
+  $('headOpt').hidden = ab; $('abdOpt').hidden = !ab;
+}
+/* 断面・MIP を作り直す（明るさの条件は変えない）。同じ条件なら何もしない */
+let geomSig = '';
+function applyGeom(force) {
+  const g = [P.region, SLICE.ori, SLICE.pos[SLICE.ori], P.mip, P.mipRot, lesOn, stoneOn, phantomKind].join('|');
+  if (g === geomSig && !force) return;
+  geomSig = g;
+  buildPhantom(); computeRep(); placeTisArr(); placeSlicePlane(); syncSliceUI();
+  xhairPx = REP[P.tissue] ? REP[P.tissue].slice() : null;
+}
+/* 部位を切り替える：組織の一覧・3D で動かす組織・断面の置き方を入れ替える */
+function setRegion(r, noRefresh) {
+  if (r === P.region) return;
+  P.region = r;
+  SLICE = REG[r].slice; SL_RANGE = REG[r].range;
+  BANKA = BANKS.filter(b => BANK_REG[r].includes(b.id));
+  setInimg();
+  if (!REG_TIS[r].includes(P.tissue) && P.tissue !== 'cus') P.tissue = r === 'abd' ? 'liv' : 'wm';
+  P.cmp = null;
+  const bb = document.querySelector('#scaleSeg [data-sc="brain"]'); if (bb) bb.disabled = r === 'abd';
+  if (r === 'abd' && P.showBody) setScale(false);
+  if (noRefresh) return;
+  applyGeom(); homeCam(); updateTis(); drawRel(); refresh(false);
+}
+$('regSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setRegion(b.dataset.r); });
+$('bStone').addEventListener('click', () => {
+  stoneOn = !stoneOn;
+  $('bStone').setAttribute('aria-pressed', stoneOn);
+  $('bStone').textContent = stoneOn ? '− 結石を取る' : '＋ 総胆管に結石（模型）を入れる';
+  applyGeom(); refresh(true);
+});
+$('sMip').addEventListener('input', e => { P.mip = +e.target.value; applyGeom(); refresh(true); });
+$('sRot').addEventListener('input', e => { P.mipRot = +e.target.value; applyGeom(); refresh(true); });
+/* 学習の手で、MIP の厚さや角度をゆっくり変えて見せる */
+let geomAnim = null;
+function animGeom(key, pts, ms) {   // pts：通る値の並び（区間ごとに同じ時間をかける）
+  cancelAnimationFrame(geomAnim); const t0 = performance.now(), n = pts.length - 1;
+  const step = now => {
+    const f = Math.min(1, (now - t0) / ms), q = Math.min(n - 1, Math.floor(f * n)), g = f * n - q, e = g < .5 ? 2 * g * g : 1 - Math.pow(-2 * g + 2, 2) / 2;
+    P[key] = Math.round((pts[q] + (pts[q + 1] - pts[q]) * e) / 2) * 2; applyGeom(); refresh(true);
+    if (f < 1) geomAnim = requestAnimationFrame(step);
+  };
+  geomAnim = requestAnimationFrame(step);
 }
 function applySlice() {
-  buildPhantom(); computeRep(); placeTisArr(); placeSlicePlane(); syncSliceUI();
-  xhairPx = REP[P.tissue] ? REP[P.tissue].slice() : null; refresh(true);
+  applyGeom(true); refresh(true);
 }
 $('oriSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.o === SLICE.ori) return; SLICE.ori = b.dataset.o; applySlice(); });
 $('sPos').addEventListener('input', e => { SLICE.pos[SLICE.ori] = +e.target.value; applySlice(); });
@@ -4237,6 +4539,7 @@ $('nSeg').addEventListener('click', e => { const b = e.target.closest('button');
 $('spdSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; P.spd = +b.dataset.s; refresh(); });
 const chk = (id, key, after) => $(id).addEventListener('change', e => { P[key] = e.target.checked; if (after) after(); refresh(); });
 function setScale(brain) {
+  if (P.region === 'abd') brain = false;   // 腹部には「全体」の立体がないので、組織を見る表示だけ
   P.showBody = brain; $('tBody').checked = brain;
   homeCam(); placeHead(); segSet($('scaleSeg'), brain ? 'brain' : 'vox', 'sc');
   cmpBarSync(); layoutImg();
@@ -4250,7 +4553,7 @@ function cmpBarSync() {
   else $('cmpLay').hidden = false;
   if (!on) return;
   bar.style.top = ($('stage').querySelector('.bar').offsetHeight + 8) + 'px';   // 上のボタンのすぐ下に置く（スマホは2段なので高さで測る）
-  [...bar.querySelectorAll('button[data-t]')].forEach(b => { b.setAttribute('aria-pressed', String(L.includes(b.dataset.t))); if (b.dataset.t === 'les') b.hidden = !lesOn; });
+  [...bar.querySelectorAll('button[data-t]')].forEach(b => { b.setAttribute('aria-pressed', String(L.includes(b.dataset.t))); b.hidden = !BANK_REG[P.region].includes(b.dataset.t) || (b.dataset.t === 'les' && !lesOn); });
   [...$('cmpLay').children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === P.cmpLay)));
   if (L.length < 2) return;
   /* 重ねたときだけ、濃さを入れ替えるスライダーを出す。両端と途中に、並べた組織の名前 */
@@ -4552,7 +4855,7 @@ function tutShow() {
   tutActI = 0;
   if (st.set) {
     learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
-    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false, bore:false, induct:false, grid:false, cmp:null }, st.set), true);
+    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false, bore:false, induct:false, grid:false, cmp:null, region:'head', mip:0, mipRot:0 }, st.set), true);
     P.tag = st.tag || {};                        // この手だけで画面に出すラベル（カードに出てくる言葉を、画面にも出す）
     layoutImg();   // コイルは出したい手だけ coil:true で出す
   }
