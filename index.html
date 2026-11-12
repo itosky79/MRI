@@ -374,7 +374,8 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset
 /* ---------- 組織チップ ---------- */
 .chips{display:flex; flex-wrap:wrap; gap:5px}
 .cmpbar{position:absolute; left:12px; z-index:3; display:flex; flex-wrap:wrap; gap:5px; align-items:center; max-width:calc(100% - 24px)}
-.cmpbar[hidden]{display:none}
+.cmpbar[hidden], .cmpbar button[hidden]{display:none}
+#scaleSeg button[disabled]{opacity:.38; cursor:default}
 .cmpbar span{font-size:13px; color:var(--dim); margin-right:2px}
 .cmpbar button{display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border:none; border-radius:999px; font-size:13.5px; font-family:var(--gothic);
   background:var(--scrim); color:var(--muted); cursor:pointer; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px)}
@@ -1299,7 +1300,7 @@ const tcol = t => document.documentElement.dataset.theme === 'light' ? t.colL : 
 /* 画像の中にある組織（十字カーソルを置けるもの） */
 const INIMG = { fat:1, wm:1, gm:1, csf:1, mus:1, les:0, bone:1 };   // 病変ははじめは無し（「病変を追加」で入れる）
 /* 部位ごとの組織。head＝頭部（Colin 27）、abd＝腹部（数式で組み立てた模式図） */
-const REG_TIS = { head:['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'bone'], abd:['fat', 'liv', 'spl', 'pan', 'kid', 'wat', 'mus', 'csf', 'bone'] };
+const REG_TIS = { head:['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'bone'], abd:['liv', 'spl', 'pan', 'kid', 'wat', 'fat', 'mus', 'csf', 'bone'] };
 function setInimg() {
   for (const t of TIS) INIMG[t.id] = 0;
   for (const id of REG_TIS[P.region]) INIMG[id] = 1;
@@ -1428,7 +1429,7 @@ function setDisp(n) {
 const BANK_IDS = ['fat', 'wm', 'gm', 'csf', 'mus', 'les', 'liv', 'spl', 'pan', 'kid', 'wat'];
 const BANKS = BANK_IDS.map(id => ({ id, x:new Float64Array(NISO), y:new Float64Array(NISO), z:new Float64Array(NISO), T1:1000, T2:100, echo:0 }));
 /* 動かすのは、いまの部位の組織の束だけ（計算を増やさないため）。頭部と腹部で入れ替える */
-const BANK_REG = { head:['fat', 'wm', 'gm', 'csf', 'mus', 'les'], abd:['fat', 'liv', 'spl', 'pan', 'kid', 'wat', 'mus'] };
+const BANK_REG = { head:['fat', 'wm', 'gm', 'csf', 'mus', 'les'], abd:['liv', 'spl', 'pan', 'kid', 'wat', 'fat', 'mus'] };   // 3D の上の組織ボタンもこの順に並べる
 let BANKA = BANKS.filter(b => BANK_REG.head.includes(b.id));
 function bankParams() { for (const b of BANKA) { const t = TIS[TIX[b.id]]; b.T1 = T1of(t, P.B0); b.T2 = T2of(t); } }
 const _cs = new Float64Array(NISO), _sn = new Float64Array(NISO);
@@ -4553,7 +4554,7 @@ function cmpBarSync() {
   else $('cmpLay').hidden = false;
   if (!on) return;
   bar.style.top = ($('stage').querySelector('.bar').offsetHeight + 8) + 'px';   // 上のボタンのすぐ下に置く（スマホは2段なので高さで測る）
-  [...bar.querySelectorAll('button[data-t]')].forEach(b => { b.setAttribute('aria-pressed', String(L.includes(b.dataset.t))); b.hidden = !BANK_REG[P.region].includes(b.dataset.t) || (b.dataset.t === 'les' && !lesOn); });
+  [...bar.querySelectorAll('button[data-t]')].forEach(b => { b.setAttribute('aria-pressed', String(L.includes(b.dataset.t))); b.hidden = !BANK_REG[P.region].includes(b.dataset.t) || (b.dataset.t === 'les' && !lesOn); b.style.order = 1 + BANK_REG[P.region].indexOf(b.dataset.t); });
   [...$('cmpLay').children].forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === P.cmpLay)));
   if (L.length < 2) return;
   /* 重ねたときだけ、濃さを入れ替えるスライダーを出す。両端と途中に、並べた組織の名前 */
