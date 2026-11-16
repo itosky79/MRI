@@ -541,6 +541,11 @@ details.fold p{margin:7px 0 0; font-size:14.5px; color:var(--dim); line-height:1
 #tutActs button:hover{filter:brightness(1.07)}
 #tutActs button.done{opacity:.72}
 #tutActs button[disabled]{opacity:.35; cursor:default; filter:none}
+#tutActs button.hit{animation:actHit .9s ease-out}
+@keyframes actHit{0%{box-shadow:0 0 0 0 rgba(212,140,20,.75)} 100%{box-shadow:0 0 0 14px rgba(212,140,20,0)}}
+#tutNext{position:relative}
+#tutNext[data-left]:not([data-left=""])::after{content:attr(data-left); position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  letter-spacing:3px; font-size:13px; opacity:.75}
 #tutHole{
   position:absolute; left:50%; top:50%; width:0; height:0; border-radius:7px;
   box-shadow:0 0 0 9999px var(--tutMask); pointer-events:none;
@@ -5015,13 +5020,24 @@ function tutActsShow(st) {
     const b = document.createElement('button'); b.type = 'button';
     b.textContent = (many && !/^[①-⑨]/.test(a.label) ? '①②③④⑤⑥'[k] + ' ' : !many ? '▶ ' : '') + a.label;
     b.disabled = k > tutActI;                      // 順番に押す（前のボタンを押すと次が押せるようになる）。押したものは何度でも押せる
-    b.addEventListener('click', () => {
-      a.fn(); b.classList.add('done');
-      if (k >= tutActI) { tutActI = k + 1; [...box.children].forEach((x, j) => { x.disabled = j > tutActI; }); }
-    });
+    b.addEventListener('click', () => tutAct(k));
     box.appendChild(b);
   });
   box.hidden = !acts.length;
+  tutDots();
+}
+function tutAct(k) {
+  const st = tutList[tutI], a = actsOf(st)[k], box = $('tutActs'), b = box.children[k];
+  if (!a || !b) return;
+  a.fn(); b.classList.add('done');
+  b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit');   // どのボタンの動きか分かるよう、一瞬光らせる
+  if (k >= tutActI) { tutActI = k + 1; [...box.children].forEach((x, j) => { x.disabled = j > tutActI; }); }
+  tutDots();
+}
+/* 「次へ」の右はしの小さな点：まだ見ていない動きの数（文字は置かない） */
+function tutDots() {
+  const st = tutList[tutI], n = st ? Math.max(0, actsOf(st).length - tutActI) : 0;
+  $('tutNext').dataset.left = n ? '•'.repeat(n) : '';
 }
 function tutActsPlace(el) {   // 3D は枠の中の下の方（再生ボタンの列より上）、図や画像は枠のすぐ下（中の線や画像を隠さない）。どちらも真ん中
   const box = $('tutActs'); if (box.hidden) return;
@@ -5050,8 +5066,10 @@ function tutActsPlace(el) {   // 3D は枠の中の下の方（再生ボタン�
   if (y + bh > c.top - 6 && x < c.right && x + bw > c.left) y = c.top - bh - 8;   // カードには重ねない
   box.style.left = Math.max(8, Math.min(innerWidth - bw - 8, x)) + 'px'; box.style.top = Math.max(8, y) + 'px';
 }
+/* 「次へ」：まだ見ていない動き（オレンジのボタン）があれば、先にそれを順に再生する。マウスを動かさずに、同じ場所を押していけばよい */
 function tutHit() {
   const st = tutList[tutI];
+  if (tutActI < actsOf(st).length) { tutAct(tutActI); return; }
   if (st.go) { st.go(); return; }               // 章のまとめ：次の章へ
   tutNext();
 }
@@ -5078,6 +5096,16 @@ function tutSync() {
   tutPlace(st.sel ? document.querySelector(st.sel) : null);
 }
 $('tutNext').addEventListener('click', tutHit);
+/* キーボード：Enter・スペース・→ で「次へ」、← で「戻る」（文字を打つ欄にいるときは何もしない） */
+addEventListener('keydown', e => {
+  if (tutI < 0 || tutEl.hidden || e.altKey || e.ctrlKey || e.metaKey) return;
+  const t = e.target, tag = t && t.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
+    e.preventDefault(); if (t && t.blur && t !== document.body) t.blur();   // 前に押したボタン（裏の画面のボタンなど）がもう一度押されないようにする
+    tutHit();
+  } else if (e.key === 'ArrowLeft' && !$('tutBack').hidden) { e.preventDefault(); tutBack(); }
+});
 $('tutHint').addEventListener('click', () => {
   const box = $('tutHintBox'), open = box.hidden;
   box.hidden = !open; $('tutHint').setAttribute('aria-pressed', String(open));
