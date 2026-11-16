@@ -543,9 +543,7 @@ details.fold p{margin:7px 0 0; font-size:14.5px; color:var(--dim); line-height:1
 #tutActs button[disabled]{opacity:.35; cursor:default; filter:none}
 #tutActs button.hit{animation:actHit .9s ease-out}
 @keyframes actHit{0%{box-shadow:0 0 0 0 rgba(212,140,20,.75)} 100%{box-shadow:0 0 0 14px rgba(212,140,20,0)}}
-#tutNext{position:relative}
-#tutNext[data-left]:not([data-left=""])::after{content:attr(data-left); position:absolute; right:12px; top:50%; transform:translateY(-50%);
-  letter-spacing:3px; font-size:13px; opacity:.75}
+
 #tutHole{
   position:absolute; left:50%; top:50%; width:0; height:0; border-radius:7px;
   box-shadow:0 0 0 9999px var(--tutMask); pointer-events:none;
@@ -3610,7 +3608,7 @@ const PRIN = [
 L({ nm:'MRI の全体の地図', hint:'「流れを通して見る」を押すと、①②③が順に光り、上の画面でも同じことが起きます。いまは全部を覚えなくて大丈夫です。', tg:'磁場 → 水素 → 信号', map:true, sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, showComp:false, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
-  act:{ label:'流れを通して見る', fn:mapPlay },
+  act:{ label:'流れを通して見る', fn:mapPlay, dur:7500 },
   tag:{ m:'M（水素）' },
   text:'MRI で起きていることは、次の3つです。' +
        '<span class="tmap">' +
@@ -3623,8 +3621,8 @@ L({ nm:'MRI の全体の地図', hint:'「流れを通して見る」を押す�
 
 L({ nm:'静磁場 B₀ の向き', hint:'電線を巻いて電流を流すと磁石になる「電磁石」と同じです。濃い矢印の向きが B₀ です。実物では人は寝ているので B₀ は水平ですが、このアプリでは B₀ を上にして描きます。', zone:[0], tg:'体の長い方向 ＝ 画面の上', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, bore:true, showComp:false, tissue:'wm' },
-  on:() => { calm(); roomHold(); },
-  act:{ label:'検査室から近づく', fn:() => roomPlay() },
+  on:() => { calm(); roomHold(); }, autoAt:2200,   // 検査室の全体を少し見てから近づく
+  act:{ label:'検査室から近づく', fn:() => roomPlay(), dur:7000 },
   text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。<br>画面では、この向きを「上」として描きます。' }),
 
 L({ nm:'静磁場の中のプロトン', hint:'方位磁石の針が北を向こうとするのと似ています。ただ、熱で揺さぶられるので、上向きはほんの少し多いだけです。', zone:[1], tg:'足し合わせると M', sel:'#stage',
@@ -3649,7 +3647,7 @@ L({ nm:'共鳴：リズムが合うと倒れる', hint:'ブランコは、揺れ
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   acts:[
-    { label:'同じ速さの電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0); } },
+    { label:'同じ速さの電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0); }, dur:6000 },
     { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
   ],
   text:'[[m:M]] と<b>同じ速さで回る</b> [[rf:RFパルス（電波）]]だけが、M を倒せます。速さがずれると、少し揺れるだけです。' +
@@ -3770,7 +3768,7 @@ L({ nm:'MIP：重ねて1枚にする', hint:'厚くするほど管が長くつ�
   tag:{ duct:true, big:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:false, region:'abd', sl:{ ori:'cor', pos:-4 }, mip:0, seq:'SE', TR:6000, TE:800, T2p:40, tissue:'wat' },
   acts:[
-    { label:'板を 0 → 60 mm に厚くする', fn:() => animGeom('mip', [0, 60], 2400) },
+    { label:'板を 0 → 60 mm に厚くする', fn:() => animGeom('mip', [0, 60], 2400), dur:4200 },
     { label:'縦の軸のまわりに回す', fn:() => { P.mip = 60; animGeom('mipRot', [0, 60, -60, 0], 6000); } },
   ],
   text:'視線の上で<b>いちばん明るい所だけ</b>を1枚に集めます（MIP）。<br>途切れていた[[duct:胆管と膵管]]が、つながって見えます。' })
@@ -4994,6 +4992,7 @@ function tutShow() {
   $('tutHintBox').innerHTML = st.hint ? '<b>ヒント</b>' + st.hint : '';
   $('tutSkip').textContent = st.quit || 'スキップ';
   tutBtn(st);
+  tutAutoRun(st);
   if (curCh >= 0 && tutList === CHAPTERS[curCh].full) markStep();
   const el = st.sel ? document.querySelector(st.sel) : null;
   /* 先に対象を画面の真ん中へ運んでから測る。なめらかスクロールだと
@@ -5028,25 +5027,27 @@ function tutActsShow(st) {
   acts.forEach((a, k) => {
     const b = document.createElement('button'); b.type = 'button';
     b.textContent = (many && !/^[①-⑨]/.test(a.label) ? '①②③④⑤⑥'[k] + ' ' : !many ? '▶ ' : '') + a.label;
-    b.disabled = k > tutActI;                      // 順番に押す（前のボタンを押すと次が押せるようになる）。押したものは何度でも押せる
-    b.addEventListener('click', () => tutAct(k));
+    b.addEventListener('click', () => { tutAutoStop(); tutAct(k); });   // 自分で押したら、自動の続きはやめる（何度でも押し直せる）
     box.appendChild(b);
   });
   box.hidden = !acts.length;
-  tutDots();
 }
 function tutAct(k) {
   const st = tutList[tutI], a = actsOf(st)[k], box = $('tutActs'), b = box.children[k];
   if (!a || !b) return;
   a.fn(); b.classList.add('done');
   b.classList.remove('hit'); void b.offsetWidth; b.classList.add('hit');   // どのボタンの動きか分かるよう、一瞬光らせる
-  if (k >= tutActI) { tutActI = k + 1; [...box.children].forEach((x, j) => { x.disabled = j > tutActI; }); }
-  tutDots();
+  tutActI = Math.max(tutActI, k + 1);
 }
-/* 「次へ」の右はしの小さな点：まだ見ていない動きの数（文字は置かない） */
-function tutDots() {
-  const st = tutList[tutI], n = st ? Math.max(0, actsOf(st).length - tutActI) : 0;
-  $('tutNext').dataset.left = n ? '•'.repeat(n) : '';
+/* 動きは、手を開いて 1 秒ほどで自動で始める。2つ以上あるときは、前の動きが見終わるころ（dur、ふつう 4 秒）に次を始める。
+   「次へ」はいつもすぐ次の手へ進む。もう一度見たいときは、シミュレーションの中のオレンジのボタンを押す */
+let tutAutoTm = [];
+function tutAutoStop() { tutAutoTm.forEach(clearTimeout); tutAutoTm = []; }
+function tutAutoRun(st) {
+  tutAutoStop();
+  const acts = actsOf(st); if (st.wait || !acts.length) return;
+  let t = st.autoAt || 1000;   // 手を開いてから動き出すまで（はじめの絵を見る時間）
+  acts.forEach((a, k) => { tutAutoTm.push(setTimeout(() => tutAct(k), t)); t += a.dur || 4000; });
 }
 function tutActsPlace(el) {   // 3D は枠の中の下の方（再生ボタンの列より上）、図や画像は枠のすぐ下（中の線や画像を隠さない）。どちらも真ん中
   const box = $('tutActs'); if (box.hidden) return;
@@ -5075,10 +5076,9 @@ function tutActsPlace(el) {   // 3D は枠の中の下の方（再生ボタン�
   if (y + bh > c.top - 6 && x < c.right && x + bw > c.left) y = c.top - bh - 8;   // カードには重ねない
   box.style.left = Math.max(8, Math.min(innerWidth - bw - 8, x)) + 'px'; box.style.top = Math.max(8, y) + 'px';
 }
-/* 「次へ」：まだ見ていない動き（オレンジのボタン）があれば、先にそれを順に再生する。マウスを動かさずに、同じ場所を押していけばよい */
 function tutHit() {
   const st = tutList[tutI];
-  if (tutActI < actsOf(st).length) { tutAct(tutActI); return; }
+  tutAutoStop();
   if (st.go) { st.go(); return; }               // 章のまとめ：次の章へ
   tutNext();
 }
@@ -5086,6 +5086,7 @@ function tutNext() { tutI++; if (tutI >= tutList.length) tutEnd(); else tutShow(
 function tutBack() { if (tutI > 0) { tutI--; tutShow(); } }
 function tutEnd() {
   if (tutWaiting) { tutWaiting.el.removeEventListener('click', tutWaiting.fn); tutWaiting = null; }
+  tutAutoStop();
   tutI = -1; tutEl.hidden = true; document.body.classList.remove('tutOn', 'tutPanel');
   coilRx = true; if (RA.on) RA.t0 = performance.now() - 7000;   // 途中でやめたら、受信は戻し、検査室からの動きは最後まで飛ばす
   P.tag = {}; cmpBarSync(); layoutImg();
