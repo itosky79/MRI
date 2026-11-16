@@ -859,6 +859,7 @@ details.fold summary{font-size:14.5px}
 .mk.mkl::after{top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(190,59,48,.92)}
 .strip figure{position:relative}
 .mk.smk{font-size:12.5px}
+body.noKey p.key{display:none}
 body.imgBig #gl, body.imgBig #labels, body.imgBig .stage .key, body.imgBig .stage .playbar{visibility:hidden}
 body.markOn .mk.smk{display:block}
 .wflash{box-shadow:0 0 0 3px rgba(17,120,143,.55)}
@@ -2196,6 +2197,7 @@ const coilGrp = new THREE.Group(); scene.add(coilGrp); coilGrp.visible = false;
 /* 受信しているか。地図の手では③が光るまで受信を止めておき（実際の装置でも、パルスを当てている間は受信しない）、
    コイルが光る・紫の矢印が出る・「電流が流れる」の表示を、③の順番に合わせる */
 let coilRx = true;
+let precB0 = false;   // 基礎「コマの首振り」で磁場を 3 T にしたか（次の手で 1.5 T に戻す）
 const coilMat = new THREE.MeshPhongMaterial({ color:0xA9BCCB, shininess:40, emissive:new THREE.Color(0x202a33) });
 {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(COILR, 0.16, 10, 64), coilMat);
@@ -2289,7 +2291,7 @@ function cmpBarBuild() {   // 3D の上の「比べる組織」のボタン（�
     bar.appendChild(b);
   });
 }
-const cmpPlain = () => !P.showBody && !P.quantum && !P.slab && !P.grid && !P.induct && !P.coil && !P.bore;   // ふつうの「組織を見る」表示か
+const cmpPlain = () => !P.showBody && !P.quantum && !P.slab && !P.grid && !P.induct && !P.emag && !P.coil && !P.bore;   // ふつうの「組織を見る」表示か
 const cmpActive = () => !!(P.cmp && P.cmp.length >= 2) && cmpPlain();                                      // 2〜3つを比べているか
 
 /* ---- 静磁場の筒（ボア）：原理「静磁場 B₀ の向き」 ----
@@ -2389,6 +2391,8 @@ function roomCam() {
    輪を通る分 Φ（紫）は軸上の磁気双極子の式の形 (1 + (y/a)²)^(−3/2) で近似し、輪の光り方は |dΦ/dt| に比例させる */
 const magArrow = mkArrow(0x11788F, 0.34, 0.9, 1.7); scene.add(magArrow.grp); magArrow.grp.visible = false; tint(magArrow, 'm');
 const IND = { y:-12, yT:-12, phi:0, dphi:0, dir:0 };
+/* 電磁石（基礎「電流が磁場を作る」）：輪の電線に流す電流 I（−1〜1）。I に比例した磁場（紫）が輪を通る向きにできる */
+const EM = { I:0, IT:0 };
 const MAG_L = 4.4;
 const indPhi = y => Math.pow(1 + Math.pow((y + MAG_L / 2) / 4.5, 2), -1.5);
 
@@ -2846,7 +2850,7 @@ function updateScene(dt) {
   labW = 0;                                      // 3D の大きさは、このコマで測り直す
   /* 受信コイルを出しているあいだは歳差を速めに見せる。遅いままだと 1 周 7 秒かかり、
      「貫く分が増えたり減ったりする」のが見えないまま T2 で消えてしまう */
-  if (P.frame === 'lab' && !P.paused) labPhase += dt * 0.85 * P.spd * (P.coil ? 4 : 1);
+  if (P.frame === 'lab' && !P.paused) labPhase += dt * 0.85 * P.spd * (P.coil ? 4 : 1) * (P.B0 / 1.5);   // 回る速さは磁場の強さに比例（ラーモア周波数）
   spinGrp.rotation.z = P.frame === 'lab' ? labPhase : 0;
 
   /* --- スピン1本ずつ --- */
@@ -2901,8 +2905,13 @@ function updateScene(dt) {
   coilGrp.visible = coilOn;
   fieldGrp.visible = !coilGrp.visible;                  // B₀ の場の線はコイルと重なって見づらいのでしまう
   magArrow.grp.visible = coilOn && !!P.induct;
-  projLine.visible = !P.induct && coilRx;
-  if (coilGrp.visible && P.induct) {                    // 電磁誘導：磁石を近づける・遠ざける
+  projLine.visible = !P.induct && !P.emag && coilRx;
+  if (coilGrp.visible && P.emag) {                      // 電磁石：電流を流すと、輪を通る向きに磁場ができる
+    EM.I += Math.sign(EM.IT - EM.I) * Math.min(Math.abs(EM.IT - EM.I), 1.4 * dt);
+    setArrow(fluxArrow, 0, EM.I >= 0 ? 1 : -1, 0, Math.abs(EM.I) * ML * 1.3);
+    const v = Math.abs(EM.I);
+    coilMat.emissive.setRGB(0.12 + 0.50 * v, 0.07 + 0.18 * v, 0.20 + 0.62 * v);
+  } else if (coilGrp.visible && P.induct) {             // 電磁誘導：磁石を近づける・遠ざける
     const st = Math.sign(IND.yT - IND.y) * Math.min(Math.abs(IND.yT - IND.y), 4.0 * dt);   // 4 単位／秒でゆっくり動かす
     IND.y += st; IND.dir = Math.abs(st) > 1e-6 ? Math.sign(st) : 0;
     const f = indPhi(IND.y);
@@ -2982,7 +2991,7 @@ function updateScene(dt) {
     }
     if (++sliceN % 2 === 0) drawSlice();
   }
-  spinGrp.visible = !far && !P.slab && !P.induct && !P.grid && !cmpOn;
+  spinGrp.visible = !far && !P.slab && !P.induct && !P.emag && !P.grid && !cmpOn;
   cmpGrp.visible = cmpOn;
   $('keyCmp').hidden = !cmpOn;
   if (cmpOn) {                                    // はじめの視点から見て横に並ぶ向きに、場所を固定して並べる（視点についてこさせない）
@@ -3023,12 +3032,13 @@ function updateScene(dt) {
   $('keySlab').hidden = !P.slab;
   $('key3d').hidden = far || coilOn || P.quantum || !!P.onlyM || !!P.slab || !!P.grid || cmpOn;      // 脳全体では細い矢印を出していないので凡例もしまう
   $('keyRes').hidden = far || !P.onlyM;
-  $('keyCoil').hidden = !coilOn || !!P.induct;
+  $('keyCoil').hidden = !coilOn || !!P.induct || !!P.emag;
   $('keyInd').hidden = !coilOn || !P.induct;
   $('keyQ').hidden = !P.quantum || far;
   $('keyBore').hidden = !(P.bore && P.showBody);
-  axGrp.visible = (!P.showBody || ctrl.dist < 45) && !P.slab && !P.grid && !cmpOn;
-  planeXY.visible = !P.showBody && !P.quantum && !P.slab && !P.grid && !cmpOn;
+  const basic = !!P.induct || !!P.emag;   // 基礎の手（電磁石・電磁誘導）：MRI の座標や M はまだ出さない
+  axGrp.visible = (!P.showBody || ctrl.dist < 45) && !P.slab && !P.grid && !cmpOn && !basic;
+  planeXY.visible = !P.showBody && !P.quantum && !P.slab && !P.grid && !cmpOn && !basic;
 
   wFlashUpdate(dt);
   /* --- カメラをなめらかに追従 --- */
@@ -3042,10 +3052,10 @@ function updateScene(dt) {
     else place('cmp' + k, 0, 0, 0, '', false);
   }
   const near3d = !P.showBody || ctrl.dist < 45;
-  const on = P.showLab && near3d && !P.slab && !P.grid && !cmpOn;
+  const on = P.showLab && near3d && !P.slab && !P.grid && !cmpOn && !basic;
   const rot = P.frame === 'rot';
   const cbOn = !$('cmpBar').hidden;   // 組織ボタンが出ているときは、ボタンに隠れないよう少し下に（スマホは場所がないので出さない）
-  place('z', 1.7, 0, cbOn ? AX * 0.72 : AX - 0.2, 'B₀ の向き（上）', on && !(cbOn && smallScr));
+  place('z', 1.7, 0, cbOn || (P.tag && P.tag.zname) ? AX * 0.72 : AX - 0.2, P.tag && P.tag.zname ? P.tag.zname.replace('{B}', P.B0.toFixed(1)) : 'B₀ の向き（上）', on && !(cbOn && smallScr));
   place('b0', 0, 0, 0, '', false);
   place('x', AX + 0.5, 0, 0, rot ? "x'" : 'x', on && !P.showBody);
   place('y', 0, AX + 0.5, 0, rot ? "y'" : 'y', on && !P.showBody);
@@ -3083,7 +3093,12 @@ function updateScene(dt) {
   place('m0', 1.6, 0, ML * 0.78,
     qStage === 1 ? '上と下が1本ずつ打ち消し合う' : qStage === 2 ? '残った ' + (CONE_UP - CONE_DN) + ' 本を、先と根元をつないで足す' : 'M₀（余った分を全部足したもの）',
     P.showLab && P.quantum);
-  if (coilGrp.visible && P.induct) {
+  if (coilGrp.visible && P.emag) {
+    const on = Math.abs(EM.I) > 0.04;
+    place('coil', COILR * 0.86, 0, COILR * 0.56, on ? (EM.I > 0 ? '電線：<b>電流が流れている</b>' : '電線：<b>電流が逆向きに流れている</b>') : '電線：電流は流れていない', P.showLab);
+    place('flux', -0.3, EM.I * ML * 1.4, -2.3, '<i>電流が作る磁場</i>', P.showLab && on);
+    place('mag', 0, 0, 0, '', false);
+  } else if (coilGrp.visible && P.induct) {
     const flow = Math.abs(IND.dphi) > 0.02;
     place('coil', COILR * 0.86, 0, COILR * 0.56,
       flow ? (IND.dphi > 0 ? '<b>電流が流れる</b>' : '<b>電流が逆向きに流れる</b>') : '電流は流れない', P.showLab);
@@ -3662,6 +3677,24 @@ L({ nm:'RFパルスで倒す', hint:'回るメリーゴーランドに乗って�
   act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
   text:'[[m:M]] と一緒に回る目線（回転座標系）で見ると、M はまっすぐ倒れます。<br>[[ang:倒れた角度]]は、[[rf:RFパルス]]の強さ × 当てる時間で決まります。' }),
 
+L({ nm:'電流が磁場を作る（電磁石）', hint:'MRI の筒の中の強い磁場（B₀）も、水素を倒す RF パルスも、場所を決める傾斜磁場も、すべて電線に流す電流で作ります。', tg:'電流 → 磁場', sel:'#stage',
+  set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, emag:true, showComp:false, tissue:'csf', T2p:Infinity },
+  tag:{ noKey:true },
+  on:() => { calm(); EM.I = EM.IT = 0; },
+  acts:[
+    { label:'電流を流す', fn:() => { EM.IT = 1; } },
+    { label:'電流を逆向きに流す', fn:() => { EM.IT = -1; } },
+    { label:'電流を止める', fn:() => { EM.IT = 0; } },
+  ],
+  text:'輪の電線に<b>電流を流すと</b>、輪を通る向きに[[flux:磁場]]ができます（電磁石）。<br>電流の向きを変えると、磁場の向きも逆になります。' }),
+
+L({ nm:'コマの首振り（歳差運動）', hint:'回っているコマを少し傾けると、倒れずに軸がぐるぐると首を振ります。水素の原子核も回っている小さな磁石なので、磁場の中で同じように首を振ります。', tg:'磁場が強いほど速く回る', sel:'#stage',
+  tag:{ m:'水素の磁石', zname:'磁場の向き（{B} T）', noKey:true },
+  set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, tissue:'csf', T2p:Infinity, B0:1.5 },
+  on:() => { calm(); pulse(35, 'x'); },
+  act:{ label:'磁場を強くする（1.5 → 3.0 T）', fn:() => { P.B0 = 3; precB0 = true; }, dur:5000 },
+  text:'回る磁石を磁場の中で傾けると、<b>首を振って回ります</b>（歳差運動）。<br>[[m:水素の磁石]]も同じで、<b>磁場が強いほど速く</b>回ります。' }),
+
 L({ nm:'電磁誘導：変化が電気を生む', hint:'自転車のライトの発電機と同じです。磁石が動いている間だけライトがつき、止まると消えます。', zone:[2], tg:'磁場が変わると電流', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, induct:true, showComp:false, tissue:'csf', T2p:Infinity },
   on:() => { calm(); IND.y = IND.yT = -12; IND.dphi = 0; IND.phi = indPhi(IND.y); },
@@ -3942,19 +3975,20 @@ L({ nm:'1枚の画像ができるまで', hint:'②の図の「位相エンコ�
 /* 3つの部に分ける：原理（1つのボクセルの中）→ 原理から画像へ（ボクセルの M が明るさになる）→ 実際の撮り方。
    序章の問い（水の白黒が逆になる）は、第2部の終わり（第6章）で答える */
 const PARTS = {
-  p1:{ nm:'第1部　原理', sub:'1つのボクセルの中で起きること', short:'原理' },
-  p2:{ nm:'第2部　原理から画像へ', sub:'ボクセルの M が、画像の明るさになる', short:'原理から画像へ' },
-  p3:{ nm:'第3部　実際の撮り方', sub:'場所を決めて1枚にし、目的に合わせて撮り方を選ぶ', short:'実際の撮り方' }
+  p0:{ nm:'第1部　基礎', sub:'電気と磁気のきまり（MRI で使う物理）', short:'基礎' },
+  p1:{ nm:'第2部　原理', sub:'1つのボクセルの中で起きること', short:'原理' },
+  p2:{ nm:'第3部　原理から画像へ', sub:'ボクセルの M が、画像の明るさになる', short:'原理から画像へ' },
+  p3:{ nm:'第4部　実際の撮り方', sub:'場所を決めて1枚にし、目的に合わせて撮り方を選ぶ', short:'実際の撮り方' }
 };
 const CHAPTERS = [
-  { no:'序章', nm:'MRI 画像で見えているもの', goal:'同じ脳でも、撮り方で水の白黒が逆になる。その理由を、原理 → 原理から画像へ → 実際の撮り方 の順に見ていく。',
+  { no:'序章', nm:'MRI 画像で見えているもの', goal:'同じ脳でも、撮り方で水の白黒が逆になる。その理由を、基礎 → 原理 → 原理から画像へ → 実際の撮り方 の順に見ていく。',
     steps:['T1強調と T2強調を撮り比べる', 'MRI の全体の地図'] },
-  { part:'p1', no:'第1章', nm:'静磁場と磁化', goal:'静磁場の中で水素がそろい、磁化 M ができる。',
+  { part:'p0', no:'第1章', nm:'電気と磁気のきまり', goal:'電流は磁場を作り、磁場が変わると電流が流れる。磁場の中の小さな磁石は、首を振って回る。',
+    steps:['電流が磁場を作る（電磁石）', '電磁誘導：変化が電気を生む', 'コマの首振り（歳差運動）'] },
+  { part:'p1', no:'第2章', nm:'静磁場と磁化', goal:'静磁場の中で水素がそろい、磁化 M ができる。',
     steps:['静磁場 B₀ の向き', '静磁場の中のプロトン'] },
-  { part:'p1', no:'第2章', nm:'共鳴と RF パルス', goal:'水素と同じ周波数の電波で、M を倒す。',
-    steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す'] },
-  { part:'p1', no:'第3章', nm:'信号の受け取り', goal:'倒れて回る M が、受信コイルに電流（信号）を起こす。',
-    steps:['電磁誘導：変化が電気を生む', '回る M でコイルに電流が流れる'] },
+  { part:'p1', no:'第3章', nm:'M を倒して信号を受け取る', goal:'水素と同じ周波数の電波で M を倒すと、回る M が受信コイルに電流（信号）を起こす。',
+    steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す', '回る M でコイルに電流が流れる'] },
   { part:'p1', no:'第4章', nm:'緩和とスピンエコー', goal:'信号は T2・T2* で減り、縦磁化は T1 で戻る。',
     steps:['T2：横磁化が短くなる', 'T2*：磁場のムラで もっと速く', 'スピンエコー：180°で呼びもどす', 'T1：縦磁化がもどる'] },
   { part:'p2', no:'第5章', nm:'M から画像の明るさへ', goal:'どのボクセルにも M があり、横の M の長さ × 水素の量が、その場所の明るさになる。',
@@ -4256,6 +4290,7 @@ function layoutImg() {
   const w = stage.clientWidth, h = stage.clientHeight;
   const big = !!(P.tag && P.tag.big);   // 画像が主役の手（MIP など）：3D をしまい、画像を大きく真ん中に出す
   document.body.classList.toggle('imgBig', big);
+  document.body.classList.toggle('noKey', !!(P.tag && P.tag.noKey));   // 基礎の手：まだ出てこない言葉（M・RF パルス）の凡例を出さない
   if (!big && (P.view === 0 || (smallScr && cmpActive()))) { imgbox.style.display = 'none'; return; }   // スマホで組織を比べているときは、矢印のために画像をしまう   // スマホで組織を並べているときは、並べた矢印のために画像をしまう
   imgbox.style.display = '';
   const cb = $('cmpBar'), top = smallScr && !cb.hidden ? cb.offsetTop + cb.offsetHeight + 8 : big ? $('stage').querySelector('.bar').offsetHeight + 10 : 46;   // スマホは組織ボタンの下に置く（重ならないように）
@@ -4371,7 +4406,7 @@ function setMode(m) {
     P.quantum = false; P.manual = false; P.coil = false; $('tCoil').checked = false;
     const wasBore = !!P.bore;
     const wasGrid = !!P.grid;
-    P.slab = false; P.onlyM = false; P.bore = false; P.induct = false; P.grid = false;   // 学習の手だけの表示（層の絵・共鳴・筒・磁石・断面のマス）は持ち越さない
+    P.slab = false; P.onlyM = false; P.bore = false; P.induct = false; P.emag = false; P.grid = false;   // 学習の手だけの表示（層の絵・共鳴・筒・磁石・断面のマス）は持ち越さない
     roomStop();
     if (wasSlab || wasBore || wasGrid) homeCam();
     refresh(true);
@@ -4387,7 +4422,7 @@ $('modeTabs').addEventListener('click', e => {
 
 /* ================= 学習 ================= */
 /* 学習は案内カードそのもの。設定・光らせる場所・やることは各手が持っている。章ごとに案内カードを流す */
-const CHKEY = 'mri-chapters-done-v2';   // 章の並びを変えたので、前の記録（章の番号）は使わない
+const CHKEY = 'mri-chapters-done-v3';   // 章の並びを変えたので、前の記録（章の番号）は使わない
 let chDoneSet = new Set();
 try { chDoneSet = new Set(JSON.parse(localStorage.getItem(CHKEY) || '[]')); } catch (e) { }
 function chDone(c) {
@@ -4434,7 +4469,12 @@ $('bLearn').addEventListener('click', () => { const nx = CHAPTERS.findIndex((ch,
 /* ---- 用語の手引き：初めて出てくる言葉を、ふつうの言葉で1行ずつ。「見る」でその言葉が出てくる手へ飛ぶ ----
    s は手の名前の書き出し（手の番号は増減するので、名前で探す） */
 const GLOSS = [
-  ['原理（第1〜4章）', [
+  ['基礎（第1章）', [
+    ['電磁石', '電線に電流を流すと磁場ができること。B₀・RF パルス・傾斜磁場は、どれもこれで作る。', '電流が磁場を作る'],
+    ['電磁誘導', '輪を通る磁場が変わると、輪に電流が流れること。変わらなければ流れない。', '電磁誘導'],
+    ['歳差運動', '回っている磁石が磁場の中で首を振って回ること。速さは磁場の強さに比例する。', 'コマの首振り'],
+  ]],
+  ['原理（第2〜4章）', [
     ['静磁場 B₀', 'MRI の筒の中の強い磁場。体の長い方向（足 → 頭）を向く。この画面では「上」。', '静磁場 B₀ の向き'],
     ['プロトン', '水素の原子核。小さな磁石としてふるまう。', '静磁場の中のプロトン'],
     ['磁化 M（M₀）', 'たくさんの水素の小さな磁石を足し合わせた1本の矢印。', '静磁場の中のプロトン'],
@@ -4442,7 +4482,6 @@ const GLOSS = [
     ['RF パルス・B₁', 'M を倒すために当てる電波と、その磁場。', 'RFパルスで倒す'],
     ['フリップ角', 'M を倒す角度。電波の強さ × 当てる時間で決まる。', 'RFパルスで倒す'],
     ['回転座標', 'M と一緒に回る目線。回る動きが消えて、倒れ方や広がり方が見やすくなる。', 'RFパルスで倒す'],
-    ['電磁誘導', '輪を通る磁場が変わると、輪に電流が流れること。変わらなければ流れない。', '電磁誘導'],
     ['縦磁化・横磁化', 'M の上向きの分（Mz）と横向きの分（Mxy）。信号になるのは横の分だけ。', '回る M'],
     ['受信コイル・信号', '回る横磁化が受信コイルに起こす電流が、MRI の信号。', '回る M'],
     ['T2（横緩和）', '横磁化が消えていく速さ。水は遅く、白質は速い。', 'T2'],
@@ -4972,7 +5011,8 @@ function tutShow() {
   if (st.set) {
     learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
     roomStop(); coilRx = true;
-    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false, bore:false, induct:false, grid:false, cmp:null, region:'head', mip:0, mipRot:0 }, st.set), true);
+    if (precB0) { P.B0 = 1.5; precB0 = false; }   // 歳差の手で強くした磁場を戻す
+    applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false, bore:false, induct:false, emag:false, grid:false, cmp:null, region:'head', mip:0, mipRot:0 }, st.set), true);
     P.tag = st.tag || {};                        // この手だけで画面に出すラベル（カードに出てくる言葉を、画面にも出す）
     layoutImg();   // コイルは出したい手だけ coil:true で出す
   }
