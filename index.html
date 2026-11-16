@@ -685,6 +685,7 @@ body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足�
   .stage{height:clamp(230px,42vh,380px)}
   .tabs button{font-size:14px; padding:9px 1px}
   .pan{height:240px}
+  #panRel{height:340px}   /* 組織の名前を5つ縦に並べても重ならない高さ */
   .choices button{padding:8px 9px; font-size:15.5px}
   .seqnav .act,.acts .act{padding:9px 4px}
   #imgbox .if{display:none}
@@ -3399,9 +3400,11 @@ function drawRel() {
   CURVE = P.tissue === 'cus' ? base.concat('cus') : base;
   const cv = document.getElementById('relCv');
   const { cx, w, h } = fitCv(cv);
-  const L = 40, Rr = w - 62;
-  const top = { y0:h * 0.145, y1:h * 0.44 }, bot = { y0:h * 0.635, y1:h * 0.92 };
   cx.font = MONO; cx.textBaseline = 'middle';
+  const short = id => TIS[TIX[id]].nm.replace(/（.*）/, '');   // 右端の名前は（ ）を外して短く
+  const nameW = Math.max(40, ...CURVE.map(id => cx.measureText(short(id)).width));
+  const L = 40, Rr = w - nameW - 16;   // 右に、いちばん長い名前が入るだけあける
+  const top = { y0:h * 0.145, y1:h * 0.44 }, bot = { y0:h * 0.635, y1:h * 0.92 };
   const isIR = P.seq === 'IR';
   const sampT = isIR ? P.TI : P.TR;
   const tmax1 = isIR ? Math.min(P.TR, P.TI * 1.6) : P.TR;
@@ -3461,31 +3464,47 @@ function drawRel() {
     const xe = Math.min(X2(P.TE), Rr), ye = Y2(a0 * Math.exp(-P.TE / T2));
     cx.beginPath(); cx.arc(xe, ye, sel ? 3.4 : 2.4, 0, 7); cx.fill();
     ys1.push(ys); ys2.push(ye);
-    tags.push({ y:ye, nm:t.nm, col:tcol(t) });
-    tags1.push({ y:Y1(mzCurve(T1, tmax1, P)), nm:t.nm, col:t.col });
+    tags.push({ y:ye, y0:ye, nm:short(id), id });
+    tags1.push({ y:Y1(mzCurve(T1, tmax1, P)), y0:Y1(mzCurve(T1, tmax1, P)), nm:short(id), id });
   });
   /* 読み取る瞬間の、いちばん上といちばん下の差。ここが画像の明暗になる */
   const gap = (xg, arr, nm, right) => {
     if (arr.length < 2) return;
     const y0 = Math.min.apply(null, arr), y1 = Math.max.apply(null, arr);
     if (y1 - y0 < 4) return;
+    if (!right && xg + 4 + cx.measureText(nm).width + 12 > Rr) right = true;   // 右の組織の名前にかかるときは、線の左に置く
     cx.strokeStyle = C.gap; cx.lineWidth = 1; cx.beginPath();
     cx.moveTo(xg, y0); cx.lineTo(xg, y1);
     cx.moveTo(xg - 3, y0); cx.lineTo(xg + 3, y0);
     cx.moveTo(xg - 3, y1); cx.lineTo(xg + 3, y1); cx.stroke();
     tagBg(cx, right ? xg - 4 : xg + 4, (y0 + y1) / 2, nm, right ? 'right' : 'left', C.gap);
   };
-  /* 右端の名前が重ならないようにずらす（上下どちらのグラフにも、線の色がどの組織かを書く） */
-  const place = (arr, yMax) => {
+  /* 右端の名前が重ならないようにずらす（上下どちらのグラフにも、線の色がどの組織かを書く）。
+     名前どうしは字の高さぶん離し、グラフの枠の高さに収める。線の端から離れた名前は、細い線で端とつなぐ */
+  const place = (arr, yMin, yMax) => {
+    if (!arr.length) return;
     arr.sort((a, b) => a.y - b.y);
-    for (let i = 1; i < arr.length; i++) if (arr[i].y - arr[i - 1].y < 11) arr[i].y = arr[i - 1].y + 11;
-    const over = arr.length ? arr[arr.length - 1].y - yMax : 0;
+    const gapY = Math.min(16, (yMax - yMin) / Math.max(1, arr.length - 1));
+    const fs = Math.min(13.5, Math.max(9.5, gapY - 1.5));   // 入りきらないときだけ、名前の字を少し小さくして重ねない
+    cx.font = MONO.replace(/^[\d.]+px/, fs + 'px');
+    for (let i = 1; i < arr.length; i++) if (arr[i].y - arr[i - 1].y < gapY) arr[i].y = arr[i - 1].y + gapY;
+    const over = arr[arr.length - 1].y - yMax;
     if (over > 0) arr.forEach(t => t.y -= over);
+    const under = yMin - arr[0].y;
+    if (under > 0) arr.forEach(t => t.y += under);
     cx.textAlign = 'left';
-    arr.forEach(t => { cx.fillStyle = tcol(t); cx.fillText(t.nm, Rr + 4, t.y); });
+    arr.forEach(t => {
+      const c = tcol(TIS[TIX[t.id]]);
+      if (Math.abs(t.y - t.y0) > 3) {
+        cx.strokeStyle = c; cx.globalAlpha = .55; cx.lineWidth = 1;
+        cx.beginPath(); cx.moveTo(Rr + 1, t.y0); cx.lineTo(Rr + 6, t.y); cx.stroke(); cx.globalAlpha = 1;
+      }
+      cx.fillStyle = c; cx.fillText(t.nm, Rr + 8, t.y);
+    });
+    cx.font = MONO;
   };
-  place(tags1, top.y1 + 4);
-  place(tags, bot.y1 + 4);
+  place(tags1, top.y0 - 4, top.y1 + 4);
+  place(tags, bot.y0 - 4, bot.y1 + 4);
   /* 縦軸の目盛り */
   cx.fillStyle = C.dim; cx.textAlign = 'right';
   cx.fillText('+1', L - 3, Y1(1));
@@ -3495,7 +3514,7 @@ function drawRel() {
   const vline = (x, y0, y1, nm) => {
     cx.strokeStyle = C.alert; cx.setLineDash([3, 3]); cx.lineWidth = 1;
     cx.beginPath(); cx.moveTo(x, y0); cx.lineTo(x, y1); cx.stroke(); cx.setLineDash([]);
-    cx.fillStyle = C.alert; cx.textAlign = 'center'; cx.fillText(nm, x, y0 - 1);
+    cx.fillStyle = C.alert; cx.textAlign = x > Rr - 14 ? 'right' : 'center'; cx.fillText(nm, x > Rr - 14 ? x - 3 : x, y0 - 1);   // 右端では、名前の列にはみ出さないよう左へ寄せる
   };
   vline(Math.min(X1(sampT), Rr), top.y0, top.y1, isIR ? 'TI' : 'TR');
   vline(Math.min(X2(P.TE), Rr), bot.y0, bot.y1, 'TE');
