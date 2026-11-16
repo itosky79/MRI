@@ -249,9 +249,9 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 
 /* ---------- 学習ステップ ---------- */
 .chap{margin-top:12px}
-.part{margin:14px 0 4px; padding:6px 10px; border-radius:8px; background:var(--fill)}
-.part b{display:block; font-size:14px; color:var(--head)}
-.part span{display:block; font-size:12px; color:var(--dim); line-height:1.5}
+.chap .cref{display:block; font-size:11px; color:var(--dim); opacity:.85}
+.chap.soon h4{color:var(--dim)}
+.chap .csoon{display:block; font-size:11.5px; color:var(--dim); font-style:normal}
 .chap h4{margin:0; display:flex; align-items:baseline; gap:8px; font-size:13.5px; color:var(--text)}
 .chap h4 .cno{font-family:var(--mono); font-size:11.5px; color:var(--teal); flex:none}
 .chap h4 .ck{margin-left:auto; font-size:11px; color:var(--teal); font-weight:400}
@@ -3648,16 +3648,17 @@ L({ nm:'静磁場 B₀ の向き', hint:'電線を巻いて電流を流すと磁
   text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。<br>画面では、この向きを「上」として描きます。' }),
 
 L({ nm:'静磁場の中のプロトン', hint:'MRI が水素を使うのは、体の大部分が水で、水素がいちばん多いからです。水素は方位磁石の針のように磁場の向きにそろおうとしますが、熱で揺さぶられるので、上向きはほんの少し多いだけです。', zone:[1], tg:'足し合わせると M', sel:'#stage',
+  tag:{ zname:'B₀（MRI の強い磁場）の向き' },
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
-  text:'[[h:水素の原子核]]は小さな磁石で、B₀ の中では上向きが少しだけ多くなります。<br>全部を足し合わせると、上と下は打ち消し合い、<b>余った上向きの分</b>が [[m:M]] になります。' }),
+  text:'[[h:水素の原子核]]は小さな磁石で、B₀ の中では上向きが少し多くなります。<br>全部足すと上と下が打ち消し合い、<b>余った上向きの分</b>が [[m:M]] になります。' }),
 
 L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの合計 M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
   text:'上と下は打ち消し合い、<b>余った上向きの分</b>だけが [[m:M]] として残ります。<br>実際の差は、100万個に約5個です。' }),
 
-L({ nm:'脳のどこにも M がある', hint:'矢印1本は、画像の1マス（ボクセル）にある水素の合計です。水素が多い所ほど長くなります。信号はどのボクセルからもまとめて受信コイルに届くので、どこからの信号かを見分ける方法は第7章で見ます。', zone:[1], tg:'ボクセルごとに1本', sel:'#stage',
+L({ nm:'脳のどこにも M がある', hint:'矢印1本は、画像の1マス（ボクセル）にある水素の合計です。水素が多い所ほど長くなります。信号はどのボクセルからもまとめて受信コイルに届くので、どこからの信号かを見分ける方法を、この章（第3章）で見ていきます。', zone:[1], tg:'ボクセルごとに1本', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
   on:() => { calm(); },
   text:'脳の<b>どのボクセルにも</b> [[m:M]] が1本ずつあり、すべて上を向いています。' }),
@@ -3735,7 +3736,7 @@ L({ nm:'スピンエコー：180°で呼びもどす', hint:'全員が途中で�
 
 L({ nm:'T1：縦磁化がもどる', hint:'③の上のグラフ①を見てください。線が上がっていくのが「縦に戻る」ようすで、上がる速さが組織ごとに違います。', zone:[1], tg:'スピン-格子緩和', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
-  text:'①のグラフのように、縦の M は時間とともに<b>戻ります</b>（T1）。<br>戻る速さは、脂肪・白質・脳脊髄液で違います。' }),
+  text:'倒れた M の縦向きの分（縦の M）は、時間とともに<b>戻ります</b>（T1）。<br>戻る速さは、脂肪・白質・脳脊髄液で違います（①のグラフ）。' }),
 
 L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
@@ -3893,7 +3894,7 @@ function kShow(mode) {               // mode：'all' ぜんぶ／'c' 中心だ�
    断面の中の縦・横の見分け方（周波数・位相エンコード）は、このあとここに足していく */
 const SLSET = { quantum:false, manual:true, frame:'rot', view:0, showBody:false, slab:true, showComp:false };
 const LOC = [
-L({ nm:'傾斜磁場：場所で磁場の強さを変える', hint:'傾斜磁場も、別のコイルに流す電流で作ります（第1章の電磁石）。水素の回る速さは磁場の強さに比例するので（第1章の首振り）、場所ごとに周波数が変わります。', tg:'場所ごとに周波数が変わる', sel:'#stage',
+L({ nm:'傾斜磁場：場所で磁場の強さを変える', hint:'傾斜磁場も、別のコイルに流す電流で作ります（第2章の電磁石）。水素の回る速さは磁場の強さに比例するので（第1章の首振り）、場所ごとに周波数が変わります。', tg:'場所ごとに周波数が変わる', sel:'#stage',
   tag:{ noBand:true },
   set:SLSET,
   on:() => { calm(); slabInit({ g:0, fc:0, hw:0.5 }); },
@@ -3963,7 +3964,7 @@ L({ nm:'T1強調と T2強調を撮り比べる', hint:'左の1枚目（T1強調�
       if (shots.length > 1) { const t = shots[0]; shots[0] = shots[1]; shots[1] = t; renderStrip(); }
     } },
   ],
-  text:'同じ脳を、撮り方だけ変えて1枚ずつ撮ります。T1強調では[[water:水]]が<b>黒</b>、T2強調では<b>白</b>に写ります。<br>この理由を、第6章までで順に見ていきます。' }),
+  text:'同じ脳を、撮り方だけ変えて1枚ずつ撮ります。T1強調では[[water:水]]が<b>黒</b>、T2強調では<b>白</b>に写ります。<br>この理由を、第4章までで順に見ていきます。' }),
 L({ nm:'水の白黒が逆になる理由', hint:'T1強調では上のグラフ①、T2強調では下のグラフ②で、脳脊髄液の線の高さをほかの線と比べてください。', tg:'序章の答え', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
   acts:[
@@ -3982,44 +3983,41 @@ L({ nm:'1枚の画像ができるまで', hint:'②の図の「位相エンコ�
 /* ---------- 章立て ----------
    ストーリーは1本（序章 → 第6章 → 終章）。ただし1章は数手に区切り、章ごとに始められるようにする。
    steps は手の名前（nm）で並べる。章の終わりのまとめは、直前の手の画面を見せたまま出す */
-/* 3つの部に分ける：原理（1つのボクセルの中）→ 原理から画像へ（ボクセルの M が明るさになる）→ 実際の撮り方。
-   序章の問い（水の白黒が逆になる）は、第2部の終わり（第6章）で答える */
-const PARTS = {
-  p0:{ nm:'第1部　基礎', sub:'電気と磁気のきまり（MRI で使う物理）', short:'基礎' },
-  p1:{ nm:'第2部　原理', sub:'1つのボクセルの中で起きること', short:'原理' },
-  p2:{ nm:'第3部　原理から画像へ', sub:'ボクセルの M が、画像の明るさになる', short:'原理から画像へ' },
-  p3:{ nm:'第4部　実際の撮り方', sub:'場所を決めて1枚にし、目的に合わせて撮り方を選ぶ', short:'実際の撮り方' }
-};
+/* 章立ては、教科書の目次の順にそろえる（第1章 磁気共鳴と緩和 → 第2章 機器・装置構成 → 第3章 傾斜磁場・k空間・画像再構成
+   → 第4章 パルスシーケンス・撮影パラメータ・画像コントラスト → 第5章 高速イメージング → 第6章 脂肪抑制法・自由水抑制法
+   → 第7章 拡散・灌流 → 第8章 MRA）。章の番号も教科書と同じにして、教科書と行き来しやすくする。
+   ref は教科書の節番号。soon はまだ手のない章（一覧に「これから作ります」と出す） */
 const CHAPTERS = [
-  { no:'序章', nm:'MRI 画像で見えているもの', goal:'同じ脳でも、撮り方で水の白黒が逆になる。その理由を、基礎 → 原理 → 原理から画像へ → 実際の撮り方 の順に見ていく。',
+  { no:'序章', nm:'MRI 画像で見えているもの', ref:'1・1〜1・2', goal:'同じ脳でも、撮り方で水の白黒が逆になる。その理由を、教科書の章の順に見ていく。',
     steps:['T1強調と T2強調を撮り比べる', 'MRI の全体の地図'] },
-  { part:'p0', no:'第1章', nm:'電気と磁気のきまり', goal:'電流は磁場を作り、磁場が変わると電流が流れる。磁場の中の小さな磁石は、首を振って回る。',
-    steps:['電流が磁場を作る（電磁石）', '電磁誘導：変化が電気を生む', 'コマの首振り（歳差運動）'] },
-  { part:'p1', no:'第2章', nm:'静磁場と磁化', goal:'静磁場の中で水素がそろい、磁化 M ができる。',
-    steps:['静磁場 B₀ の向き', '静磁場の中のプロトン'] },
-  { part:'p1', no:'第3章', nm:'M を倒して信号を受け取る', goal:'水素と同じ周波数の電波で M を倒すと、回る M が受信コイルに電流（信号）を起こす。',
-    steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す', '回る M でコイルに電流が流れる'] },
-  { part:'p1', no:'第4章', nm:'緩和とスピンエコー', goal:'信号は T2・T2* で減り、縦磁化は T1 で戻る。',
-    steps:['T2：横磁化が短くなる', 'T2*：磁場のムラで もっと速く', 'スピンエコー：180°で呼びもどす', 'T1：縦磁化がもどる'] },
-  { part:'p2', no:'第5章', nm:'M から画像の明るさへ', goal:'どのボクセルにも M があり、横の M の長さ × 水素の量が、その場所の明るさになる。',
-    steps:['脳のどこにも M がある', '矢印から画像へ'] },
-  { part:'p2', no:'第6章', nm:'コントラスト（序章の答え）', goal:'TR で T1 の差、TE で T2 の差が明るさに出る。だから水の白黒が逆になる。',
-    steps:['TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由'] },
-  { part:'p3', no:'第7章', nm:'場所を決めて1枚にする', goal:'傾斜磁場で場所ごとに周波数を変え、集めた信号（k 空間）から1枚の画像を作る。',
-    steps:['傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表', '1枚の画像ができるまで'] },
-  { part:'p3', no:'第8章', nm:'いろいろな撮像法', goal:'GRE・IR・FLAIR・MRCP など、見たいものに合わせて撮り方を変える。',
-    steps:['GRE：180° を使わない', 'IR：狙った組織を消す', 'FLAIR：水を消す', '強いT2強調：水だけを残す', 'MIP：重ねて1枚にする'] },
+  { no:'第1章', nm:'磁気共鳴と緩和', ref:'1・3〜1・13', goal:'磁場の中の水素は首を振って回り、そろって M になる。同じ周波数の電波で倒すと、T1・T2 で元に戻っていく。',
+    steps:['コマの首振り（歳差運動）', '静磁場の中のプロトン', '共鳴：リズムが合うと倒れる', 'RFパルスで倒す', 'T1：縦磁化がもどる', 'T2：横磁化が短くなる', 'T2*：磁場のムラで もっと速く'] },
+  { no:'第2章', nm:'機器・装置構成', ref:'2・1〜2・6', goal:'電流は磁場を作り（静磁場・RF・傾斜磁場）、磁場の変化は電流を生む（受信コイル）。',
+    steps:['電流が磁場を作る（電磁石）', '電磁誘導：変化が電気を生む', '静磁場 B₀ の向き', '回る M でコイルに電流が流れる'] },
+  { no:'第3章', nm:'傾斜磁場・k空間・画像再構成', ref:'3・1〜3・4', goal:'傾斜磁場で場所ごとに周波数と位相を変え、集めた信号（k 空間）から画像を作る。',
+    steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表'] },
+  { no:'第4章', nm:'パルスシーケンス・撮影パラメータ・画像コントラスト', ref:'4・1〜4・4', goal:'シーケンスの図の見方、SE と GRE、TR・TE で決まるコントラスト。ここで序章の答えが出る。',
+    steps:['1枚の画像ができるまで', 'スピンエコー：180°で呼びもどす', 'GRE：180° を使わない', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '矢印から画像へ', '水の白黒が逆になる理由'] },
+  { no:'第5章', nm:'高速イメージング', ref:'5・1〜5・5', soon:true, goal:'撮像時間を短くする方法（パラレルイメージングなど）。' },
+  { no:'第6章', nm:'脂肪抑制法・自由水抑制法', ref:'6・4・6・9', goal:'反転回復（IR）で、狙った組織（脂肪・水）の信号を消す。',
+    steps:['IR：狙った組織を消す', 'FLAIR：水を消す'] },
+  { no:'第7章', nm:'拡散・灌流', ref:'7・1〜7・6', soon:true, goal:'水分子の動き（拡散）と血流（灌流）を画像にする。' },
+  { no:'第8章', nm:'MRA', ref:'8・1〜', soon:true, goal:'流れている血液の信号で血管を写す（TOF 法など）。' },
+  { no:'応用', nm:'MRCP と MIP', goal:'TE をうんと長くして水だけを残し、MIP で1枚にまとめる。MIP は MRA の表示にも使う。',
+    steps:['強いT2強調：水だけを残す', 'MIP：重ねて1枚にする'] },
 ];
 {
   const pool = PRIN.concat(METH, LOC, EXTRA), byNm = {};
   for (const st of pool) byNm[st.nm] = st;
   CHAPTERS.forEach((ch, c) => {
-    ch.list = ch.steps.map(nm => { if (!byNm[nm]) throw new Error('手が見つからない: ' + nm); return byNm[nm]; });
-    /* 章の終わりのまとめカードは置かない（長くなるので）。章の最後の手のボタンを「次の章へ」にする */
-    const last = ch.list[ch.list.length - 1], hasNext = c < CHAPTERS.length - 1;
-    last.next = hasNext ? '次の章へ' : '終わる';
-    last.go = () => { chDone(c); tutEnd(); if (hasNext) runChapter(c + 1, 0); };
+    ch.list = (ch.steps || []).map(nm => { if (!byNm[nm]) throw new Error('手が見つからない: ' + nm); return byNm[nm]; });
     ch.full = ch.list;
+    if (ch.soon) return;
+    /* 章の終わりのまとめカードは置かない（長くなるので）。章の最後の手のボタンを「次の章へ」にする（まだ手のない章はとばす） */
+    let nx = c + 1; while (nx < CHAPTERS.length && CHAPTERS[nx].soon) nx++;
+    const last = ch.list[ch.list.length - 1], hasNext = nx < CHAPTERS.length;
+    last.next = hasNext ? '次の章へ' : '終わる';
+    last.go = () => { chDone(c); tutEnd(); if (hasNext) runChapter(nx, 0); };
   });
 }
 let curCh = -1, curStep = 0;   // いま開いている章と手（一覧の印に使う）
@@ -4433,7 +4431,7 @@ $('modeTabs').addEventListener('click', e => {
 
 /* ================= 学習 ================= */
 /* 学習は案内カードそのもの。設定・光らせる場所・やることは各手が持っている。章ごとに案内カードを流す */
-const CHKEY = 'mri-chapters-done-v3';   // 章の並びを変えたので、前の記録（章の番号）は使わない
+const CHKEY = 'mri-chapters-done-v4';   // 章の並びを教科書の順にしたので、前の記録は使わない   // 章の並びを変えたので、前の記録（章の番号）は使わない
 let chDoneSet = new Set();
 try { chDoneSet = new Set(JSON.parse(localStorage.getItem(CHKEY) || '[]')); } catch (e) { }
 function chDone(c) {
@@ -4444,13 +4442,10 @@ function chDone(c) {
 function buildChList() {
   const box = $('chList'); box.innerHTML = '';
   CHAPTERS.forEach((ch, c) => {
-    if (ch.part && (c === 0 || CHAPTERS[c - 1].part !== ch.part)) {   // 部の見出し
-      const h = document.createElement('div'); h.className = 'part';
-      h.innerHTML = '<b>' + PARTS[ch.part].nm + '</b><span>' + PARTS[ch.part].sub + '</span>'; box.appendChild(h);
-    }
-    const d = document.createElement('div'); d.className = 'chap';
+    const d = document.createElement('div'); d.className = 'chap' + (ch.soon ? ' soon' : '');
     d.innerHTML = '<h4><span class="cno">' + ch.no + '</span><span>' + ch.nm + '</span>' + (chDoneSet.has(c) ? '<span class="ck">✓ 済み</span>' : '') + '</h4>' +
-      '<p class="cgoal">' + ch.goal + '</p>';
+      '<p class="cgoal">' + ch.goal + (ch.ref ? '<span class="cref">教科書 ' + ch.ref + '</span>' : '') + (ch.soon ? '<span class="csoon">この章の手は、これから作ります</span>' : '') + '</p>';
+    if (ch.soon) { box.appendChild(d); return; }
     const ol = document.createElement('ol'); ol.className = 'seq';
     ch.list.forEach((st, i) => {
       const li = document.createElement('li'), b = document.createElement('button');
@@ -4461,7 +4456,7 @@ function buildChList() {
     });
     d.appendChild(ol); box.appendChild(d);
   });
-  const nx = CHAPTERS.findIndex((ch, c) => !chDoneSet.has(c));
+  const nx = CHAPTERS.findIndex((ch, c) => !ch.soon && !chDoneSet.has(c));
   $('bLearn').textContent = nx < 0 ? '序章からもう一度' : nx === 0 ? '序章から始める' : CHAPTERS[nx].no + '（' + CHAPTERS[nx].nm + '）から続ける';
   markStep();
 }
@@ -4475,18 +4470,13 @@ function markStep() {
   document.querySelectorAll('#chList ol.seq button').forEach(b =>
     (live && +b.dataset.c === curCh && +b.dataset.i === curStep) ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
 }
-$('bLearn').addEventListener('click', () => { const nx = CHAPTERS.findIndex((ch, c) => !chDoneSet.has(c)); runChapter(nx < 0 ? 0 : nx, 0); });
+$('bLearn').addEventListener('click', () => { const nx = CHAPTERS.findIndex((ch, c) => !ch.soon && !chDoneSet.has(c)); runChapter(nx < 0 ? 0 : nx, 0); });
 
 /* ---- 用語の手引き：初めて出てくる言葉を、ふつうの言葉で1行ずつ。「見る」でその言葉が出てくる手へ飛ぶ ----
    s は手の名前の書き出し（手の番号は増減するので、名前で探す） */
 const GLOSS = [
-  ['基礎（第1章）', [
-    ['電磁石', '電線に電流を流すと磁場ができること。B₀・RF パルス・傾斜磁場は、どれもこれで作る。', '電流が磁場を作る'],
-    ['電磁誘導', '輪を通る磁場が変わると、輪に電流が流れること。変わらなければ流れない。', '電磁誘導'],
+  ['第1章 磁気共鳴と緩和', [
     ['歳差運動', '回っている磁石が磁場の中で首を振って回ること。速さは磁場の強さに比例する。', 'コマの首振り'],
-  ]],
-  ['原理（第2〜4章）', [
-    ['静磁場 B₀', 'MRI の筒の中の強い磁場。体の長い方向（足 → 頭）を向く。この画面では「上」。', '静磁場 B₀ の向き'],
     ['プロトン', '水素の原子核。小さな磁石としてふるまう。', '静磁場の中のプロトン'],
     ['磁化 M（M₀）', 'たくさんの水素の小さな磁石を足し合わせた1本の矢印。', '静磁場の中のプロトン'],
     ['共鳴・ラーモア周波数', '水素が回る速さと同じ周波数の電波だけが M を倒せること。周波数は B₀ に比例（1.5 T で約 64 MHz）。', '共鳴'],
@@ -4494,28 +4484,37 @@ const GLOSS = [
     ['フリップ角', 'M を倒す角度。電波の強さ × 当てる時間で決まる。', 'RFパルスで倒す'],
     ['回転座標', 'M と一緒に回る目線。回る動きが消えて、倒れ方や広がり方が見やすくなる。', 'RFパルスで倒す'],
     ['縦磁化・横磁化', 'M の上向きの分（Mz）と横向きの分（Mxy）。信号になるのは横の分だけ。', '回る M'],
-    ['受信コイル・信号', '回る横磁化が受信コイルに起こす電流が、MRI の信号。', '回る M'],
+    ['T1（縦緩和）', '縦磁化が元へ戻る速さ。脂肪は速く、水は遅い。', 'T1'],
     ['T2（横緩和）', '横磁化が消えていく速さ。水は遅く、白質は速い。', 'T2'],
     ['T2*', '磁場のムラも加わって、T2 より速く消える減り方。', 'T2*'],
-    ['スピンエコー', '180° パルスでずれを折り返し、信号を呼びもどすこと。', 'スピンエコー'],
-    ['T1（縦緩和）', '縦磁化が元へ戻る速さ。脂肪は速く、水は遅い。', 'T1'],
   ]],
-  ['原理から画像へ（第5・6章）', [
+  ['第2章 機器・装置構成', [
+    ['電磁石', '電線に電流を流すと磁場ができること。B₀・RF パルス・傾斜磁場は、どれもこれで作る。', '電流が磁場を作る'],
+    ['電磁誘導', '輪を通る磁場が変わると、輪に電流が流れること。変わらなければ流れない。', '電磁誘導'],
+    ['静磁場 B₀', 'MRI の筒の中の強い磁場。体の長い方向（足 → 頭）を向く。この画面では「上」。', '静磁場 B₀ の向き'],
+    ['受信コイル・信号', '回る横磁化が受信コイルに起こす電流が、MRI の信号。', '回る M'],
+  ]],
+  ['第3章 傾斜磁場・k空間・画像再構成', [
     ['ボクセル', '体を小さく区切った1区画。画像の1マスにあたる。', '脳のどこにも M がある'],
-    ['TR', '「倒す → 読む」をくり返す間隔（倒してから次に倒すまでの時間）。短くすると T1 の差が出る。', 'TR'],
-    ['TE', '倒してから信号を読むまでの時間。長くすると T2 の差が出る。', 'TE'],
-    ['T1強調・T2強調・プロトン密度強調', 'TR・TE の長い・短いの組み合わせで決まる画像の種類。', '水の白黒'],
-  ]],
-  ['実際の撮り方（第7・8章）', [
     ['傾斜磁場', '場所によって強さが少しずつ違う磁場。別のコイルで作り、場所ごとに周波数を変える。', '傾斜磁場'],
     ['スライス選択・帯域幅', '傾斜磁場と共鳴で1枚の断面だけを倒す。厚さ ＝ 電波の帯域幅 ÷ 傾斜の強さ。', 'スライスの位置と厚さ'],
     ['周波数エンコード', '読んでいる間に傾斜をかけ、音の高さ（周波数）で一方向の位置を見分ける。', '周波数エンコード'],
     ['位相エンコード', '読む前に一瞬だけ傾斜をかけ、角度のずれ（位相）でもう一方向の位置を見分ける。', '位相エンコード'],
     ['k 空間・フーリエ変換', '集めた信号を並べた表と、それを画像に変える計算。中心は明暗、外側は輪郭を決める。', 'k 空間'],
+  ]],
+  ['第4章 パルスシーケンス・撮影パラメータ・画像コントラスト', [
     ['撮像時間', 'TR × 位相エンコード数 × 加算回数。', '1枚の画像'],
+    ['スピンエコー', '180° パルスでずれを折り返し、信号を呼びもどすこと。', 'スピンエコー'],
     ['GRE', '180° を使わずにエコーを作る撮り方。T2 ではなく T2* で暗くなる。', 'GRE'],
+    ['TR', '「倒す → 読む」をくり返す間隔（倒してから次に倒すまでの時間）。短くすると T1 の差が出る。', 'TR'],
+    ['TE', '倒してから信号を読むまでの時間。長くすると T2 の差が出る。', 'TE'],
+    ['T1強調・T2強調・プロトン密度強調', 'TR・TE の長い・短いの組み合わせで決まる画像の種類。', '水の白黒'],
+  ]],
+  ['第6章 脂肪抑制法・自由水抑制法', [
     ['IR・TI・STIR', '180° で縦磁化を反転させ、消したい組織が 0 になる瞬間（TI）に倒す。脂肪を消すのが STIR。', 'IR'],
     ['FLAIR', 'TI を長くして、水（脳脊髄液）を消す撮り方。', 'FLAIR'],
+  ]],
+  ['応用 MRCP と MIP', [
     ['強いT2強調・MRCP', 'TE をうんと長くして、T2 の長い水（胆汁・膵液など）だけを白く残す撮り方。', '強いT2強調'],
     ['MIP', '厚い板の中を視線の向きに見て、いちばん明るい所だけを集めて1枚にする方法。', 'MIP'],
   ]],
@@ -5036,8 +5035,7 @@ function tutShow() {
   if (curCh >= 0 && tutList === CHAPTERS[curCh].full) {   // 全体のどこまで来たか（全部で何手か）を、いつも出す
     const all = CHAPTERS.reduce((a, ch) => a + ch.list.length, 0);
     const done = CHAPTERS.slice(0, curCh).reduce((a, ch) => a + ch.list.length, 0) + tutI + 1;
-    const pt = PARTS[CHAPTERS[curCh].part];
-    chl = CHAPTERS[curCh].no + (pt ? '・' + pt.short : '') + '　';
+    chl = CHAPTERS[curCh].no + '　';
     prog = '<span class="tprog"><i style="width:' + (done / all * 100).toFixed(1) + '%"></i></span><span class="tprogn">全体 ' + done + ' / ' + all + '</span>';
   }
   $('tutStep').innerHTML = (st.head || (counted(st) ? chl + k + ' / ' + n : '')) + zone + prog;
