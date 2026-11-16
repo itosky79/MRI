@@ -543,6 +543,8 @@ details.fold p{margin:7px 0 0; font-size:14.5px; color:var(--dim); line-height:1
   box-shadow:0 2px 10px rgba(0,0,0,.18); cursor:pointer}
 #tutActs button:hover{filter:brightness(1.07)}
 #tutActs button.done{opacity:.72}
+#tutActs.sm{gap:6px}
+#tutActs.sm button{padding:7px 11px; font-size:13.5px}
 #tutActs button[disabled]{opacity:.35; cursor:default; filter:none}
 #tutActs button.hit{animation:actHit .9s ease-out}
 @keyframes actHit{0%{box-shadow:0 0 0 0 rgba(212,140,20,.75)} 100%{box-shadow:0 0 0 14px rgba(212,140,20,0)}}
@@ -860,6 +862,7 @@ details.fold summary{font-size:14.5px}
 .strip figure{position:relative}
 .mk.smk{font-size:12.5px}
 body.noKey p.key{display:none}
+body.noBand .kband{display:none}
 body.imgBig #gl, body.imgBig #labels, body.imgBig .stage .key, body.imgBig .stage .playbar{visibility:hidden}
 body.markOn .mk.smk{display:block}
 .wflash{box-shadow:0 0 0 3px rgba(17,120,143,.55)}
@@ -973,7 +976,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
       </p>
       <p class="key" id="keySlab" hidden>
         <span><i style="background:var(--sig)"></i>矢印＝各層の磁化 M</span>
-        <span><i style="background:var(--amber)"></i><b>オレンジ＝電波の周波数の範囲と、そこに入った層</b></span>
+        <span class="kband"><i style="background:var(--amber)"></i><b>オレンジ＝電波の周波数の範囲と、そこに入った層</b></span>
       </p>
       <p class="key" id="keyRes" hidden>
         <span><i style="background:var(--sig)"></i>太い矢印＝M</span>
@@ -2475,7 +2478,7 @@ function slabUpdate(dt) {
     SLB.disc[k].material.color.setHex(sel ? 0xF0B24B : 0xB9C6CF);
     SLB.disc[k].material.opacity = sel ? 0.45 : 0.32;
     SLB.bar[k].scale.x = SLFB + slFreq(k) * SLST;
-    SLB.bar[k].material.color.setHex(Math.abs(slFreq(k) - SLB.fc) <= SLB.hw + 0.02 ? 0xE09A2B : 0xAEBBC4);
+    SLB.bar[k].material.color.setHex(slBand.visible && Math.abs(slFreq(k) - SLB.fc) <= SLB.hw + 0.02 ? 0xE09A2B : 0xAEBBC4);   // 帯を出さない手では、棒はみな灰色
   }
   const x0 = SLXB + SLFB + (SLB.fc - SLB.hw) * SLST, x1 = SLXB + SLFB + (SLB.fc + SLB.hw) * SLST;
   slBand.position.x = (x0 + x1) / 2; slBand.scale.set(Math.max(0.05, x1 - x0), 1, SLN * SLDZ + 1.2);
@@ -3025,6 +3028,7 @@ function updateScene(dt) {
     if (P.cmpLay === 'over') { const el = $('cmpFadeL'); if (el._h !== fadeHtml) { el._h = fadeHtml; el.innerHTML = fadeHtml; } }
   } else cmpLab.fill(null);
   slabGrp.visible = !!P.slab;
+  slBand.visible = !(P.tag && P.tag.noBand);   // 傾斜磁場だけを見せる手では、電波の帯はまだ出さない
   if (P.slab) slabUpdate(dt);
   gridGrp.visible = !!P.grid;
   if (P.grid) gridUpdate(dt);
@@ -3088,7 +3092,7 @@ function updateScene(dt) {
     const selK = []; for (let k = 0; k < SLN; k++) if (SLB.tipT[k] > 0) selK.push(k);
     const zc = selK.length ? (selK.reduce((a, b) => a + b, 0) / selK.length - SLC) * SLDZ : 0;
     place('slThick', SLOFF - SLR - 3.6, 0, SLZ + zc, '選ばれた断面（' + selK.length + ' 層ぶんの厚さ）', sl && selK.length > 0 && selK.length < SLN);
-    place('slBand', SLOFF + slBand.position.x, 0, SLZ + top + 1.7, '電波の周波数の範囲', sl);
+    place('slBand', SLOFF + slBand.position.x, 0, SLZ + top + 1.7, '電波の周波数の範囲', sl && slBand.visible);
   }
   place('m0', 1.6, 0, ML * 0.78,
     qStage === 1 ? '上と下が1本ずつ打ち消し合う' : qStage === 2 ? '残った ' + (CONE_UP - CONE_DN) + ' 本を、先と根元をつないで足す' : 'M₀（余った分を全部足したもの）',
@@ -3643,7 +3647,7 @@ L({ nm:'静磁場 B₀ の向き', hint:'電線を巻いて電流を流すと磁
   act:{ label:'検査室から近づく', fn:() => roomPlay(), dur:7000 },
   text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。<br>画面では、この向きを「上」として描きます。' }),
 
-L({ nm:'静磁場の中のプロトン', hint:'方位磁石の針が北を向こうとするのと似ています。ただ、熱で揺さぶられるので、上向きはほんの少し多いだけです。', zone:[1], tg:'足し合わせると M', sel:'#stage',
+L({ nm:'静磁場の中のプロトン', hint:'MRI が水素を使うのは、体の大部分が水で、水素がいちばん多いからです。水素は方位磁石の針のように磁場の向きにそろおうとしますが、熱で揺さぶられるので、上向きはほんの少し多いだけです。', zone:[1], tg:'足し合わせると M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
   text:'[[h:水素の原子核]]は小さな磁石で、B₀ の中では上向きが少しだけ多くなります。<br>全部を足し合わせると、上と下は打ち消し合い、<b>余った上向きの分</b>が [[m:M]] になります。' }),
@@ -3653,7 +3657,7 @@ L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
   text:'上と下は打ち消し合い、<b>余った上向きの分</b>だけが [[m:M]] として残ります。<br>実際の差は、100万個に約5個です。' }),
 
-L({ nm:'脳のどこにも M がある', hint:'矢印1本は、画像の1マス（ボクセル）にある水素の合計です。水素が多い所ほど長くなります。', zone:[1], tg:'ボクセルごとに1本', sel:'#stage',
+L({ nm:'脳のどこにも M がある', hint:'矢印1本は、画像の1マス（ボクセル）にある水素の合計です。水素が多い所ほど長くなります。信号はどのボクセルからもまとめて受信コイルに届くので、どこからの信号かを見分ける方法は第7章で見ます。', zone:[1], tg:'ボクセルごとに1本', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
   on:() => { calm(); },
   text:'脳の<b>どのボクセルにも</b> [[m:M]] が1本ずつあり、すべて上を向いています。' }),
@@ -3713,7 +3717,7 @@ L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石か
 L({ nm:'T2：横磁化が短くなる', hint:'赤い矢印（横の M）の横に出る「○%」を見てください。100% から少しずつ減っていきます。', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
   tag:{ pct:true },
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
-  text:'[[mxy:横の M]] は、時間とともに<b>短くなります</b>（T2）。<br>37% まで減る時間を T2 といいます。' }),
+  text:'倒れた M の横向きの分（[[mxy:横の M]]）は、時間とともに<b>短くなります</b>。<br>37% まで減る時間を T2 といいます。' }),
 
 L({ nm:'T2*：磁場のムラで もっと速く', hint:'走る速さが少しずつ違うと、スタートでそろっていた列がだんだんばらけていきます。それと同じです。', zone:[1], tg:'ムラの分だけ速く消える', sel:'#stage',
   tag:{ fan:true },
@@ -3760,7 +3764,7 @@ L({ nm:'矢印から画像へ', hint:'「組織ごとに塗ってみる」を押
 L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで、赤い TR の線が左へ動きます。そのとき、脳脊髄液の線がまだ低いところにあるのを見てください。', tg:'T1 の差をつける', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
-  text:'TR を短くすると、縦の戻りが遅い<b>脳脊髄液（水）が暗く</b>なります（[[relw:T1強調]]）。' }),
+  text:'MRI は「倒す → 読む」を何度もくり返します。その間隔が TR です。<br>短くすると、戻りの遅い<b>脳脊髄液（水）が暗く</b>なります（[[relw:T1強調]]）。' }),
 
 L({ nm:'TE：倒してから読むまで', hint:'③の下のグラフで、TE の線が右へ動きます。脳脊髄液の線だけが高いところに残るのを見てください。', tg:'T2 の差をつける', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:4000, TE:15, T2p:40, tissue:'wm' },
@@ -3889,15 +3893,21 @@ function kShow(mode) {               // mode：'all' ぜんぶ／'c' 中心だ�
    断面の中の縦・横の見分け方（周波数・位相エンコード）は、このあとここに足していく */
 const SLSET = { quantum:false, manual:true, frame:'rot', view:0, showBody:false, slab:true, showComp:false };
 const LOC = [
+L({ nm:'傾斜磁場：場所で磁場の強さを変える', hint:'傾斜磁場も、別のコイルに流す電流で作ります（第1章の電磁石）。水素の回る速さは磁場の強さに比例するので（第1章の首振り）、場所ごとに周波数が変わります。', tg:'場所ごとに周波数が変わる', sel:'#stage',
+  tag:{ noBand:true },
+  set:SLSET,
+  on:() => { calm(); slabInit({ g:0, fc:0, hw:0.5 }); },
+  act:{ label:'傾斜磁場をかける', fn:() => { slabSet({ g:1 }); } },
+  text:'傾斜磁場は、場所によって<b>強さが少しずつ違う</b>磁場です。<br>強い所ほど水素は速く回るので、<b>層ごとに周波数</b>（右の棒）がずれます。' }),
+
 L({ nm:'スライス選択：1枚だけ倒す', hint:'ラジオで1つの局だけを聞くのと同じです。電波の周波数が合った層だけが反応します。', zone:[0, 1], tg:'傾斜磁場 ＋ 共鳴', sel:'#stage',
   set:SLSET,
   on:() => { calm(); slabInit({ g:0, fc:0, hw:0.5 }); },
   acts:[
-    { label:'電波を当てる（傾斜なし）', fn:() => { slabInit({ g:0, fc:0, hw:0.5 }); slabRF(); } },
-    { label:'傾斜磁場をかける', fn:() => { slabSet({ g:1 }); } },
-    { label:'電波を当てる', fn:() => { slabRF(); } },
+    { label:'傾斜なしで電波を当てる', fn:() => { slabInit({ g:0, fc:0, hw:0.5 }); slabRF(); } },
+    { label:'傾斜をかけて電波を当てる', fn:() => { slabSet({ g:1 }); later(slabRF, 1300); }, dur:4500 },
   ],
-  text:'傾斜磁場をかけて各層の周波数（右の棒）をずらすと、[[band:電波の範囲]]に入った<b>1枚だけ</b>の [[m:M]] が倒れます。' }),
+  text:'傾斜磁場で層ごとに周波数をずらしておくと、[[band:電波の範囲]]に入った<b>1枚だけ</b>の [[m:M]] が倒れます。' }),
 
 L({ nm:'スライスの位置と厚さ', hint:'オレンジの帯が動くと選ばれる層が動き、帯が太くなると選ばれる層が増えます。', zone:[0, 1], tg:'厚さ ＝ 帯域幅 ÷ 傾斜', sel:'#stage',
   set:SLSET,
@@ -3996,7 +4006,7 @@ const CHAPTERS = [
   { part:'p2', no:'第6章', nm:'コントラスト（序章の答え）', goal:'TR で T1 の差、TE で T2 の差が明るさに出る。だから水の白黒が逆になる。',
     steps:['TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由'] },
   { part:'p3', no:'第7章', nm:'場所を決めて1枚にする', goal:'傾斜磁場で場所ごとに周波数を変え、集めた信号（k 空間）から1枚の画像を作る。',
-    steps:['スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表', '1枚の画像ができるまで'] },
+    steps:['傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表', '1枚の画像ができるまで'] },
   { part:'p3', no:'第8章', nm:'いろいろな撮像法', goal:'GRE・IR・FLAIR・MRCP など、見たいものに合わせて撮り方を変える。',
     steps:['GRE：180° を使わない', 'IR：狙った組織を消す', 'FLAIR：水を消す', '強いT2強調：水だけを残す', 'MIP：重ねて1枚にする'] },
 ];
@@ -4290,7 +4300,8 @@ function layoutImg() {
   const w = stage.clientWidth, h = stage.clientHeight;
   const big = !!(P.tag && P.tag.big);   // 画像が主役の手（MIP など）：3D をしまい、画像を大きく真ん中に出す
   document.body.classList.toggle('imgBig', big);
-  document.body.classList.toggle('noKey', !!(P.tag && P.tag.noKey));   // 基礎の手：まだ出てこない言葉（M・RF パルス）の凡例を出さない
+  document.body.classList.toggle('noKey', !!(P.tag && P.tag.noKey));
+  document.body.classList.toggle('noBand', !!(P.tag && P.tag.noBand));   // 基礎の手：まだ出てこない言葉（M・RF パルス）の凡例を出さない
   if (!big && (P.view === 0 || (smallScr && cmpActive()))) { imgbox.style.display = 'none'; return; }   // スマホで組織を比べているときは、矢印のために画像をしまう   // スマホで組織を並べているときは、並べた矢印のために画像をしまう
   imgbox.style.display = '';
   const cb = $('cmpBar'), top = smallScr && !cb.hidden ? cb.offsetTop + cb.offsetHeight + 8 : big ? $('stage').querySelector('.bar').offsetHeight + 10 : 46;   // スマホは組織ボタンの下に置く（重ならないように）
@@ -4491,12 +4502,12 @@ const GLOSS = [
   ]],
   ['原理から画像へ（第5・6章）', [
     ['ボクセル', '体を小さく区切った1区画。画像の1マスにあたる。', '脳のどこにも M がある'],
-    ['TR', '倒してから次に倒すまでの時間。短くすると T1 の差が出る。', 'TR'],
+    ['TR', '「倒す → 読む」をくり返す間隔（倒してから次に倒すまでの時間）。短くすると T1 の差が出る。', 'TR'],
     ['TE', '倒してから信号を読むまでの時間。長くすると T2 の差が出る。', 'TE'],
     ['T1強調・T2強調・プロトン密度強調', 'TR・TE の長い・短いの組み合わせで決まる画像の種類。', '水の白黒'],
   ]],
   ['実際の撮り方（第7・8章）', [
-    ['傾斜磁場', '場所によって強さが少しずつ違う磁場。別のコイルで作り、場所ごとに周波数を変える。', 'スライス選択'],
+    ['傾斜磁場', '場所によって強さが少しずつ違う磁場。別のコイルで作り、場所ごとに周波数を変える。', '傾斜磁場'],
     ['スライス選択・帯域幅', '傾斜磁場と共鳴で1枚の断面だけを倒す。厚さ ＝ 電波の帯域幅 ÷ 傾斜の強さ。', 'スライスの位置と厚さ'],
     ['周波数エンコード', '読んでいる間に傾斜をかけ、音の高さ（周波数）で一方向の位置を見分ける。', '周波数エンコード'],
     ['位相エンコード', '読む前に一瞬だけ傾斜をかけ、角度のずれ（位相）でもう一方向の位置を見分ける。', '位相エンコード'],
@@ -5104,8 +5115,9 @@ function tutActsPlace(el) {   // 3D は枠の中の下の方（再生ボタン�
   let r = el ? el.getBoundingClientRect() : null;
   if (r && (r.width < 40 || r.height < 40)) r = null;
   const c0 = tutCard.getBoundingClientRect();
-  if (r && el !== stage) {                       // 図・画像：すぐ下に入るなら外に置く
+  if (r && (el !== stage || smallScr)) {          // 図・画像（スマホは 3D も）：すぐ下に入るなら外に置く（絵を隠さない）
     box.style.maxWidth = Math.min(innerWidth - 16, Math.max(r.width, 340)) + 'px';
+    box.classList.toggle('sm', smallScr);
     const bw = box.offsetWidth, bh = box.offsetHeight, y = r.bottom + 10;
     if (y + bh <= Math.min(c0.top - 6, innerHeight - 6)) {
       box.style.left = Math.max(8, Math.min(innerWidth - bw - 8, r.left + r.width / 2 - bw / 2)) + 'px'; box.style.top = y + 'px';
@@ -5120,7 +5132,7 @@ function tutActsPlace(el) {   // 3D は枠の中の下の方（再生ボタン�
     const pb = el.querySelector && el.querySelector('.playbar');
     if (pb) { const q = pb.getBoundingClientRect(); if (q.height) bot = Math.min(bot, q.top - 8); }
     y = bot - bh; if (y < r.top + 8) y = Math.min(r.bottom + 8, innerHeight - bh - 8);
-    x = r.left + r.width / 2 - bw / 2;
+    x = el === stage ? r.right - bw - 14 : r.left + r.width / 2 - bw / 2;   // 3D は右寄せ（真ん中の絵やラベルに重ねない。下の再生ボタンの列の真上）
   } else { const c = tutCard.getBoundingClientRect(); y = c.top - bh - 10; x = innerWidth / 2 - bw / 2; }
   const c = tutCard.getBoundingClientRect();
   if (y + bh > c.top - 6 && x < c.right && x + bw > c.left) y = c.top - bh - 8;   // カードには重ねない
