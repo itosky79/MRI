@@ -533,6 +533,14 @@ details.fold p{margin:7px 0 0; font-size:14.5px; color:var(--dim); line-height:1
 /* ---------- はじめてのチュートリアル ---------- */
 #tut{position:fixed; inset:0; z-index:70; pointer-events:none}
 #tut[hidden]{display:none}
+/* やってみるボタン：見ているシミュレーションの中（光らせた枠の下の方）に置く。カードの「次へ」の場所には置かない */
+#tutActs{position:fixed; z-index:72; pointer-events:auto; display:flex; flex-wrap:wrap; justify-content:center; gap:8px; max-width:calc(100vw - 16px)}
+#tutActs[hidden]{display:none}
+#tutActs button{padding:9px 16px; border:none; border-radius:10px; background:var(--amber); color:var(--onAmber); font:700 15px/1.3 var(--gothic);
+  box-shadow:0 2px 10px rgba(0,0,0,.18); cursor:pointer}
+#tutActs button:hover{filter:brightness(1.07)}
+#tutActs button.done{opacity:.72}
+#tutActs button[disabled]{opacity:.35; cursor:default; filter:none}
 #tutHole{
   position:absolute; left:50%; top:50%; width:0; height:0; border-radius:7px;
   box-shadow:0 0 0 9999px var(--tutMask); pointer-events:none;
@@ -1227,6 +1235,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
 
 <div id="tut" hidden>
   <div id="tutHole"></div>
+  <div id="tutActs" hidden></div>
   <div id="tutCard">
     <p class="tstep" id="tutStep"></p>
     <p class="ttext" id="tutText"></p>
@@ -4898,6 +4907,7 @@ function tutPlace(el) {
     tutHole.style.left = '50%'; tutHole.style.top = '50%';
     tutHole.className = '';
     tutCard.className = 'dock'; tutCard.style.left = tutCard.style.top = '';
+    tutActsPlace(null);
     return;
   }
   const r = el.getBoundingClientRect(), pad = 6;
@@ -4907,6 +4917,7 @@ function tutPlace(el) {
   tutHole.style.height = (r.height + pad * 2) + 'px';
   tutHole.className = tutList[tutI].wait ? 'ring tap' : 'ring';
   tutCard.className = 'dock'; tutCard.style.left = tutCard.style.top = '';
+  tutActsPlace(el);
   return;
   /* （以前はカードを対象の反対側に置いていたが、ボタンの位置が毎回変わるので下に固定した） */
   const cw = tutCard.offsetWidth || 340, ch = tutCard.offsetHeight || 150;
@@ -4990,16 +5001,57 @@ function tutShow() {
   }
 }
 /* 進むボタン：やることがある手では、まず「やる」ボタンになる */
+/* カードのボタンはいつも「次へ」。やってみるボタンは、見ているシミュレーションの中に別に出す（tutActs）。
+   見ている所から目を離さずに押せるようにし、「次へ」のつもりで押してしまうことをなくす */
 function tutBtn(st) {
   const b = $('tutNext');
-  const acts = actsOf(st);
-  if (tutActI < acts.length) { b.textContent = acts[tutActI].label; b.className = 'doit'; }
-  else { b.textContent = st.next || (st.wait ? '押さずに次へ' : '次へ'); b.className = ''; }
+  b.textContent = st.next || (st.wait ? '押さずに次へ' : '次へ'); b.className = '';
+  tutActsShow(st);
+}
+function tutActsShow(st) {
+  const box = $('tutActs'), acts = actsOf(st), many = acts.length > 1;
+  box.innerHTML = '';
+  acts.forEach((a, k) => {
+    const b = document.createElement('button'); b.type = 'button';
+    b.textContent = (many && !/^[①-⑨]/.test(a.label) ? '①②③④⑤⑥'[k] + ' ' : !many ? '▶ ' : '') + a.label;
+    b.disabled = k > tutActI;                      // 順番に押す（前のボタンを押すと次が押せるようになる）。押したものは何度でも押せる
+    b.addEventListener('click', () => {
+      a.fn(); b.classList.add('done');
+      if (k >= tutActI) { tutActI = k + 1; [...box.children].forEach((x, j) => { x.disabled = j > tutActI; }); }
+    });
+    box.appendChild(b);
+  });
+  box.hidden = !acts.length;
+}
+function tutActsPlace(el) {   // 3D は枠の中の下の方（再生ボタンの列より上）、図や画像は枠のすぐ下（中の線や画像を隠さない）。どちらも真ん中
+  const box = $('tutActs'); if (box.hidden) return;
+  let r = el ? el.getBoundingClientRect() : null;
+  if (r && (r.width < 40 || r.height < 40)) r = null;
+  const c0 = tutCard.getBoundingClientRect();
+  if (r && el !== stage) {                       // 図・画像：すぐ下に入るなら外に置く
+    box.style.maxWidth = Math.min(innerWidth - 16, Math.max(r.width, 340)) + 'px';
+    const bw = box.offsetWidth, bh = box.offsetHeight, y = r.bottom + 10;
+    if (y + bh <= Math.min(c0.top - 6, innerHeight - 6)) {
+      box.style.left = Math.max(8, Math.min(innerWidth - bw - 8, r.left + r.width / 2 - bw / 2)) + 'px'; box.style.top = y + 'px';
+      return;
+    }
+  }
+  box.style.maxWidth = (r ? Math.max(200, r.width - 20) : innerWidth - 16) + 'px';
+  const bw = box.offsetWidth, bh = box.offsetHeight;
+  let x, y;
+  if (r) {
+    let bot = Math.min(r.bottom, innerHeight) - 12;
+    const pb = el.querySelector && el.querySelector('.playbar');
+    if (pb) { const q = pb.getBoundingClientRect(); if (q.height) bot = Math.min(bot, q.top - 8); }
+    y = bot - bh; if (y < r.top + 8) y = Math.min(r.bottom + 8, innerHeight - bh - 8);
+    x = r.left + r.width / 2 - bw / 2;
+  } else { const c = tutCard.getBoundingClientRect(); y = c.top - bh - 10; x = innerWidth / 2 - bw / 2; }
+  const c = tutCard.getBoundingClientRect();
+  if (y + bh > c.top - 6 && x < c.right && x + bw > c.left) y = c.top - bh - 8;   // カードには重ねない
+  box.style.left = Math.max(8, Math.min(innerWidth - bw - 8, x)) + 'px'; box.style.top = Math.max(8, y) + 'px';
 }
 function tutHit() {
   const st = tutList[tutI];
-  const acts = actsOf(st);
-  if (tutActI < acts.length) { acts[tutActI++].fn(); tutBtn(st); return; }
   if (st.go) { st.go(); return; }               // 章のまとめ：次の章へ
   tutNext();
 }
