@@ -2078,7 +2078,7 @@ function applyThemeGL() {
 }
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(34, 1, 0.4, 900);
+const camera = new THREE.PerspectiveCamera(34, 1, 0.4, 5000);   // 遠くは検査室の全体（約 6 m）まで
 camera.up.set(0, 0, 1);                       // z（B0）を画面の上に置く
 const amb = new THREE.AmbientLight(0x9fb4c4, 0.62); scene.add(amb);
 const dl = new THREE.DirectionalLight(0xffffff, 0.72); dl.position.set(6, -9, 12); scene.add(dl);
@@ -2178,6 +2178,9 @@ const b1Arrow = mkArrow(0xF0B24B, 0.13, 0.4, 1.0); spinGrp.add(b1Arrow.grp); tin
    その変化の速さ（＝|dΦ/dt|、一定の速さで回るなら M の x 成分に比例）が、そのまま起電力の大きさになる。 */
 const COILR = 6.4;
 const coilGrp = new THREE.Group(); scene.add(coilGrp); coilGrp.visible = false;
+/* 受信しているか。地図の手では③が光るまで受信を止めておき（実際の装置でも、パルスを当てている間は受信しない）、
+   コイルが光る・紫の矢印が出る・「電流が流れる」の表示を、③の順番に合わせる */
+let coilRx = true;
 const coilMat = new THREE.MeshPhongMaterial({ color:0xA9BCCB, shininess:40, emissive:new THREE.Color(0x202a33) });
 {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(COILR, 0.16, 10, 64), coilMat);
@@ -2276,24 +2279,95 @@ const cmpActive = () => !!(P.cmp && P.cmp.length >= 2) && cmpPlain();           
 
 /* ---- 静磁場の筒（ボア）：原理「静磁場 B₀ の向き」 ----
    筒の壁に巻いた電線（灰色の輪）に電流を流すと、筒の中に体の長い方向（足 → 頭）の磁場 B₀ ができる。
-   この画面ではその向きを z（上）として描いている。実物の筒の内径は 60〜70 cm ほどだが、頭が入って見える大きさに縮めてある */
+   この画面ではその向きを z（上）として描いている。筒の大きさは実物に近くしてある（内径 約 62 cm、長さ 約 1.6 m。1 単位 = 5 mm）。
+   はじめに検査室（装置・寝台・寝ている人）を見せ、近づきながら装置のカバーと人を消して筒の電線だけを残し、
+   最後に「体の長い方向」が画面の上になるように回す（roomPlay）。実物では人は寝ていて、B₀ は水平 */
 const boreGrp = new THREE.Group(); scene.add(boreGrp); boreGrp.visible = false;
 const BORE_WM = new THREE.MeshPhongMaterial({ color:0x8FA3B2, shininess:30 });
-const BORE_R = 30, BORE_L = 66;
+const BORE_R = 62, BORE_L = 320;
 {
-  const g = new THREE.CylinderGeometry(BORE_R, BORE_R, BORE_L, 56, 1, true); g.rotateX(Math.PI / 2);
+  const g = new THREE.CylinderGeometry(BORE_R, BORE_R, BORE_L, 64, 1, true); g.rotateX(Math.PI / 2);
   boreGrp.add(new THREE.Mesh(g, new THREE.MeshPhongMaterial({ color:0xB9C6CF, transparent:true, opacity:0.12, side:THREE.DoubleSide, depthWrite:false })));
   const wm = BORE_WM;
-  for (let k = 0; k < 9; k++) {
-    const r = new THREE.Mesh(new THREE.TorusGeometry(BORE_R + 0.4, 0.45, 8, 72), wm);
-    r.position.z = -BORE_L / 2 + 4 + k * (BORE_L - 8) / 8; boreGrp.add(r);
+  for (let k = 0; k < 15; k++) {
+    const r = new THREE.Mesh(new THREE.TorusGeometry(BORE_R + 0.8, 1.0, 8, 96), wm);
+    r.position.z = -BORE_L / 2 + 8 + k * (BORE_L - 16) / 14; boreGrp.add(r);
   }
 }
 const boreB0 = [];
 for (let k = 0; k < 4; k++) {
-  const a = mkArrow(0x40566A, 0.55, 1.6, 3.6); const t = Math.PI / 4 + k * Math.PI / 2;
-  a.grp.position.set(Math.cos(t) * 24, Math.sin(t) * 24, -20); setArrow(a, 0, 0, 1, 36);
+  const a = mkArrow(0x40566A, 1.1, 3.2, 7.2); const t = Math.PI / 4 + k * Math.PI / 2;
+  a.grp.position.set(Math.cos(t) * 42, Math.sin(t) * 42, -45); setArrow(a, 0, 0, 1, 90);
   boreGrp.add(a.grp); boreB0.push(a);
+}
+/* 検査室：床・壁・装置のカバー（筒の穴あき）・寝台・寝ている人。どれも灰色で、近づくと消える。
+   座標は 頭側＝+z、前（天井側）＝+y。床は筒の中心から 1 m 下 */
+const roomGrp = new THREE.Group(); boreGrp.add(roomGrp);
+const ROOM = { a:1, mats:[] };
+function roomMat(color) {   // 明るい地に沈まないよう、自分でも少し光らせる
+  const m = new THREE.MeshPhongMaterial({ color, shininess:12, transparent:true, opacity:1, emissive:new THREE.Color(color).multiplyScalar(0.08) }); ROOM.mats.push(m); return m;
+}
+{
+  const FLOOR = -200;
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(3200, 3200), roomMat(0x7F8D98)); fl.rotation.x = -Math.PI / 2; fl.position.set(0, FLOOR, -200); roomGrp.add(fl);
+  const wl = new THREE.Mesh(new THREE.PlaneGeometry(3200, 700), roomMat(0xA9B4BE)); wl.position.set(0, FLOOR + 350, 360); wl.rotation.y = Math.PI; roomGrp.add(wl);
+  const wl2 = new THREE.Mesh(new THREE.PlaneGeometry(3200, 700), roomMat(0x97A4AF)); wl2.position.set(-620, FLOOR + 350, -200); wl2.rotation.y = Math.PI / 2; roomGrp.add(wl2);
+  /* 装置のカバー：角の丸い四角（幅 2 m・高さ 2 m）に筒の穴をあけ、長さ 1.7 m に押し出す */
+  const sh = new THREE.Shape(), W = 200, H = 200, rr = 40;
+  sh.moveTo(-W + rr, -H); sh.lineTo(W - rr, -H); sh.quadraticCurveTo(W, -H, W, -H + rr); sh.lineTo(W, H - rr); sh.quadraticCurveTo(W, H, W - rr, H);
+  sh.lineTo(-W + rr, H); sh.quadraticCurveTo(-W, H, -W, H - rr); sh.lineTo(-W, -H + rr); sh.quadraticCurveTo(-W, -H, -W + rr, -H);
+  const hole = new THREE.Path(); hole.absarc(0, 0, BORE_R + 4, 0, Math.PI * 2, true); sh.holes.push(hole);
+  const hg = new THREE.ExtrudeGeometry(sh, { depth:340, bevelEnabled:false, curveSegments:48 }); hg.translate(0, 0, -170);
+  roomGrp.add(new THREE.Mesh(hg, roomMat(0xC8D2DA)));
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(BORE_R + 10, 6, 10, 72), roomMat(0x6E8293)); ring.position.z = -172; roomGrp.add(ring);   // 穴の縁
+  /* 寝台（天板と台） */
+  const top = new THREE.Mesh(new THREE.BoxGeometry(110, 8, 700), roomMat(0x5E7282)); top.position.set(0, -28, -190); roomGrp.add(top);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(80, 168, 280), roomMat(0x7E8E9B)); base.position.set(0, FLOOR + 84, -400); roomGrp.add(base);
+  /* 寝ている人（頭が筒の中心、足は筒の外） */
+  const pm = roomMat(0x4F6F86);
+  const ell = (c, r) => { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 18), pm); m.scale.set(r[0], r[1], r[2]); m.position.set(c[0], c[1], c[2]); roomGrp.add(m); };
+  const cap = (a, b, r) => {
+    const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b), len = va.distanceTo(vb);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 14), pm);   // 両端に球をつけて、丸い棒にする
+    m.position.copy(va.clone().add(vb).multiplyScalar(.5)); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vb.clone().sub(va).normalize()); roomGrp.add(m);
+    ell(a, [r, r, r]); ell(b, [r, r, r]);
+  };
+  ell([0, 0, 2], [17, 20, 24]); cap([0, -2, -22], [0, -2, -34], 10);
+  ell([0, -2, -100], [44, 22, 68]);
+  cap([47, -6, -48], [45, -8, -165], 8); cap([-47, -6, -48], [-45, -8, -165], 8);
+  cap([15, -6, -165], [13, -8, -335], 12); cap([-15, -6, -165], [-13, -8, -335], 12);
+  ell([13, 4, -348], [8, 12, 6]); ell([-13, 4, -348], [8, 12, 6]);
+}
+const roomLight = new THREE.DirectionalLight(0xffffff, 0); roomLight.position.set(0.5, 1, -0.6); scene.add(roomLight);   // 天井の明かり（検査室を見せている間だけ）
+function roomFade(a) {   // 1 = 検査室をそのまま見せる、0 = 消す
+  ROOM.a = a; roomGrp.visible = a > 0.01; roomLight.intensity = 0.45 * a;
+  for (const m of ROOM.mats) { m.opacity = a; m.depthWrite = a > 0.98; }
+}
+roomFade(0);
+/* 検査室から近づく：カメラの向き・距離・見る点・上の向きを、時間で決めた道すじにそって動かす */
+const RA = { on:false, t0:0 };
+const _rv = new THREE.Vector3(), _ru = new THREE.Vector3(), _rt = new THREE.Vector3();
+const RA_D0 = new THREE.Vector3(0.80, 0.52, -0.42).normalize();    // 足の方の斜め上から、検査室ごと
+const RA_DS = new THREE.Vector3(1, 0.22, 0).normalize();           // 真横（少し上）から、筒の中の頭
+const RA_UY = new THREE.Vector3(0, 1, 0), RA_UZ = new THREE.Vector3(0, 0, 1);
+function roomHold() { RA.on = true; RA.t0 = 1e15; roomFade(1); }               // 検査室の全体を見せたまま止めておく
+function roomPlay() { RA.on = true; RA.t0 = performance.now(); roomFade(1); }
+function roomStop() { if (!RA.on) return; RA.on = false; roomFade(0); camera.up.copy(RA_UZ); }
+const ease = f => f <= 0 ? 0 : f >= 1 ? 1 : f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+const seg01 = (t, a, b) => ease((t - a) / (b - a));
+function roomCam() {
+  const t = performance.now() - RA.t0, dF = new THREE.Vector3(Math.sin(1.38), 0, Math.cos(1.38));
+  const z = seg01(t, 900, 4200), r = seg01(t, 4600, 6400);   // z：近づく、r：回して B₀ を上にする
+  const dist0 = smallScr ? 2100 : 1500, distS = smallScr ? 360 : 300;
+  const dist = Math.exp(Math.log(dist0) + (Math.log(distS) - Math.log(dist0)) * z) + (ctrl.want - distS) * r;
+  _rv.copy(RA_D0).lerp(RA_DS, z).lerp(dF, r).normalize();
+  _rt.set(0, -40, smallScr ? -120 : -190).multiplyScalar(1 - z);
+  _ru.copy(RA_UY).lerp(RA_UZ, r).normalize();
+  camera.up.copy(_ru);
+  camera.position.copy(_rv).multiplyScalar(dist).add(_rt); camera.lookAt(_rt);
+  camera.updateMatrixWorld();
+  roomFade(1 - seg01(t, 2600, 4000));
+  if (t > 6500) { RA.on = false; roomFade(0); camera.up.copy(RA_UZ); ctrl.th = 0; ctrl.phi = 1.38; ctrl.dist = ctrl.want; applyCam(); }
 }
 /* ---- 電磁誘導：磁石を受信コイルに近づける・遠ざける（原理「電磁誘導」） ----
    磁石（青緑、M と同じ色＝あとで「回る M は回る磁石」とつなぐ）を y 軸にそって動かす。
@@ -2552,6 +2626,7 @@ function placeHead() {   // 近くで見るときは選んだボクセルを原�
 /* ---- カメラ操作 ---- */
 const ctrl = { th:-1.05, phi:1.15, dist:23, want:23 };
 function applyCam() {
+  if (RA.on) { roomCam(); return; }   // 検査室から近づいている途中
   const sp = Math.sin(ctrl.phi), cp = Math.cos(ctrl.phi);
   camera.position.set(ctrl.dist * sp * Math.cos(ctrl.th), ctrl.dist * sp * Math.sin(ctrl.th), ctrl.dist * cp);
   camera.lookAt(0, 0, 0);
@@ -2573,8 +2648,8 @@ function homeCam() {
   if (P.slab) {                                 // 層の積み重ねを正面（-y 側）から少し見下ろす：右が周波数
     ctrl.th = -Math.PI / 2; ctrl.phi = 1.36; ctrl.want = smallScr ? 40 : 34; applyCam(); return;
   }
-  if (P.bore && P.showBody) {                   // 筒ごと横から見る
-    ctrl.th = -1.05; ctrl.phi = 1.38; ctrl.want = smallScr ? 175 : 150; applyCam(); return;
+  if (P.bore && P.showBody) {                   // 筒ごと真横から見る（筒は実物に近い大きさ）
+    ctrl.th = 0; ctrl.phi = 1.38; ctrl.want = smallScr ? 380 : 260; applyCam(); return;
   }
   ctrl.th = P.showBody || !P.coil ? -1.05 : -0.42;
   ctrl.phi = P.showBody ? 0.8 : 1.15;
@@ -2616,6 +2691,7 @@ let nPtr = 0;   // 画面に触れている指の数。2本目が触れたら回
 canvas.addEventListener('pointerdown', e => {
   canvas.setPointerCapture(e.pointerId);
   if (e.pointerType === 'touch' && ++nPtr > 1) { drag = null; return; }
+  if (RA.on) { RA.t0 = performance.now() - 7000; roomCam(); }   // 検査室から近づいている途中でさわったら、最後の向きまで飛ばす
   drag = { x:e.clientX, y:e.clientY, slice:e.button === 2 };
   if (drag.slice) { sliceAcc = 0; if (sliceOK()) showSliceTip(); }
 });
@@ -2668,6 +2744,7 @@ function mkLab(key, cls) {
 mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
 mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
 mkLab('coil', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
+mkLab('rmMri', 'axis'); mkLab('rmBed', 'axis');
 mkLab('cmp0', 'm'); mkLab('cmp1', 'm'); mkLab('cmp2', 'm');
 mkLab('ang', 'm'); mkLab('fan', 'axis'); mkLab('echo', 'm'); mkLab('fBrain', 'axis'); mkLab('fVox', 'm'); mkLab('slThick', 'rf');
 mkLab('gL', 'axis'); mkLab('gR', 'axis'); mkLab('gT', 'axis'); mkLab('gB', 'axis'); mkLab('gOn', 'rf'); mkLab('mag', 'm'); mkLab('boreB0', 'axis'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
@@ -2803,7 +2880,7 @@ function updateScene(dt) {
   coilGrp.visible = coilOn;
   fieldGrp.visible = !coilGrp.visible;                  // B₀ の場の線はコイルと重なって見づらいのでしまう
   magArrow.grp.visible = coilOn && !!P.induct;
-  projLine.visible = !P.induct;
+  projLine.visible = !P.induct && coilRx;
   if (coilGrp.visible && P.induct) {                    // 電磁誘導：磁石を近づける・遠ざける
     const st = Math.sign(IND.yT - IND.y) * Math.min(Math.abs(IND.yT - IND.y), 4.0 * dt);   // 4 単位／秒でゆっくり動かす
     IND.y += st; IND.dir = Math.abs(st) > 1e-6 ? Math.sign(st) : 0;
@@ -2816,12 +2893,12 @@ function updateScene(dt) {
     coilMat.emissive.setRGB(0.12 + 0.50 * v, 0.07 + 0.18 * v, 0.20 + 0.62 * v);
   } else if (coilGrp.visible) {
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    setArrow(fluxArrow, 0, _m.y >= 0 ? 1 : -1, 0, Math.abs(_m.y) * ML + 0.001);
+    setArrow(fluxArrow, 0, _m.y >= 0 ? 1 : -1, 0, coilRx ? Math.abs(_m.y) * ML + 0.001 : 0);   // 受信していない間は出さない
     projPos[0] = _m.x * ML; projPos[1] = _m.y * ML; projPos[2] = 0;    // Mxy の先から y 軸へ下ろした足
     projPos[3] = 0; projPos[4] = _m.y * ML; projPos[5] = 0;
     projGeo.attributes.position.needsUpdate = true;
     projLine.computeLineDistances();
-    const v = Math.abs(_m.x);                           // 一定の速さで回るなら dΦ/dt ∝ Mx
+    const v = coilRx ? Math.abs(_m.x) : 0;              // 一定の速さで回るなら dΦ/dt ∝ Mx
     coilMat.emissive.setRGB(0.12 + 0.50 * v, 0.07 + 0.18 * v, 0.20 + 0.62 * v);   // 「貫く分」と同じ紫で光らせる（色数を増やさない）
   }
 
@@ -2991,8 +3068,8 @@ function updateScene(dt) {
   } else if (coilGrp.visible) {
     place('mag', 0, 0, 0, '', false);
     _m.set(m[0], m[1], m[2]).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    place('coil', COILR * 0.98, 0, -COILR * 0.2, Math.hypot(m[0], m[1]) > 0.08 ? '受信コイル：<b>電流（信号）が流れる</b>' : '受信コイル：電流は流れない', P.showLab);
-    place('flux', -0.3, _m.y * ML * 1.08, -2.3, '<i>輪を通る分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab);
+    place('coil', COILR * 0.98, 0, -COILR * 0.2, !coilRx ? '受信コイル' : Math.hypot(m[0], m[1]) > 0.08 ? '受信コイル：<b>電流（信号）が流れる</b>' : '受信コイル：電流は流れない', P.showLab);
+    place('flux', -0.3, _m.y * ML * 1.08, -2.3, '<i>輪を通る分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab && coilRx);
   } else { place('coil', 0, 0, 0, '', false); place('flux', 0, 0, 0, '', false); place('mag', 0, 0, 0, '', false); }
   place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
   for (const t of tisArr) {
@@ -3017,8 +3094,12 @@ function updateScene(dt) {
     place('gB', e + 3.6, GOFF - e, 0, '下の行：遅れる', g && !fq && ph);
     place('gOn', 0, smallScr ? GOFF - e - 3.6 : GOFF + e + 2.1, 0, fq ? '左右の傾斜 ON（読んでいる間）' : '上下の傾斜 ON（一瞬だけ）', g && (fq || GRID.gyLeft > 0));
   }
-  place('boreB0', 24 * Math.cos(-Math.PI / 4) + 6, 24 * Math.sin(-Math.PI / 4), -4, 'B₀（体の長い方向：足 → 頭）', !!P.bore && P.showBody && P.showLab);
-  place('boreW', BORE_R + 1, 6, 28, '筒の電線（電流が流れる）', !!P.bore && P.showBody && P.showLab);
+  const bl = !!P.bore && P.showBody && P.showLab && !RA.on;   // 検査室から近づいている間は出さない
+  place('boreB0', 30, -42, -70, 'B₀（体の長い方向：足 → 頭）', bl);
+  place('boreW', 0, BORE_R + 2, 70, '筒の電線（電流が流れる）', bl);
+  const ra = !!P.bore && P.showBody && P.showLab && RA.on && ROOM.a > 0.6;
+  place('rmMri', 0, 178, -172, 'MRI 装置', ra);
+  place('rmBed', 0, -20, -500, '寝台', ra);
 }
 
 /* ================= グラフ ================= */
@@ -3408,10 +3489,10 @@ const later = (fn, ms) => { learnTm.push(setTimeout(fn, ms)); };
 
 /* 地図の手：受信コイルの場面で「倒す → 回る → コイルが光る」を再生し、地図の3段を同時に光らせる */
 function mapLit(i) { document.querySelectorAll('#tutText .tmap .z').forEach((e, k) => e.classList.toggle('on', k === i)); }
-function mapPlay() {
-  calm(); mapLit(0); manualPulse(90, 'x', 2.2);
+function mapPlay() {   // ①が光ると同時にパルス、②で M が回り、③が光った瞬間にコイルが受信を始めて光る
+  calm(); coilRx = false; mapLit(0); manualPulse(90, 'x', 2.2);
   later(() => mapLit(1), 2500);
-  later(() => mapLit(2), 5200);
+  later(() => { mapLit(2); coilRx = true; }, 5200);
 }
 
 /* ---------- 井戸とバケツ（コントラストの章）----------
@@ -3517,9 +3598,10 @@ L({ nm:'MRI の全体の地図', hint:'「流れを通して見る」を押す�
          '<span class="z"><span class="zl">③</span><span class="zt">[[coil:受信コイル]]に電流（信号）が流れる</span></span>' +
        '</span>' }),
 
-L({ nm:'静磁場 B₀ の向き', hint:'電線を巻いて電流を流すと磁石になる「電磁石」と同じです。濃い矢印の向きが B₀ です。', zone:[0], tg:'体の長い方向 ＝ 画面の上', sel:'#stage',
+L({ nm:'静磁場 B₀ の向き', hint:'電線を巻いて電流を流すと磁石になる「電磁石」と同じです。濃い矢印の向きが B₀ です。実物では人は寝ているので B₀ は水平ですが、このアプリでは B₀ を上にして描きます。', zone:[0], tg:'体の長い方向 ＝ 画面の上', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, bore:true, showComp:false, tissue:'wm' },
-  on:() => { calm(); },
+  on:() => { calm(); roomHold(); },
+  act:{ label:'検査室から近づく', fn:() => roomPlay() },
   text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。<br>画面では、この向きを「上」として描きます。' }),
 
 L({ nm:'静磁場の中のプロトン', hint:'方位磁石の針が北を向こうとするのと似ています。ただ、熱で揺さぶられるので、上向きはほんの少し多いだけです。', zone:[1], tg:'足し合わせると M', sel:'#stage',
@@ -4266,6 +4348,7 @@ function setMode(m) {
     const wasBore = !!P.bore;
     const wasGrid = !!P.grid;
     P.slab = false; P.onlyM = false; P.bore = false; P.induct = false; P.grid = false;   // 学習の手だけの表示（層の絵・共鳴・筒・磁石・断面のマス）は持ち越さない
+    roomStop();
     if (wasSlab || wasBore || wasGrid) homeCam();
     refresh(true);
   }
@@ -4856,6 +4939,7 @@ function tutShow() {
   tutActI = 0;
   if (st.set) {
     learnTm.forEach(clearTimeout); learnTm = []; R.nut = null; qMerge = -1;   // 前の手のパルスの続きや予約を持ち越さない
+    roomStop(); coilRx = true;
     applySet(Object.assign({ coil:false, nameOnly:false, showComp:true, onlyM:false, slab:false, bore:false, induct:false, grid:false, cmp:null, region:'head', mip:0, mipRot:0 }, st.set), true);
     P.tag = st.tag || {};                        // この手だけで画面に出すラベル（カードに出てくる言葉を、画面にも出す）
     layoutImg();   // コイルは出したい手だけ coil:true で出す
@@ -4924,6 +5008,7 @@ function tutBack() { if (tutI > 0) { tutI--; tutShow(); } }
 function tutEnd() {
   if (tutWaiting) { tutWaiting.el.removeEventListener('click', tutWaiting.fn); tutWaiting = null; }
   tutI = -1; tutEl.hidden = true; document.body.classList.remove('tutOn', 'tutPanel');
+  coilRx = true; if (RA.on) RA.t0 = performance.now() - 7000;   // 途中でやめたら、受信は戻し、検査室からの動きは最後まで飛ばす
   P.tag = {}; cmpBarSync(); layoutImg();
   const f = tutAfter; tutAfter = null;
   if (f) f();
