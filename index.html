@@ -895,7 +895,7 @@ body.markOn .mk.smk{display:block}
 .tw.b0{color:#40566A}
 .tw.coil{color:#5E7386}
 .tw.flux{color:#7E57C9}
-.tw.wire{color:#5E7386} .tw.ang,.tw.echo{color:#11788F} .tw.fan{color:#5E7386} .tw.frame,.tw.relw,.tw.thick{color:#11788F} .tw.water,.tw.duct,.tw.bile{color:#11788F}
+.tw.wire{color:#5E7386} .tw.ang,.tw.echo{color:#11788F} .tw.fan{color:#5E7386} .tw.frame,.tw.relw,.tw.thick{color:#11788F} .tw.water,.tw.duct,.tw.bile{color:#11788F} .tw.cur{color:#2F4C5D}
 .ttext b .tw{background:var(--panel)}
 .lab.flash{box-shadow:0 0 0 3px rgba(17,120,143,.5); font-weight:700}
 /* アプリ全体を大きくしたのに合わせて、学習タブの一覧・説明も1段上げる */
@@ -2233,6 +2233,27 @@ const coilMat = new THREE.MeshPhongMaterial({ color:0xA9BCCB, shininess:40, emis
 }
 /* 輪を貫いている分＝Mxy の y 成分。y 軸にのせて描くので「横磁化のうち、どれだけが輪を貫く向きか」が見える */
 const fluxArrow = mkArrow(0xB08BE0, 0.105, 0.34, 0.85, 0.98); coilGrp.add(fluxArrow.grp);
+/* 電流の向き（電磁石の手）：輪の上を電流の向きに進む小さな矢印（円錐）。電流を逆にすると向きも進み方も逆になる。
+   輪は x-z 面にあり、+y の向きに磁場ができるのは、+y から見て反時計回り（y 軸まわりの正の回転）に流れるとき（右ねじの法則） */
+const CUR_N = 8, curCones = [];
+const curMat = new THREE.MeshPhongMaterial({ color:0x2F4C5D, shininess:30, emissive:new THREE.Color(0x2F4C5D).multiplyScalar(0.25) });
+for (let k = 0; k < CUR_N; k++) {
+  const c = new THREE.Mesh(new THREE.ConeGeometry(0.46, 1.25, 16), curMat); c.visible = false;
+  coilGrp.add(c); curCones.push(c);
+}
+let curPhase = 0;
+const _cq = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+function curUpdate(dt, I) {   // I：電流（−1〜1）。0 なら矢印を出さない
+  const on = Math.abs(I) > 0.04;
+  curPhase += dt * 0.9 * I;
+  curCones.forEach((c, k) => {
+    c.visible = on; if (!on) return;
+    const f = curPhase + k * 2 * Math.PI / CUR_N, sg = I >= 0 ? 1 : -1;
+    c.position.set(COILR * Math.cos(f), 0, -COILR * Math.sin(f));
+    _cq.set(-Math.sin(f) * sg, 0, -Math.cos(f) * sg);                     // 輪にそった進む向き
+    c.quaternion.setFromUnitVectors(_up, _cq);
+  });
+}
 const projPos = new Float32Array(6);
 const projGeo = new THREE.BufferGeometry();
 projGeo.setAttribute('position', new THREE.BufferAttribute(projPos, 3));
@@ -2694,6 +2715,9 @@ function homeCam() {
   if (P.slab) {                                 // 層の積み重ねを正面（-y 側）から少し見下ろす：右が周波数
     ctrl.th = -Math.PI / 2; ctrl.phi = 1.36; ctrl.want = smallScr ? 40 : 34; applyCam(); return;
   }
+  if (P.emag) {                                 // 電磁石：輪を斜め上から見て、電流が輪をどちら回りに流れるかが見えるようにする
+    ctrl.th = -1.2; ctrl.phi = 1.0; ctrl.want = smallScr ? 34 : 28; applyCam(); return;
+  }
   if (P.bore && P.showBody) {                   // 筒ごと真横から見る（筒は実物に近い大きさ）
     ctrl.th = 0; ctrl.phi = 1.38; ctrl.want = smallScr ? 380 : 260; applyCam(); return;
   }
@@ -2789,7 +2813,7 @@ function mkLab(key, cls) {
 ['z', 'x', 'y'].forEach(k => mkLab(k, 'axis'));
 mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
 mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
-mkLab('coil', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
+mkLab('coil', 'axis'); mkLab('cur', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
 mkLab('rmMri', 'axis'); mkLab('rmBed', 'axis');
 mkLab('cmp0', 'm'); mkLab('cmp1', 'm'); mkLab('cmp2', 'm');
 mkLab('ang', 'm'); mkLab('fan', 'axis'); mkLab('echo', 'm'); mkLab('fBrain', 'axis'); mkLab('fVox', 'm'); mkLab('slThick', 'rf');
@@ -2817,8 +2841,8 @@ let labPhase = 0, echoFlash = 0;
 P.tag = {};
 /* ---- 用語と画面の物を結びつける：カードの用語札（[[キー:言葉]]）を押すと、その物の色とラベルが静かに明るくなる（大きさは変えない） */
 const WFL = {};
-const WKEYS = ['m', 'm0', 'mxy', 'spins', 'rf', 'b0', 'flux', 'mag', 'h', 'coil', 'band', 'wire', 'ang', 'fan', 'echo', 'thick'];
-const WLAB = { m:['m', 'fVox'], m0:['m0'], mxy:['mxy'], rf:['b1'], b0:['z', 'boreB0'], coil:['coil'], flux:['flux'], mag:['mag'], band:['slBand'],
+const WKEYS = ['m', 'm0', 'mxy', 'spins', 'rf', 'b0', 'flux', 'cur', 'mag', 'h', 'coil', 'band', 'wire', 'ang', 'fan', 'echo', 'thick'];
+const WLAB = { m:['m', 'fVox'], m0:['m0'], mxy:['mxy'], rf:['b1'], b0:['z', 'boreB0'], coil:['coil'], flux:['flux'], cur:['cur'], mag:['mag'], band:['slBand'],
   wire:['boreW'], ang:['ang'], fan:['fan'], echo:['echo'], thick:['slThick'] };
 const WDOM = { frame:'#frameSeg', relw:'#relW', water:'#mkW', duct:'#mkB, #mkP', bile:'#mkG' };   // 画面の部品（ボタンや印）を光らせる
 function wFlash(k) {
@@ -2837,6 +2861,7 @@ function wTargets(k) {
     case 'rf': return [b1Arrow.grp];
     case 'b0': return boreB0.map(a => a.grp).concat(B0AX ? [B0AX.grp] : []);
     case 'flux': return [fluxArrow.grp];
+    case 'cur': return curCones;
     case 'mag': return [magArrow.grp];
     case 'h': return cons.map(a => a.grp);
   }
@@ -2929,10 +2954,12 @@ function updateScene(dt) {
   projLine.visible = !P.induct && !P.emag && coilRx && !(P.tag && P.tag.noFlux);
   if (coilGrp.visible && P.emag) {                      // 電磁石：電流を流すと、輪を通る向きに磁場ができる
     EM.I += Math.sign(EM.IT - EM.I) * Math.min(Math.abs(EM.IT - EM.I), 1.4 * dt);
+    curUpdate(dt, EM.I);
     setArrow(fluxArrow, 0, EM.I >= 0 ? 1 : -1, 0, Math.abs(EM.I) * ML * 1.3);
     const v = Math.abs(EM.I);
     coilMat.emissive.setRGB(0.12 + 0.50 * v, 0.07 + 0.18 * v, 0.20 + 0.62 * v);
   } else if (coilGrp.visible && P.induct) {             // 電磁誘導：磁石を近づける・遠ざける
+    curUpdate(0, 0);
     const st = Math.sign(IND.yT - IND.y) * Math.min(Math.abs(IND.yT - IND.y), 4.0 * dt);   // 4 単位／秒でゆっくり動かす
     IND.y += st; IND.dir = Math.abs(st) > 1e-6 ? Math.sign(st) : 0;
     const f = indPhi(IND.y);
@@ -3121,6 +3148,8 @@ function updateScene(dt) {
     const on = Math.abs(EM.I) > 0.04;
     place('coil', COILR * 0.86, 0, COILR * 0.56, on ? (EM.I > 0 ? '電線：<b>電流が流れている</b>' : '電線：<b>電流が逆向きに流れている</b>') : '電線：電流は流れていない', P.showLab);
     place('flux', -0.3, EM.I * ML * 1.4, -2.3, '<i>電流が作る磁場</i>', P.showLab && on);
+    const cf = curPhase + 2 * Math.PI * 0.5 / CUR_N + Math.PI * 0.25;      // 「電流の向き」の文字は、輪の手前あたりの矢印の近くに
+    place('cur', COILR * 1.12 * Math.cos(cf), 0.9, -COILR * 1.12 * Math.sin(cf), '電流の向き', P.showLab && on);
     place('mag', 0, 0, 0, '', false);
   } else if (coilGrp.visible && P.induct) {
     const flow = Math.abs(IND.dphi) > 0.02;
@@ -3134,6 +3163,7 @@ function updateScene(dt) {
     place('coil', COILR * 0.98, 0, -COILR * 0.2, !coilRx ? '受信コイル' : Math.hypot(m[0], m[1]) > 0.08 ? '受信コイル：<b>電流（信号）が流れる</b>' : '受信コイル：電流は流れない', P.showLab);
     place('flux', -0.3, _m.y * ML * 1.08, -2.3, '<i>輪を通る分</i><b>' + _m.y.toFixed(2) + '</b>', P.showLab && coilRx && !(P.tag && P.tag.noFlux));
   } else { place('coil', 0, 0, 0, '', false); place('flux', 0, 0, 0, '', false); place('mag', 0, 0, 0, '', false); }
+  if (!(coilGrp.visible && P.emag)) { place('cur', 0, 0, 0, '', false); curCones.forEach(c => { c.visible = false; }); }
   place('vox', voxel.position.x, voxel.position.y, voxel.position.z + 3.6, 'このボクセルを見ている', P.showLab && P.showBody && ctrl.dist > 40 && !far);
   for (const t of tisArr) {
     const n = bankM(BANKS[BANK_IDS.indexOf(t.id)]), w = t.hold.position;
@@ -3720,7 +3750,7 @@ L({ nm:'RFパルスで倒す', hint:'回るメリーゴーランドに乗って�
   act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
   text:'[[m:M]] と一緒に回る目線（回転座標系）で見ると、M はまっすぐ倒れます。<br>[[ang:倒れた角度]]は、[[rf:RFパルス]]の強さ × 当てる時間で決まります。' }),
 
-L({ nm:'電流が磁場を作る（電磁石）', hint:'MRI の筒の中の強い磁場（B₀）も、水素を倒す RF パルスも、場所を決める傾斜磁場も、すべて電線に流す電流で作ります。', tg:'電流 → 磁場', sel:'#stage',
+L({ nm:'電流が磁場を作る（電磁石）', hint:'電流の向きに右ねじを回すと、ねじの進む向きが磁場の向きです（右ねじの法則）。MRI の強い磁場（B₀）も、RF パルスも、傾斜磁場も、電線に流す電流で作ります。', tg:'電流 → 磁場', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, emag:true, showComp:false, tissue:'csf', T2p:Infinity },
   tag:{ noKey:true },
   on:() => { calm(); EM.I = EM.IT = 0; },
@@ -3729,7 +3759,7 @@ L({ nm:'電流が磁場を作る（電磁石）', hint:'MRI の筒の中の強�
     { label:'電流を逆向きに流す', fn:() => { EM.IT = -1; } },
     { label:'電流を止める', fn:() => { EM.IT = 0; } },
   ],
-  text:'輪の電線に<b>電流を流すと</b>、輪を通る向きに[[flux:磁場]]ができます（電磁石）。<br>電流の向きを変えると、磁場の向きも逆になります。' }),
+  text:'輪の電線に[[cur:電流]]を流すと、輪を通る向きに[[flux:磁場]]ができます。<br>電流の向きを逆にすると、<b>磁場の向きも逆</b>になります（電磁石）。' }),
 
 L({ nm:'歳差運動：首を振って回る', hint:'傾けたコマが倒れずに首を振るのと同じ動きです。実際の水素は 1.5 T で1秒に約6400万回まわります。画面ではとても遅くしています。', tg:'磁場が強いほど速く回る', sel:'#stage',
   tag:{ m:() => '水素の磁石（1周 ' + (2 * Math.PI / (0.85 * P.spd * P.B0 / 1.5)).toFixed(1) + ' 秒）', zname:'磁場の向き（{B} T）', noKey:true },
