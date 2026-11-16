@@ -3692,7 +3692,7 @@ L({ nm:'共鳴：リズムが合うと倒れる', hint:'ブランコは、揺れ
     { label:'同じ速さの電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0); }, dur:6000 },
     { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
   ],
-  text:'[[m:M]] と<b>同じ速さで回る</b> [[rf:RFパルス（電波）]]だけが、M を倒せます。速さがずれると、少し揺れるだけです。' +
+  text:'[[m:M]] と<b>同じ速さで回る</b>[[rf:RFパルス]]だけが、M を倒せます。<br>速さがずれると、少し揺れるだけです。' +
        '<span class="eq">共鳴周波数 f ＝ 42.58 MHz × B₀〔T〕（1.5 T で約 64 MHz）</span>' }),
 
 L({ nm:'RFパルスで倒す', hint:'回るメリーゴーランドに乗って見ると、となりの馬は止まって見えます。回転座標系は、それと同じ見方です。', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × 時間', sel:'#stage',
@@ -3718,7 +3718,7 @@ L({ nm:'歳差運動：首を振って回る', hint:'傾けたコマが倒れず
   on:() => { calm(); pulse(35, 'x'); },
   act:{ label:'磁場を 1.5 → 3.0 T に強くする', fn:() => { P.B0 = 3; precB0 = true; }, dur:8000 },
   autoAt:8000,   // はじめに 1.5 T で1周するのを見てから強くする
-  text:'磁場の中の[[m:水素の磁石]]は、磁場の向きのまわりを<b>首を振って回ります</b>（歳差運動）。<br>磁場を 1.5 T から 3.0 T に強くすると、<b>1周の時間が半分</b>になります。' }),
+  text:'磁場の中の[[m:水素の磁石]]は、<b>首を振って回ります</b>（歳差運動）。<br>磁場を 3.0 T に強くすると、<b>1周の時間が半分</b>になります。' }),
 
 L({ nm:'電磁誘導：変化が電気を生む', hint:'自転車のライトの発電機と同じです。磁石が動いている間だけライトがつき、止まると消えます。', zone:[2], tg:'磁場が変わると電流', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, induct:true, showComp:false, tissue:'csf', T2p:Infinity },
@@ -3727,7 +3727,7 @@ L({ nm:'電磁誘導：変化が電気を生む', hint:'自転車のライトの
     { label:'磁石を近づける', fn:() => { IND.yT = -5; } },
     { label:'磁石を遠ざける', fn:() => { IND.yT = -12; } },
   ],
-  text:'[[mag:磁石]]を動かすと、輪を通る磁場（[[flux:紫の矢印]]）が変わり、<b>動いている間だけ</b>電流が流れます。<br>これを電磁誘導といいます。' }),
+  text:'[[mag:磁石]]を動かすと、[[flux:輪を通る磁場]]が変わります。<br><b>変わっている間だけ</b>電流が流れます（電磁誘導）。' }),
 
 L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石からは電気は起きません。M を横に倒して回すと、M が回る磁石（発電機）になります。', zone:[2], tg:'これが MRI の信号', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
@@ -3818,7 +3818,7 @@ L({ nm:'GRE：180° を使わない', hint:'②の図から 180° のパルス�
 L({ nm:'IR：狙った組織を消す', hint:'③の上のグラフで、線がいったん下（マイナス）から始まります。0 を横切る瞬間に倒した組織は、信号が出ません。', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
   act:{ label:'TI を 180 ms にする（STIR）', fn:() => applySet(pre('stir'), true) },
-  text:'先に 180° で反転させ、縦の M が <b>0 になる瞬間（TI）</b>に倒すと、その組織が消えます。<br>脂肪を消すのが [[relw:STIR]] です。' }),
+  text:'180° で反転させ、縦の M が <b>0 の瞬間（TI）</b>に倒すと、<br>その組織が消えます。脂肪を消すのが [[relw:STIR]] です。' }),
 
 L({ nm:'やってみよう：TI で脂肪を消す', hint:'脂肪の縦の M が 0 を通る時刻に倒すと、脂肪の信号が出ません。TI を小さい方から少しずつ動かしてみてください。', tg:'TI を自分で合わせる', sel:'#imgbox',
   tag:{ big:true },
@@ -3970,7 +3970,7 @@ L({ nm:'位相エンコード：縦は角度のずれで', hint:'時計の針を
     { label:'上下に一瞬だけ傾斜をかける', fn:() => { gridInit(); gridPhase(1); } },
     { label:'強さを変えて、もう一度', fn:() => { gridInit(); gridPhase(2); } },
   ],
-  text:'読む前に一瞬だけ上下の傾斜をかけると、<b>行ごとに</b> [[m:M]] の角度がずれて残ります。<br>強さを変えて行の数だけくり返すので、時間がかかります。' }),
+  text:'読む前に一瞬、上下の傾斜をかけると、<br><b>行ごとに</b> [[m:M]] の角度がずれて残ります。' }),
 
 L({ nm:'k 空間：集めたデータの表', hint:'k 空間は、画像を作るための「材料表」です。中心だけ残すとぼやけ、外側だけ残すと輪郭だけになります。', zone:[2], tg:'中心＝明暗、外側＝輪郭', map:true,
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
@@ -3980,7 +3980,7 @@ L({ nm:'k 空間：集めたデータの表', hint:'k 空間は、画像を作�
     { label:'外側だけ残す', fn:() => kShow('o') },
     { label:'ぜんぶ使う', fn:() => kShow('all') },
   ],
-  text:'集めた信号の表が <b>k 空間</b>です。フーリエ変換すると画像になります。' +
+  text:'集めた信号の表（<b>k 空間</b>）を計算すると、画像になります。' +
        '<span class="kpair"><span><canvas id="kCv" width="256" height="256" style="width:150px"></canvas>k 空間</span>' +
        '<span><canvas id="kImg" width="176" height="208" style="width:127px"></canvas>画像</span></span>' +
        '表の<b>中心は明暗、外側は輪郭</b>を決めています。' })
@@ -3999,7 +3999,7 @@ L({ nm:'T1強調と T2強調を撮り比べる', hint:'左の1枚目（T1強調�
     applySet(pre('t2'), true); $('bShot').click();
     if (shots.length > 1) { const t = shots[0]; shots[0] = shots[1]; shots[1] = t; renderStrip(); }
   },
-  text:'同じ脳を、撮り方だけ変えて1枚ずつ撮ります。T1強調では[[water:水]]が<b>黒</b>、T2強調では<b>白</b>に写ります。<br>この理由を、第5章までで順に見ていきます。' }),
+  text:'同じ脳でも、T1強調では[[water:水]]が<b>黒</b>、T2強調では<b>白</b>に写ります。<br>この理由を、第5章までで順に見ていきます。' }),
 L({ nm:'水の白黒が逆になる理由', hint:'T1強調では上のグラフ①、T2強調では下のグラフ②で、脳脊髄液の線の高さをほかの線と比べてください。', tg:'序章の答え', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
   acts:[
@@ -4011,7 +4011,7 @@ L({ nm:'1枚の画像ができるまで', hint:'②の図の「位相エンコ�
   tag:{ pe:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
   act:{ label:'1回分を最初から再生する', fn:() => { P.paused = false; $('bStep').click(); } },
-  text:'「90° で倒す → 読む」を、位相エンコードを変えながら<b>行の数だけくり返す</b>と1枚になります。' +
+  text:'「倒す → 読む」を、位相エンコードを変えて<br><b>行の数だけくり返す</b>と、1枚になります。' +
        '<span class="eq">撮像時間 ＝ TR × 位相エンコード数 × 加算回数</span>' }),
 ];
 
