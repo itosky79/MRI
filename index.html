@@ -12,8 +12,9 @@ document.documentElement.dataset.theme = 'light';
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link id="webfont" rel="stylesheet" media="print"
-      href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+      href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDGothic:wght@400;700&display=swap">
 <script>addEventListener('load', function () { var w = document.getElementById('webfont'); if (w) w.media = 'all'; });</script>
+<style>body{font-variant-numeric:tabular-nums}</style>
 <style>
 :root{
   color-scheme: dark;
@@ -50,9 +51,11 @@ document.documentElement.dataset.theme = 'light';
   --swLine:rgba(255,255,255,.22);
   --shadow:rgba(0,0,0,.6); --shadow2:rgba(0,0,0,.72); --shadow3:rgba(0,0,0,.75); --shadow4:rgba(0,0,0,.95);
   --modal:rgba(4,7,10,.82); --modal2:rgba(4,7,10,.93); --glerr:rgba(10,15,20,.95); --tutMask:rgba(4,7,10,.72);
-  --mincho:"Zen Maru Gothic",'Hiragino Maru Gothic ProN','Yu Gothic',system-ui,sans-serif;
-  --gothic:"Zen Kaku Gothic New",'Hiragino Sans','Yu Gothic',system-ui,sans-serif;
-  --mono:"IBM Plex Mono","Zen Kaku Gothic New",'Hiragino Sans','Yu Gothic',ui-monospace,monospace;   /* 日本語は等幅の全角フォントに落とさない */
+  /* 文字はすべて、読みやすさ・見分けやすさを考えて作られたユニバーサルデザインフォント（BIZ UDPゴシック）にする。
+     数字や値（TR 500 など）は字の幅がそろう BIZ UDゴシック。読めないときは端末の読みやすいゴシック（BIZ UD・ヒラギノ・Noto）へ */
+  --mincho:"BIZ UDPGothic","BIZ UDPゴシック",'Hiragino Sans','Noto Sans JP','Yu Gothic UI',system-ui,sans-serif;
+  --gothic:"BIZ UDPGothic","BIZ UDPゴシック",'Hiragino Sans','Noto Sans JP','Yu Gothic UI',system-ui,sans-serif;
+  --mono:"BIZ UDGothic","BIZ UDゴシック","BIZ UDPGothic",'Hiragino Sans','Noto Sans JP',ui-monospace,monospace;
   --r:14px;
   /* iOS から取り入れたもの：セグメントの溝とつまみ、面の影、オレンジの上の文字 */
   --fill:rgba(143,165,182,.14); --thumb:#2A3C4B; --cardShadow:none; --onAmber:#1A1205;
@@ -3181,7 +3184,7 @@ function readColors() {
    'gap', 'tagbg', 'env', 'rfDim', 'axisT', 'inputLine'].forEach(k => { C[k] = g('--' + k); });
   C.mut = C.muted;
   /* グラフの字。数字は等幅のまま、日本語は等幅の全角フォントに落ちると字間が空いて読みにくいので、ふつうのゴシックへ回す */
-  MONO = '13.5px "IBM Plex Mono","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
+  MONO = '13.5px "BIZ UDGothic","BIZ UDPGothic","Hiragino Sans","Noto Sans JP",sans-serif';
 }
 let MONO = '';
 readColors();
@@ -5293,6 +5296,8 @@ applySet(Object.assign({ manual:false, quantum:false }, PRE[0].s), true);
 refresh(false);
 resize();
 homeCam(); ctrl.dist = ctrl.want; applyCam();   // 起動時は寄っていく動きなしで脳全体を見せる
+/* 文字のフォントが読み込み終わったら、図（キャンバス）の文字を描き直す */
+if (document.fonts) document.fonts.addEventListener('loadingdone', () => { try { refresh(); } catch (e) { } });
 renderStrip();
 requestAnimationFrame(loop);
 })();
