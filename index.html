@@ -2480,19 +2480,25 @@ function slabUpdate(dt) {
 /* ---- 熱平衡のようす（量子的な描き方）: ±z のコーンの上を歳差する ---- */
 const conGrp = new THREE.Group(); scene.add(conGrp); conGrp.visible = false;
 /* 熱平衡の水素（上向き＝平行、下向き＝反平行）。
-   本数と長さは、「余った上向きの分を縦に積むと、ちょうど M（長さ ML）になる」ように決めてある：
+   本数と長さは、「余った上向きの分を足すと、ちょうど M（長さ ML）になる」ように決めてある：
    余り 6 本 × 長さ CONE_L × cos54.7° ＝ 6 × 1.5 × 0.578 ≒ 5.2 ＝ ML。
-   本当の差は 100 万個に 5 個ほどなので、差は見えるように大きく描いている（学習カードでもそう断る） */
+   本当の差は 100 万個に 5 個ほどなので、差は見えるように大きく描いている（学習カードでもそう断る）。
+   横の向き（歳差の位相）は、全部を足すと横の成分がちょうど 0 になるように決める：
+   上向き 13 本と下向き 13 本は、真逆の向きの組（足すと 0）。余った上向き 6 本は 60° ずつずらす（横の成分の和が 0）。
+   ばらばら（でたらめ）にすると、32 本では横の成分が打ち消し合わず、足してもまっすぐ上の M にならない */
 const CONE_UP = 19, CONE_DN = 13, CONE_L = 1.5, CONE_TH = 54.7 * Math.PI / 180;
 const CONE_H = CONE_L * Math.cos(CONE_TH);       // 1本の縦の長さ
 const cons = [];
 (function () {
   const up = CONE_UP, dn = CONE_DN;
+  const ph0 = [];
+  for (let i = 0; i < dn; i++) ph0.push(i * 2 * Math.PI / dn + 0.3);    // 組になる上向き
+  for (let k = 0; k < up - dn; k++) ph0.push(k * 2 * Math.PI / (up - dn)); // 余った上向き：60° ずつ
   for (let i = 0; i < up + dn; i++) {
     const par = i < up;
     const a = mkArrow(par ? 0x8FC8D8 : 0xB07A7A, 0.030, 0.12, 0.40, 1);
     tint(a, par ? 'conePar' : 'coneAnti');
-    a.par = par; a.ph = Math.random() * Math.PI * 2;
+    a.par = par; a.ph = par ? ph0[i] : ph0[i - up] + Math.PI;            // 下向きは、組の上向きの真逆
     a.rx = (Math.random() - .5) * 4.6; a.ry = (Math.random() - .5) * 4.6; a.rz = (Math.random() - .5) * 5.0;
     conGrp.add(a.grp); cons.push(a);
   }
@@ -2921,7 +2927,8 @@ function updateScene(dt) {
   if (P.quantum) {
     /* 「全部を足し合わせる」を3段で見せる（qMerge 0→1、約4秒）
        A：下向き1本と上向き1本がペアになって打ち消し合い、消える（13 組）
-       B：残った上向き6本が、z 軸の上に縦に積み重なる（縦の長さの合計 ＝ ML）
+       B：残った上向き6本が、矢印の先に次の矢印の根元をつなぐ形（ベクトルの足し算）で並ぶ。横の向きは 60° ずつなので、
+          らせん状につながった先が z 軸の上の高さ ML（＝ M の先）にちょうど来る
        C：積み上がった高さが、そのまま M になる（薄い M₀ が濃くなる） */
     if (qMerge >= 0) qMerge = Math.min(1, qMerge + dt / 4.2);
     const sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
@@ -2929,6 +2936,7 @@ function updateScene(dt) {
     const pA = sm(u / 0.38), pB = sm((u - 0.42) / 0.36), pC = sm((u - 0.82) / 0.18);
     const s = Math.sin(CONE_TH), cz = Math.cos(CONE_TH);
     let iUp = 0, iDn = 0;
+    const chain = [0, 0, 0];                              // つないでいる途中の先の位置
     for (const a of cons) {
       a.ph += dt * (P.paused ? 0 : 1.9);
       setArrow(a, Math.cos(a.ph) * s, Math.sin(a.ph) * s, a.par ? cz : -cz, CONE_L);
@@ -2938,9 +2946,10 @@ function updateScene(dt) {
         a.mat.opacity = 1 - pA;
       } else if (iUp < CONE_DN) {                          // ペアになった上向き：その場で消える
         a.grp.position.set(a.rx, a.ry, a.rz); a.mat.opacity = 1 - pA; iUp++;
-      } else {                                             // 余った上向き：縦に積む
-        const e = iUp++ - CONE_DN;
-        a.grp.position.set(a.rx * (1 - pB), a.ry * (1 - pB), a.rz + (e * CONE_H - a.rz) * pB);
+      } else {                                             // 余った上向き：前の矢印の先につなぐ
+        iUp++;
+        a.grp.position.set(a.rx + (chain[0] - a.rx) * pB, a.ry + (chain[1] - a.ry) * pB, a.rz + (chain[2] - a.rz) * pB);
+        chain[0] += Math.cos(a.ph) * s * CONE_L; chain[1] += Math.sin(a.ph) * s * CONE_L; chain[2] += cz * CONE_L;
         a.mat.opacity = 1 - pC;
       }
     }
@@ -3071,7 +3080,7 @@ function updateScene(dt) {
     place('slBand', SLOFF + slBand.position.x, 0, SLZ + top + 1.7, '電波の周波数の範囲', sl);
   }
   place('m0', 1.6, 0, ML * 0.78,
-    qStage === 1 ? '上と下が1本ずつ打ち消し合う' : qStage === 2 ? '残った ' + (CONE_UP - CONE_DN) + ' 本を縦に積む' : 'M₀（余った分を全部足したもの）',
+    qStage === 1 ? '上と下が1本ずつ打ち消し合う' : qStage === 2 ? '残った ' + (CONE_UP - CONE_DN) + ' 本を、先と根元をつないで足す' : 'M₀（余った分を全部足したもの）',
     P.showLab && P.quantum);
   if (coilGrp.visible && P.induct) {
     const flow = Math.abs(IND.dphi) > 0.02;
