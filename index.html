@@ -870,8 +870,10 @@ details.fold summary{font-size:14.5px}
 .mk.mkl{background:rgba(190,59,48,.92); transform:translate(-50%,45%)}   /* 病変は点の下に出して、水の印と重ならないように */
 .mk.mkl::after{top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(190,59,48,.92)}
 .strip figure{position:relative}
+body.bigStrip .strip figure, body.bigStrip .strip img{width:min(190px, 40vw)}   /* 撮り比べの手：2枚を大きく並べる */
+body.bigStrip .strip img{height:auto; aspect-ratio:176 / 208}
 .mk.smk{font-size:12.5px}
-body.tutOn #viewSeg, body.tutOn #scaleSeg, body.tutOn #frameSeg{display:none}   /* 学習の案内の間は、表示の切り替えボタンを出さない（手ごとに自動で切り替える） */
+body.tutOn #viewSeg, body.tutOn #scaleSeg, body.tutOn #frameSeg, body.tutOn #bShot, body.tutOn .stage .playbar{display:none}   /* 学習の案内の間は、表示の切り替えボタンを出さない（手ごとに自動で切り替える） */
 body.noKey p.key, body.tutOn p.key{display:none}   /* 学習の案内の間は凡例を出さない（色の意味はカードの札と画面のラベルで言う） */
 body.noBand .kband{display:none}
 body.imgBig #gl, body.imgBig #labels, body.imgBig .stage .key, body.imgBig .stage .playbar{visibility:hidden}
@@ -3984,18 +3986,16 @@ L({ nm:'k 空間：集めたデータの表', hint:'k 空間は、画像を作�
 /* ---------- 章立てのために足した手（序章・第6章の答え合わせ・終章） ---------- */
 const EXTRA = [
 L({ nm:'T1強調と T2強調を撮り比べる', hint:'左の1枚目（T1強調）と右の2枚目（T2強調）で、「水」の印のところを比べてください。黒と白が入れ替わっています。', tg:'水の白黒が逆になる', sel:'#strip',
-  tag:{ mark:true },
+  tag:{ mark:true, bigStrip:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
-  on:() => { shots = []; renderStrip(); },   // くり返すたびに、撮った画像の帯を空にしてから撮る
-  /* 1枚ずつ自分で撮る（2枚を続けて自動で撮ると、2枚目がいつ出たのか分かりにくかった）。
-     「撮影した画像」の帯は新しいものが左に並ぶので、2枚目を撮ったら入れ替えて、文と同じ「左が T1強調・右が T2強調」にする */
-  acts:[
-    { label:'① T1強調で撮る', fn:() => { applySet(pre('t1'), true); $('bShot').click(); } },
-    { label:'② T2強調で撮る', fn:() => {
-      applySet(pre('t2'), true); $('bShot').click();
-      if (shots.length > 1) { const t = shots[0]; shots[0] = shots[1]; shots[1] = t; renderStrip(); }
-    } },
-  ],
+  /* 手を開いた瞬間に2枚とも並べる（1枚ずつ撮っていると、2枚目が出る前に文を読み終わってしまう）。
+     「撮影した画像」の帯は新しいものが左に並ぶので、2枚撮ったら入れ替えて、文と同じ「左が T1強調・右が T2強調」にする */
+  on:() => {
+    shots = [];
+    applySet(pre('t1'), true); $('bShot').click();
+    applySet(pre('t2'), true); $('bShot').click();
+    if (shots.length > 1) { const t = shots[0]; shots[0] = shots[1]; shots[1] = t; renderStrip(); }
+  },
   text:'同じ脳を、撮り方だけ変えて1枚ずつ撮ります。T1強調では[[water:水]]が<b>黒</b>、T2強調では<b>白</b>に写ります。<br>この理由を、第5章までで順に見ていきます。' }),
 L({ nm:'水の白黒が逆になる理由', hint:'T1強調では上のグラフ①、T2強調では下のグラフ②で、脳脊髄液の線の高さをほかの線と比べてください。', tg:'序章の答え', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
@@ -4326,7 +4326,8 @@ function layoutImg() {
   const big = !!(P.tag && P.tag.big);   // 画像が主役の手（MIP など）：3D をしまい、画像を大きく真ん中に出す
   document.body.classList.toggle('imgBig', big);
   document.body.classList.toggle('noKey', !!(P.tag && P.tag.noKey));
-  document.body.classList.toggle('noBand', !!(P.tag && P.tag.noBand));   // 基礎の手：まだ出てこない言葉（M・RF パルス）の凡例を出さない
+  document.body.classList.toggle('noBand', !!(P.tag && P.tag.noBand));
+  document.body.classList.toggle('bigStrip', !!(P.tag && P.tag.bigStrip));   // 基礎の手：まだ出てこない言葉（M・RF パルス）の凡例を出さない
   if (!big && (P.view === 0 || (smallScr && cmpActive()))) { imgbox.style.display = 'none'; return; }   // スマホで組織を比べているときは、矢印のために画像をしまう   // スマホで組織を並べているときは、並べた矢印のために画像をしまう
   imgbox.style.display = '';
   const cb = $('cmpBar'), top = smallScr && !cb.hidden ? cb.offsetTop + cb.offsetHeight + 8 : big ? $('stage').querySelector('.bar').offsetHeight + 10 : 46;   // スマホは組織ボタンの下に置く（重ならないように）
