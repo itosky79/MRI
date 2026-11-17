@@ -2877,7 +2877,7 @@ function mkLab(key, cls) {
 mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
 mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
 mkLab('coil', 'axis'); mkLab('cur', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
-mkLab('rmMri', 'axis'); mkLab('rmBed', 'axis');
+mkLab('hcone', 'm'); mkLab('rmMri', 'axis'); mkLab('rmBed', 'axis');
 mkLab('cmp0', 'm'); mkLab('cmp1', 'm'); mkLab('cmp2', 'm');
 mkLab('ang', 'm'); mkLab('fan', 'axis'); mkLab('echo', 'm'); mkLab('fBrain', 'axis'); mkLab('fVox', 'm'); mkLab('slThick', 'rf');
 mkLab('gL', 'axis'); mkLab('gR', 'axis'); mkLab('gT', 'axis'); mkLab('gB', 'axis'); mkLab('gOn', 'rf'); mkLab('mag', 'm'); mkLab('boreB0', 'axis'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
@@ -2905,7 +2905,7 @@ P.tag = {};
 /* ---- 用語と画面の物を結びつける：カードの用語札（[[キー:言葉]]）を押すと、その物の色とラベルが静かに明るくなる（大きさは変えない） */
 const WFL = {};
 const WKEYS = ['m', 'm0', 'mxy', 'spins', 'rf', 'b0', 'flux', 'cur', 'hyd', 'sig', 'mag', 'h', 'coil', 'band', 'wire', 'ang', 'fan', 'echo', 'thick'];
-const WLAB = { m:['m', 'fVox'], hyd:['m'], sig:['coil'], m0:['m0'], mxy:['mxy'], rf:['b1'], b0:['z', 'boreB0'], coil:['coil'], flux:['flux'], cur:['cur'], mag:['mag'], band:['slBand'],
+const WLAB = { m:['m', 'fVox'], hyd:['m'], h:['hcone'], sig:['coil'], m0:['m0'], mxy:['mxy'], rf:['b1'], b0:['z', 'boreB0'], coil:['coil'], flux:['flux'], cur:['cur'], mag:['mag'], band:['slBand'],
   wire:['boreW'], ang:['ang'], fan:['fan'], echo:['echo'], thick:['slThick'] };
 const WDOM = { frame:'#frameSeg', relw:'#relW', img:'#imgbox', water:'#mkW', duct:'#mkB, #mkP', bile:'#mkG' };   // 画面の部品（ボタンや印）を光らせる
 function wFlash(k) {
@@ -3077,7 +3077,7 @@ function updateScene(dt) {
       }
     }
     setArrow(m0Ghost, 0, 0, 1, ML);
-    m0Ghost.mat.opacity = 0.22 + 0.78 * pC;
+    m0Ghost.mat.opacity = P.tag && P.tag.noM0 ? 0 : 0.22 + 0.78 * pC;   // プロトンを紹介する手では、まだ M₀ を出さない
     qStage = qMerge < 0 ? 0 : (u < 0.42 ? 1 : u < 0.82 ? 2 : 3);
     if (qMerge >= 1) { qMerge = -1; qStage = 0; P.quantum = false; }   // 積み上がったら、ふつうの M の表示に切り替える
   }
@@ -3207,7 +3207,11 @@ function updateScene(dt) {
   }
   place('m0', 1.6, 0, ML * 0.78,
     qStage === 1 ? '上と下が1本ずつ打ち消し合う' : qStage === 2 ? '残った ' + (CONE_UP - CONE_DN) + ' 本を、先と根元をつないで足す' : 'M₀：余った分を全部足したもの',
-    P.showLab && P.quantum);
+    P.showLab && P.quantum && !(P.tag && P.tag.noM0));
+  {   // プロトンを紹介する手：1本の小さな矢印に名前を付ける
+    const c = cons[CONE_DN], hl = P.tag && P.tag.hlab;
+    place('hcone', c.grp.position.x + 0.3, c.grp.position.y, c.grp.position.z + 1.3, hl || '', P.showLab && P.quantum && !!hl);
+  }
   if (coilGrp.visible && P.emag) {
     const on = Math.abs(EM.I) > 0.04;
     place('coil', COILR * 0.86, 0, COILR * 0.56, on ? (EM.I > 0 ? '電線：<b>電流が流れている</b>' : '電線：<b>電流が逆向きに流れている</b>') : '電線：電流は流れていない', P.showLab);
@@ -3778,13 +3782,13 @@ L({ nm:'静磁場 B₀ の向き', hint:'電線を巻いて電流を流すと磁
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, bore:true, showComp:false, tissue:'wm' },
   on:() => { calm(); roomHold(); }, autoAt:2200,   // 検査室の全体を少し見てから近づく
   act:{ label:'検査室から近づく', fn:() => roomPlay(), dur:7000 },
-  text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。<br>画面では、この向きを「上」として描きます。' }),
+  text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。<br>これを静磁場といい、画面では上向きに描きます。' }),
 
-L({ nm:'静磁場の中のプロトン', hint:'MRI が水素を使うのは、体の大部分が水で、水素がいちばん多いからです。水素は方位磁石の針のように磁場の向きにそろおうとしますが、熱で揺さぶられるので、上向きはほんの少し多いだけです。', zone:[1], tg:'足し合わせると M', sel:'#stage',
-  tag:{ zname:'↑ B₀：MRI の強い磁場' },
+L({ nm:'静磁場の中のプロトン', hint:'上向きと下向きの差は、本当は100万個に5個ほどです。見えるように、ここでは差を大きく描いています。足し合わせた M が、このあとずっと主役になります。', zone:[1], tg:'足し合わせると M', sel:'#stage',
+  tag:{ zname:'↑ 磁場の向き', hlab:'プロトン' },
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
-  text:'[[h:水素の原子核]]は小さな磁石で、B₀ の中では上向きが少し多くなります。<br>全部足すと上と下が打ち消し合い、<b>余った上向きの分</b>が [[m:M]] になります。' }),
+  text:'[[h:プロトン]]は上向きが少し多く、全部足すと上と下が打ち消し合います。<br><b>余った上向きの分</b>が残り、これが磁化 [[m:M]] です。' }),
 
 L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの合計 M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
@@ -3794,23 +3798,24 @@ L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの
 L({ nm:'脳のどこにも M がある', hint:'矢印1本は、画像の1マス、ボクセルにある水素の合計です。水素が多い所ほど長くなります。信号はどのボクセルからもまとめて受信コイルに届くので、どこからの信号かを見分ける方法を、この章で見ていきます。', zone:[1], tg:'ボクセルごとに1本', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
   on:() => { calm(); },
-  text:'脳の<b>どのボクセルにも</b> [[m:M]] が1本ずつあり、すべて上を向いています。' }),
+  text:'画像の1マスがボクセル。脳の<b>どのボクセルにも</b> [[m:M]] が1本ずつあります。<br>信号はまとめて届くので、どこからか見分ける仕組みが要ります。' }),
 
 /* 共鳴：B₁ の速さが M と合えば倒れ、ずれれば少しぐらつくだけ。
    ずれの量は、パルスの終わりに M がちょうど真上へ戻る値にしている（M から見た実効磁場のまわりの回転がちょうど1周：
    √(90² + off²) = 360 → off ≈ 349°）。そのあいだ M は最大で約 29°しか倒れない */
-L({ nm:'共鳴：リズムが合うと倒れる', hint:'ブランコは、揺れのリズムに合わせて押すと大きく揺れます。リズムがずれると押したり引いたりになり、揺れは大きくなりません。', zone:[0, 1], tg:'周波数が合うと倒れる', sel:'#stage',
+L({ nm:'共鳴：リズムが合うと倒れる', hint:'ブランコは、揺れのリズムに合わせて押すと大きく揺れます。リズムがずれると押したり引いたりになり、揺れは大きくなりません。RF は電波のこと、パルスは短く当てることです。', zone:[0, 1], tg:'周波数が合うと倒れる', sel:'#stage',
+  tag:{ zname:'↑ 磁場の向き' },
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   acts:[
     { label:'同じ速さの電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0); }, dur:6000 },
     { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
   ],
-  text:'[[m:M]] と<b>同じ速さで回る</b>[[rf:RFパルス]]だけが、M を倒せます。<br>速さがずれると、少し揺れるだけです。' +
-       '<span class="eq">共鳴周波数 f ＝ 42.58 MHz × B₀〔T〕 ＝ 1.5 T で約 64 MHz</span>' }),
+  text:'[[m:M]] を倒すには電波を当てます。この電波が[[rf:RFパルス]]です。<br><b>同じ速さで回る</b>ときだけ倒れ、ずれると揺れるだけ。これが共鳴です。' +
+       '<span class="eq">回る速さ ＝ 共鳴周波数 f ＝ 42.58 MHz × 磁場〔T〕 ＝ 1.5 T で約 64 MHz</span>' }),
 
 L({ nm:'RFパルスで倒す', hint:'回るメリーゴーランドに乗って見ると、となりの馬は止まって見えます。回転座標系は、それと同じ見方です。', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × 時間', sel:'#stage',
-  tag:{ ang:true },
+  tag:{ zname:'↑ 磁場の向き', ang:true },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:false, tissue:'wm', T2p:40 },
   act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
   text:'回転座標系 ＝ [[m:M]] と一緒に回る目線。M はまっすぐ倒れて見えます。<br>[[ang:倒れた角度]] ＝ [[rf:RFパルス]]の強さ × 当てる時間。' }),
@@ -3826,13 +3831,18 @@ L({ nm:'電流が磁場を作る（電磁石）', hint:'右ねじの法則：電
   ],
   text:'輪の電線に[[cur:電流]]を流すと、輪を通る向きに[[flux:磁場]]ができます。<br>電流の向きを逆にすると、<b>磁場の向きも逆</b>になります。これが電磁石です。' }),
 
-L({ nm:'歳差運動：首を振って回る', hint:'傾けたコマが倒れずに首を振るのと同じ動きです。実際の水素は 1.5 T で1秒に約6400万回まわります。画面ではとても遅くしています。', tg:'磁場が強いほど速く回る', sel:'#stage',
-  tag:{ m:() => '水素の磁石：1周 ' + (2 * Math.PI / (0.85 * P.spd * P.B0 / 1.5)).toFixed(1) + ' 秒', zname:'↑ 磁場の向き　{B} T', noKey:true },
+L({ nm:'プロトン：水素の原子核は小さな磁石', hint:'MRI が水素を使うのは、体の大部分が水で、水素がいちばん多いからです。小さな矢印の1本1本がプロトンで、方位磁石の針のように磁場の向きにそろおうとしますが、熱で揺さぶられて上か下を向きます。', tg:'体は水素だらけ', sel:'#stage',
+  tag:{ hlab:'プロトン ＝ 水素の磁石', noM0:true, zname:'↑ 磁場の向き', noKey:true },
+  set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
+  text:'体のほとんどは水で、水素がたくさんあります。<br>水素の原子核、[[h:プロトン]]は小さな磁石で、磁場の中で首を振っています。' }),
+
+L({ nm:'歳差運動：首を振って回る', hint:'プロトンを1つだけ大きく見ています。傾けたコマが倒れずに首を振るのと同じ動きです。T はテスラで、磁場の強さの単位です。実際の水素は 1.5 T で1秒に約6400万回まわりますが、画面ではとても遅くしています。', tg:'磁場が強いほど速く回る', sel:'#stage',
+  tag:{ m:() => 'プロトン：1周 ' + (2 * Math.PI / (0.85 * P.spd * P.B0 / 1.5)).toFixed(1) + ' 秒', zname:'↑ 磁場の向き　{B} T', noKey:true },
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, showTrail:true, tissue:'csf', T2p:Infinity, B0:1.5 },
   on:() => { calm(); pulse(35, 'x'); },
   act:{ label:'磁場を 1.5 → 3.0 T に強くする', fn:() => { P.B0 = 3; precB0 = true; }, dur:8000 },
   autoAt:8000,   // はじめに 1.5 T で1周するのを見てから強くする
-  text:'磁場の中の[[m:水素の磁石]]は、<b>首を振って回ります</b>。これが歳差運動です。<br>磁場を 3.0 T に強くすると、<b>1周の時間が半分</b>になります。' }),
+  text:'[[m:プロトン]]は磁場の中で<b>首を振って回ります</b>。これが歳差運動です。<br>磁場を 3.0 T に強くすると、<b>1周の時間が半分</b>になります。' }),
 
 L({ nm:'電磁誘導：変化が電気を生む', hint:'自転車のライトの発電機と同じです。磁石が動いている間だけライトがつき、止まると消えます。', zone:[2], tg:'磁場が変わると電流', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, induct:true, showComp:false, tissue:'csf', T2p:Infinity },
@@ -3847,17 +3857,17 @@ L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石か
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   act:{ label:'M を倒す', fn:() => { calm(); later(() => manualPulse(90, 'x', 1.2), 300); } },
-  text:'縦向きの [[m:M]] は止まっていて、コイルに電流は流れません。<br><b>倒して回すと</b>[[flux:輪を通る分]]が変わり、電流が流れます。これが信号です。' }),
+  text:'輪は受信コイルです。縦向きの [[m:M]] は止まっていて、電流は流れません。<br><b>倒して回すと</b>[[flux:輪を通る分]]が変わり、電流が流れます。これが信号です。' }),
 
 L({ nm:'T2：横磁化が短くなる', hint:'横の M の赤い矢印の横に出る「○%」を見てください。100% から少しずつ減っていきます。', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
-  tag:{ pct:true },
+  tag:{ zname:'↑ 磁場の向き', pct:true },
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
-  text:'M の横向きの分、[[mxy:横の M]] は、時間とともに<b>短くなります</b>。<br>37% まで減るまでの時間を T2 といいます。' }),
+  text:'M の横向きの分が[[mxy:横の M]]、横磁化です。時間とともに<b>短くなります</b>。<br>37% まで減るまでの時間を T2 といいます。' }),
 
 L({ nm:'T2*：磁場のムラで もっと速く', hint:'走る速さが少しずつ違うと、スタートでそろっていた列がだんだんばらけていきます。それと同じです。', zone:[1], tg:'ムラの分だけ速く消える', sel:'#stage',
-  tag:{ fan:true },
+  tag:{ zname:'↑ 磁場の向き', fan:true },
   set:{ onlyM:false, quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
-  text:'[[fan:磁場のムラ]]で、水素1つずつの細い矢印の速さがばらつきます。<br>すると [[mxy:横の M]] は <b>T2 より速く</b>消えます。これが T2* です。' }),
+  text:'M は細い矢印、水素1つずつの合計。[[fan:磁場のムラ]]で速さがばらつくと、<br>[[mxy:横の M]] は <b>T2 より速く</b>消えます。これが T2* です。' }),
 
 L({ nm:'スピンエコー：180°で呼びもどす', hint:'全員が途中で向きを変えて同じ速さで戻ると、速い人も遅い人もスタートラインに同時に戻ってきます。これがエコーです。', zone:[1], tg:'エコーの高さは T2 だけ', sel:'#stage',
   tag:{ echo:true },
@@ -3866,11 +3876,12 @@ L({ nm:'スピンエコー：180°で呼びもどす', hint:'全員が途中で�
     calm(); manualPulse(90, 'x');
     later(() => manualPulse(180, 'y', 1.2), 2000);   // 180° はゆっくり当てて、オレンジの RF パルスが見えるようにする
   } },
-  text:'[[rf:180° の RFパルス]]で折り返すと、ばらけた細い矢印が<b>またそろいます</b>。<br>これが[[echo:エコー]]です。' }),
+  text:'ばらけた細い矢印を[[rf:180° の RFパルス]]で折り返すと、<b>またそろいます</b>。<br>これが[[echo:エコー]]で、この撮り方がスピンエコー、SE です。' }),
 
 L({ nm:'T1：縦磁化がもどる', hint:'③の上のグラフ①を見てください。線が上がっていくのが「縦に戻る」ようすで、上がる速さが組織ごとに違います。', zone:[1], tg:'スピン-格子緩和', sel:'#panRel',
+  tag:{ zname:'↑ 磁場の向き' },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
-  text:'縦の M ＝ M の縦向きの分。倒れたあと、時間とともに<b>戻ります</b>。<br>戻る速さが T1 です。①のグラフのとおり、組織ごとに違います。' }),
+  text:'縦磁化 ＝ 縦の M は、倒れたあと時間とともに<b>戻ります</b>。<br>戻る速さが T1 で、①のグラフのとおり組織ごとに違います。' }),
 
 L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
@@ -3896,11 +3907,12 @@ L({ nm:'矢印から画像へ', hint:'「組織ごとに塗ってみる」を押
   act:{ label:'組織ごとに塗ってみる', fn:() => paintDemo(), dur:6500 },
   text:'ボクセルごとの<b>横の M の長さ × 水素の量</b>が、その場所の<b>明るさ</b>です。' }),
 
-L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで、赤い TR の線が左へ動きます。そのとき、脳脊髄液の線がまだ低いところにあるのを見てください。', tg:'T1 の差をつける', sel:'#panRel',
+L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで、赤い TR の線が左へ動きます。そのとき、脳脊髄液の線がまだ低いところにあるのを見てください。同じ行を何回か撮って平均することもあり、その回数を加算回数といいます。撮像時間はその分かかります。', tg:'T1 の差をつける', sel:'#panRel',
   tag:{ mark:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
-  text:'「倒す → 読む」をくり返す間隔が TR です。短くすると、<br>戻りの遅い[[water:脳脊髄液]]が<b>暗く</b>なります ＝ [[relw:T1強調]]。' }),
+  text:'「倒す → 読む」をくり返す間隔が TR です。短くすると、<br>戻りの遅い[[water:脳脊髄液]]が<b>暗く</b>なります ＝ [[relw:T1強調]]。' +
+       '<span class="eq">撮像時間 ＝ TR × 行の数</span>' }),
 
 L({ nm:'TE：倒してから読むまで', hint:'③の下のグラフで、TE の線が右へ動きます。脳脊髄液の線だけが高いところに残るのを見てください。', tg:'T2 の差をつける', sel:'#panRel',
   tag:{ mark:true },
@@ -3926,15 +3938,15 @@ L({ nm:'やってみよう：水をいちばん暗くする', hint:'脳脊髄液
     ok:'できました。TR を短くすると、戻りの遅い脳脊髄液が暗くなります。これが T1強調です。', ng:'まだ、脳脊髄液がいちばん暗くなっていません。' },
   text:'TR と TE のつまみを動かして、[[water:脳脊髄液]]を<b>いちばん暗く</b>してください。' }),
 
-L({ nm:'GRE：180° を使わない', hint:'②の図から 180° のパルスが消えるのを見てください。ばらけた矢印を戻さないので、信号は速く小さくなります。', tg:'T2 ではなく T2*', sel:'#panSeq',
+L({ nm:'GRE：180° を使わない', hint:'GRE はグラジエントエコーの略で、グラジエントは傾斜磁場のことです。②の図から 180° のパルスが消えるのを見てください。ばらけた矢印を戻さないので、信号は速く小さくなります。', tg:'T2 ではなく T2*', sel:'#panSeq',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:25, T2p:40 },
   act:{ label:'T2*強調 GRE に切り替える', fn:() => applySet(pre('t2s'), true) },
-  text:'180° を使わずにエコーを作ります。信号は <b>T2* で</b>速く減ります。' }),
+  text:'180° の代わりに傾斜磁場でエコーを作る撮り方が GRE です。<br>信号は <b>T2* で</b>速く減ります。' }),
 
-L({ nm:'IR：狙った組織を消す', hint:'③の上のグラフで、線がいったんマイナスから始まります。0 を横切る瞬間に倒した組織は、信号が出ません。', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
+L({ nm:'IR：狙った組織を消す', hint:'IR は反転回復のことです。③の上のグラフで、線がいったんマイナスから始まります。0 を横切る瞬間に倒した組織は、信号が出ません。', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
   act:{ label:'TI を 180 ms にする（STIR）', fn:() => applySet(pre('stir'), true) },
-  text:'180° で反転させ、縦の M が <b>0 になる瞬間</b>に倒すと、その組織が消えます。<br>この待ち時間が TI です。脂肪を消すのが [[relw:STIR]] です。' }),
+  text:'180° で反転させ、縦の M が <b>0 になる瞬間</b>に倒すと、その組織が消えます。<br>この撮り方が IR、待ち時間が TI です。脂肪を消すのが [[relw:STIR]] です。' }),
 
 L({ nm:'やってみよう：TI で脂肪を消す', hint:'脂肪の縦の M が 0 を通る時刻に倒すと、脂肪の信号が出ません。TI を小さい方から少しずつ動かしてみてください。', tg:'TI を自分で合わせる', sel:'#imgbox',
   tag:{ big:true },
@@ -3949,15 +3961,15 @@ L({ nm:'FLAIR：水を消す', hint:'画像の「水」の印のところが黒�
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:180, T2p:40 },
   on:() => { if (!lesOn) $('bLes').click(); },   // 文で「病変が浮かぶ」と言うので、病変を入れておく
   act:{ label:'FLAIR（TI 2400 ms）に切り替える', fn:() => applySet(pre('flair'), true) },
-  text:'TI を約 2400 ms と長くすると、<b>[[water:脳脊髄液]]が消え</b>、そばの病変が白く浮かびます。' }),
+  text:'TI を約 2400 ms にすると<b>[[water:脳脊髄液]]が消え</b>、病変が白く浮かびます。<br>この撮り方が FLAIR です。' }),
 
 L({ nm:'強いT2強調：水だけを残す', hint:'右の画像は、体を前から見た腹部の模式図です。3D は左が肝臓、右が胆汁の M です。TE の間に、肝臓の横の M だけが消えるのを見てください。', tg:'TE をうんと長く', sel:'#imgbox',
   tag:{ gb:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:false, region:'abd', sl:{ ori:'cor', pos:2 }, seq:'SE', TR:6000, TE:100, T2p:40, tissue:'wat', cmp:['liv', 'wat'], cmpLay:'side' },
   act:{ label:'TE を 100 → 800 ms にする', fn:() => applySet({ TE:800 }, true) },
-  text:'TE をうんと長くすると、T2 の短い肝臓は黒く消え、<br>T2 の長い[[bile:胆汁などの水]]だけが<b>白く残ります</b>。' }),
+  text:'画像を腹部に変えます。TE をうんと長くすると、T2 の短い肝臓は黒く消え、<br>T2 の長い[[bile:胆汁などの水]]だけが<b>白く残ります</b>。これが強い T2強調です。' }),
 
-L({ nm:'MIP：重ねて1枚にする', hint:'厚くするほど管が長くつながって見えます。そのかわり、胃や腸の水も重なって写ります。細かいところは、もとの断面1枚ずつでも確かめます。「詳細」で結石の模型を入れて比べられます。', tg:'いちばん明るい所を集める', sel:'#imgbox',
+L({ nm:'MIP：重ねて1枚にする', hint:'胆管と膵管をこうして写す検査が MRCP です。厚くするほど管が長くつながって見えます。そのかわり、胃や腸の水も重なって写ります。細かいところは、もとの断面1枚ずつでも確かめます。「詳細」で結石の模型を入れて比べられます。', tg:'いちばん明るい所を集める', sel:'#imgbox',
   tag:{ duct:true, big:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:false, region:'abd', sl:{ ori:'cor', pos:-4 }, mip:0, seq:'SE', TR:6000, TE:800, T2p:40, tissue:'wat' },
   acts:[
@@ -4051,7 +4063,7 @@ L({ nm:'傾斜磁場：場所で磁場の強さを変える', hint:'傾斜磁場
   set:SLSET,
   on:() => { calm(); slabInit({ g:0, fc:0, hw:0.5 }); },
   act:{ label:'傾斜磁場をかける', fn:() => { slabSet({ g:1 }); } },
-  text:'傾斜磁場は、場所によって<b>強さが少しずつ違う</b>磁場です。<br>強い所ほど水素は速く回るので、右の棒の<b>層ごとの周波数</b>がずれます。' }),
+  text:'傾斜磁場は、場所によって<b>強さが少しずつ違う</b>磁場です。<br>強い所ほど速く回るので、右の棒の<b>層ごとの周波数</b>、回る速さがずれます。' }),
 
 L({ nm:'スライス選択：1枚だけ倒す', hint:'ラジオで1つの局だけを聞くのと同じです。電波の周波数が合った層だけが反応します。', zone:[0, 1], tg:'傾斜磁場 ＋ 共鳴', sel:'#stage',
   set:SLSET,
@@ -4060,7 +4072,7 @@ L({ nm:'スライス選択：1枚だけ倒す', hint:'ラジオで1つの局だ�
     { label:'傾斜なしで電波を当てる', fn:() => { slabInit({ g:0, fc:0, hw:0.5 }); slabRF(); } },
     { label:'傾斜をかけて電波を当てる', fn:() => { slabSet({ g:1 }); later(slabRF, 1300); }, dur:4500 },
   ],
-  text:'傾斜磁場で層ごとに周波数をずらしておくと、[[band:電波の範囲]]に入った<b>1枚だけ</b>の [[m:M]] が倒れます。' }),
+  text:'[[band:電波の範囲]]に周波数が入った<b>1枚だけ</b>、[[m:M]] が倒れます。<br>この1枚がスライスです。' }),
 
 L({ nm:'スライスの位置と厚さ', hint:'オレンジの帯が動くと選ばれる層が動き、帯が太くなると選ばれる層が増えます。', zone:[0, 1], tg:'厚さ ＝ 帯域幅 ÷ 傾斜', sel:'#stage',
   set:SLSET,
@@ -4071,13 +4083,13 @@ L({ nm:'スライスの位置と厚さ', hint:'オレンジの帯が動くと選
     { label:'傾斜を急にする', fn:() => { slabSet({ g:2 }); later(slabRF, 1300); } },
   ],
   text:'電波の<b>中心の周波数</b>で位置が、<b>範囲の広さ</b>と傾斜で[[thick:厚さ]]が決まります。' +
-       '<span class="eq">スライス厚 ＝ 帯域幅 ÷ 傾斜磁場の強さ</span>' }),
+       '<span class="eq">範囲の広さが帯域幅。スライス厚 ＝ 帯域幅 ÷ 傾斜磁場の強さ</span>' }),
 
 L({ nm:'周波数エンコード：横は音の高さで', hint:'合唱で、列ごとに声の高さを変えて歌ってもらうと、声の高さでどの列か分かります。', zone:[0, 2], tg:'読んでいる間に左右の傾斜', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
   on:() => { calm(); gridInit(); },
   act:{ label:'左右に傾斜をかける（読んでいる間）', fn:() => { GRID.gx = 1; } },
-  text:'読む間に左右の傾斜をかけると、<b>列ごとに</b> [[m:M]] の回る速さが変わります。<br>この速さ、つまり音の高さで、横の位置が分かります。' }),
+  text:'読む間に左右の傾斜をかけると、<b>列ごとに</b> [[m:M]] の回る速さが変わります。<br>この速さで横の位置が分かります。これが周波数エンコードです。' }),
 
 L({ nm:'位相エンコード：縦は角度のずれで', hint:'時計の針を、行ごとに少しずつ進めておくイメージです。同じ速さで回っても、針のずれで行が分かります。', zone:[0, 1], tg:'読む前に一瞬だけ上下の傾斜', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
@@ -4086,7 +4098,7 @@ L({ nm:'位相エンコード：縦は角度のずれで', hint:'時計の針を
     { label:'上下に一瞬だけ傾斜をかける', fn:() => { gridInit(); gridPhase(1); } },
     { label:'強さを変えて、もう一度', fn:() => { gridInit(); gridPhase(2); } },
   ],
-  text:'読む前に一瞬、上下の傾斜をかけると、<br><b>行ごとに</b> [[m:M]] の角度がずれて残ります。' }),
+  text:'上下の傾斜を一瞬かけると、<b>行ごとに</b> [[m:M]] の角度がずれます。<br>このずれ、位相で行の位置が分かります ＝ 位相エンコード。' }),
 
 L({ nm:'k 空間：集めたデータの表', hint:'k 空間は、画像を作るための「材料表」です。中心だけ残すとぼやけ、外側だけ残すと輪郭だけになります。', zone:[2], tg:'中心＝明暗、外側＝輪郭', map:true,
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
@@ -4096,7 +4108,7 @@ L({ nm:'k 空間：集めたデータの表', hint:'k 空間は、画像を作�
     { label:'外側だけ残す', fn:() => kShow('o') },
     { label:'ぜんぶ使う', fn:() => kShow('all') },
   ],
-  text:'集めた信号の表が <b>k 空間</b>です。計算すると画像になります。' +
+  text:'集めた信号の表が <b>k 空間</b>です。フーリエ変換という計算で画像になります。' +
        '<span class="kpair"><span><canvas id="kCv" width="256" height="256" style="width:150px"></canvas>k 空間</span>' +
        '<span><canvas id="kImg" width="176" height="208" style="width:127px"></canvas>画像</span></span>' +
        '表の<b>中心は明暗、外側は輪郭</b>を決めています。' })
@@ -4127,8 +4139,8 @@ L({ nm:'1枚の画像ができるまで', hint:'②の図の「位相エンコ�
   tag:{ pe:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
   act:{ label:'1回分を最初から再生する', fn:() => { P.paused = false; $('bStep').click(); } },
-  text:'「倒す → 読む」を、位相エンコードを変えて<br><b>行の数だけくり返す</b>と、1枚になります。' +
-       '<span class="eq">撮像時間 ＝ TR × 位相エンコード数 × 加算回数</span>' }),
+  text:'「倒す → 読む」を位相を変えて<b>行の数だけくり返す</b>と、1枚になります。<br>この手順を②の図に描いたものが、パルスシーケンスです。' +
+       '<span class="eq">撮像時間 ＝ くり返しの間隔 × 行の数</span>' }),
 ];
 
 /* ---------- 章立て ----------
@@ -4139,8 +4151,8 @@ L({ nm:'1枚の画像ができるまで', hint:'②の図の「位相エンコ�
 const CHAPTERS = [
   { no:'序章', nm:'MRI 画像で見えているもの', goal:'同じ脳でも、撮り方で水の白黒が逆になる。その理由を、水素の小さな磁石から順に見ていく。',
     steps:['T1強調と T2強調を撮り比べる', 'MRI が画像を作るまで'] },
-  { no:'第1章', nm:'水素は首を振る小さな磁石', goal:'磁場の中の水素は首を振って回り、足し合わせると1本の矢印 M になる。',
-    steps:['歳差運動：首を振って回る', '静磁場の中のプロトン'] },
+  { no:'第1章', nm:'水素は首を振る小さな磁石', goal:'水素の原子核、プロトンは小さな磁石。磁場の中で首を振って回り、足し合わせると1本の矢印 M になる。',
+    steps:['プロトン：水素の原子核は小さな磁石', '歳差運動：首を振って回る', '静磁場の中のプロトン'] },
   { no:'第2章', nm:'倒して、戻るのを見る', goal:'同じ周波数の電波で M を倒すと、横は T2・T2* で減り、縦は T1 で戻る。',
     steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す', 'T1：縦磁化がもどる', 'T2：横磁化が短くなる', 'T2*：磁場のムラで もっと速く'] },
   { no:'第3章', nm:'装置の中の電気と磁気', goal:'電流が磁場を作り（静磁場）、回る M の磁場の変化が電流（信号）を生む。',
@@ -4623,8 +4635,8 @@ $('bLearn').addEventListener('click', () => { const nx = CHAPTERS.findIndex((ch,
    s は手の名前の書き出し（手の番号は増減するので、名前で探す） */
 const GLOSS = [
   ['水素は首を振る小さな磁石（第1章）', [
-    ['歳差運動', '磁場の中の水素の磁石が、磁場の向きのまわりを首を振って回ること。速さは磁場の強さに比例する。', '歳差運動'],
-    ['プロトン', '水素の原子核。小さな磁石としてふるまう。', '静磁場の中のプロトン'],
+    ['プロトン', '水素の原子核。小さな磁石としてふるまう。', 'プロトン：'],
+    ['歳差運動', '磁場の中のプロトンが、磁場の向きのまわりを首を振って回ること。速さは磁場の強さに比例する。', '歳差運動'],
     ['磁化 M（M₀）', 'たくさんの水素の小さな磁石を足し合わせた1本の矢印。', '静磁場の中のプロトン'],
   ]],
   ['倒して、戻るのを見る（第2章）', [
