@@ -686,6 +686,7 @@ body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足�
   .tabs button{font-size:14px; padding:9px 1px}
   .pan{height:240px}
   #panRel{height:340px}   /* 組織の名前を5つ縦に並べても重ならない高さ */
+  body.tutPanel #panRel{height:312px}   /* 学習の案内の間は、上の 3D とカードの間に枠が丸ごと入る高さにする */
   .choices button{padding:8px 9px; font-size:15.5px}
   .seqnav .act,.acts .act{padding:9px 4px}
   #imgbox .if{display:none}
@@ -5287,6 +5288,13 @@ function tutActsPlace(el) {   // 3D は枠の中の下の方（再生ボタン�
   let r = el ? el.getBoundingClientRect() : null;
   if (r && (r.width < 40 || r.height < 40)) r = null;
   const c0 = tutCard.getBoundingClientRect();
+  if (r && el !== stage && smallScr) {            // スマホで図や画像を光らせているとき：上に貼りついた 3D の下の端に置く（案内の間は再生ボタンがなく、空いている。図の線や名前を隠さない）
+    box.style.maxWidth = (innerWidth - 16) + 'px'; box.classList.add('sm');
+    const sr = stage.getBoundingClientRect(), bw = box.offsetWidth, bh = box.offsetHeight;
+    box.style.left = Math.max(8, Math.min(innerWidth - bw - 8, sr.left + sr.width / 2 - bw / 2)) + 'px';
+    box.style.top = Math.max(8, sr.bottom - bh - 10) + 'px';
+    return;
+  }
   if (r && (el !== stage || smallScr)) {          // 図・画像（スマホは 3D も）：すぐ下に入るなら外に置く（絵を隠さない）
     box.style.maxWidth = Math.min(innerWidth - 16, Math.max(r.width, 340)) + 'px';
     box.classList.toggle('sm', smallScr);
