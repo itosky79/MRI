@@ -686,7 +686,7 @@ body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足�
   .tabs button{font-size:14px; padding:9px 1px}
   .pan{height:240px}
   #panRel{height:340px}   /* 組織の名前を5つ縦に並べても重ならない高さ */
-  body.tutPanel #panRel{height:312px}   /* 学習の案内の間は、上の 3D とカードの間に枠が丸ごと入る高さにする */
+  body.tutPanel #panRel{height:302px}   /* 学習の案内の間は、上の 3D とカードの間に枠が丸ごと入る高さにする */
   .choices button{padding:8px 9px; font-size:15.5px}
   .seqnav .act,.acts .act{padding:9px 4px}
   #imgbox .if{display:none}
@@ -882,7 +882,9 @@ ol.seq button{padding:6px 8px; line-height:1.6}
 
 /* ---- 圧迫感を減らす：パネルどうしの隙間・内側の余白・字間を広げる ---- */
 body{letter-spacing:.03em}          /* BIZ UDPゴシックは字送りが詰まり気味。少しだけ空けると楽に読める */
-.ttext,.thint,.note,.lede,.tiny,.gloss dd,.chap .cgoal{letter-spacing:.04em}
+.note,.lede,.tiny,.gloss dd,.chap .cgoal{letter-spacing:.04em}
+#tutCard.dock{width:min(620px,calc(100vw - 20px))}   /* 字間と余白を広げたぶん、カードも広げて2行に収める */
+@media (max-width:560px){ #tutCard.dock{width:calc(100vw - 16px)} }
 .wrap{padding-inline:28px}
 header{padding-block:18px 13px; margin-bottom:18px}
 .work{gap:18px; height:calc(100vh - 116px); height:calc(100dvh - 116px)}
