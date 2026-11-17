@@ -686,7 +686,7 @@ body.tutOn{padding-bottom:60vh}   /* 案内中はページの下に余白を足�
   .tabs button{font-size:14px; padding:9px 1px}
   .pan{height:240px}
   #panRel{height:340px}   /* 組織の名前を5つ縦に並べても重ならない高さ */
-  body.tutPanel #panRel{height:302px}   /* 学習の案内の間は、上の 3D とカードの間に枠が丸ごと入る高さにする */
+  body.tutPanel #panRel{height:286px}   /* 学習の案内の間は、上の 3D とカードの間に枠が丸ごと入る高さにする */
   .choices button{padding:8px 9px; font-size:15.5px}
   .seqnav .act,.acts .act{padding:9px 4px}
   #imgbox .if{display:none}
@@ -941,7 +941,7 @@ header{padding-block:18px 13px; margin-bottom:18px}
 .task .topts button:disabled{cursor:default}
 .task .topts button.ok{background:var(--sel); border-color:var(--teal); color:var(--teal); font-weight:700}
 .task .topts button.ng{color:var(--dim); text-decoration:line-through}
-.task .tstat{margin:9px 0 0; padding:8px 12px; border-radius:8px; background:var(--fill); font-size:14.5px; line-height:1.85}
+.task .tstat{margin:0; padding:8px 12px; border-radius:8px; background:var(--fill); font-size:14.5px; line-height:1.85}
 .task .tstat b{color:var(--teal); margin-right:4px}
 /* 章の終わり：この章の話が、画像の明るさとどうつながるか */
 .tlink[hidden]{display:none}
@@ -3820,7 +3820,7 @@ const TVH = { nm:'縦と横は同時に変わる', hint:'白質では T1 が約 
     why:'横の M が減る速さ T2 は、縦の M が戻る速さ T1 よりずっと速いからです。' },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:true, onlyM:true, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
   on:() => { calm(); },
-  act:{ label:'90° 倒して、そのまま待つ', fn:() => { calm(); manualPulse(90, 'x', 1.0); }, dur:11000 },
+  act:{ label:'90° 倒して、そのまま待つ', fn:() => { calm(); manualPulse(90, 'x', 1.0); }, dur:12000 }, loopGap:3500,   // 終わりの「横は消えたが縦は戻りきっていない」をしばらく見せる
   text:'倒れたあと[[mz:縦の M]] は戻り、[[mxy:横の M]] は減ります。<b>2つは同時に</b>進みます。<br>縦が戻るのと、横が減るのと、どちらが速いでしょう。' };
 const PRIN = [
 /* 全体の地図：① 機械が電流で磁場を作る → ② 水素の M が倒れて回る → ③ 受信コイルに電流（信号）が流れる。
@@ -3990,9 +3990,8 @@ L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで�
   tag:{ mark:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
-  ask:{ opts:['明るくなる', '暗くなる'], ans:1, why:'縦の M が戻りきる前に次を倒すので、信号が小さくなります。これが T1強調です。' },
-  text:'「倒す → 読む」をくり返す間隔が TR です。TR を短くすると、<br>縦の M の戻りが遅い[[water:脳脊髄液]]は、明るくなるでしょうか、暗くなるでしょうか。' +
-       '<span class="eq">撮像時間 ＝ TR × 行の数</span>' }),
+  ask:{ opts:['明るくなる', '暗くなる'], ans:1, why:'戻りきる前に次を倒すので、信号が小さくなります。これが T1強調です。' },
+  text:'「倒す → 読む」をくり返す間隔が TR です。<br>TR を短くすると、縦の M の戻りが遅い[[water:脳脊髄液]]はどうなるでしょう。' }),
 
 L({ nm:'TE：倒してから読むまで', hint:'③の下のグラフで、TE の線が右へ動きます。脳脊髄液の線だけが高いところに残るのを見てください。', tg:'T2 の差をつける', sel:'#panRel',
   tag:{ mark:true },
@@ -5288,9 +5287,9 @@ function tutAsk(st) {
     b.addEventListener('click', () => {
       if (tutAsked || tutList[tutI] !== st) return;
       tutAsked = true;
-      row.querySelectorAll('button').forEach((x, j) => { x.disabled = true; if (j === A.ans) x.classList.add('ok'); else if (j === i) x.classList.add('ng'); });
+      box.innerHTML = '';   // 答えたら問いと選択肢は畳み、正解と理由だけを残す（カードを伸ばして図を隠さない）
       const p = document.createElement('p'); p.className = 'tstat';
-      p.innerHTML = (i === A.ans ? '<b>◯ そのとおり。</b>' : '<b>答えは「' + A.opts[A.ans] + '」。</b>') + A.why;
+      p.innerHTML = '<b>' + (i === A.ans ? '◯' : '✕') + ' 正解は「' + A.opts[A.ans] + '」。</b>' + A.why;
       box.appendChild(p);
       if (A.tag) { Object.assign(P.tag, A.tag); scopeSync(); }
       $('tutLink').hidden = !st.link;
