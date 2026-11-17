@@ -3231,7 +3231,7 @@ function updateScene(dt) {
     if (P.tag.pctz) place('mz', 0.55, 0.55, Math.max(m[2] * ML + 0.8, 2.8), '<i>縦の M</i><b>' + Math.round(Math.max(0, m[2]) * 100) + '%</b>', on && comp);
     else place('mz', 0.55, 0.55, m[2] * ML, '縦の M', on && comp && Math.abs(m[2]) > 0.18);
     const q = new THREE.Vector3(m[0] * ML, m[1] * ML, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
-    place('mxy', q.x * 1.18, q.y * 1.18, -0.5, P.tag.pct ? '<i>横の M</i><b>' + Math.round(txy * 100) + '%</b>' : '横の M', on && comp && txy > 0.18);
+    place('mxy', q.x * 1.18, q.y * 1.18, -0.5, P.tag.pct ? '<i>横の M</i><b>' + Math.round(txy * 100) + '%</b>' : '横の M', on && comp && (txy > 0.18 || (!!P.tag.pctz && !R.nut)));   // 縦と横を比べる手では、0% になっても出しておく
     /* 倒れた角度・エコー・磁場のムラ（その言葉が出てくる手だけ） */
     const deg = Math.round(Math.atan2(txy, m[2]) * 180 / Math.PI);
     place('ang', 0, 0, -1.7, '<i>倒れた角度</i><b>' + deg + '°</b>', on && showSpin && !!P.tag.ang && deg > 1);
