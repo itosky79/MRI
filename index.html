@@ -4706,12 +4706,12 @@ $('modeTabs').addEventListener('click', e => {
 const CHKEY = 'mri-chapters-done-v6';   // 章の並びを変えたので、前の記録は使わない   // 章の並びを変えたので、前の記録（章の番号）は使わない
 let chDoneSet = new Set();
 try { chDoneSet = new Set(JSON.parse(localStorage.getItem(CHKEY) || '[]')); } catch (e) { }
-const RKEY = 'mri-resume-v1';   // 最後に見た章と手（章の途中から続けられるように）
+const RESKEY = 'mri-resume-v1';   // 最後に見た章と手（章の途中から続けられるように）
 let resume = null;
-try { resume = JSON.parse(localStorage.getItem(RKEY) || 'null'); } catch (e) { }
+try { resume = JSON.parse(localStorage.getItem(RESKEY) || 'null'); } catch (e) { }
 function saveResume(c, i) {
   resume = { c:c, i:i };
-  try { localStorage.setItem(RKEY, JSON.stringify(resume)); } catch (e) { }
+  try { localStorage.setItem(RESKEY, JSON.stringify(resume)); } catch (e) { }
 }
 function chDone(c) {
   chDoneSet.add(c);
