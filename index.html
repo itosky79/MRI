@@ -932,6 +932,11 @@ header{padding-block:18px 13px; margin-bottom:18px}
 @media (max-width:560px){ #scopeTag{font-size:12.5px; left:28px; top:6px; padding:2px 8px} #scopeTag b{display:none} }
 /* 予想してから見る：選ぶまで動きは始まらない */
 .task{margin:-4px 0 14px}
+.twait{margin:-4px 0 14px; padding:8px 12px; border-radius:8px; border:1.5px dashed var(--line2); font-size:14px; color:var(--muted)}
+.twait[hidden]{display:none}
+.twait i{display:block; height:4px; margin-top:6px; border-radius:2px; background:var(--fill); overflow:hidden}
+.twait i b{display:block; height:100%; width:0; background:var(--teal); animation:twaitGo linear forwards}
+@keyframes twaitGo{to{width:100%}}
 .task[hidden]{display:none}
 .task .tq{display:block; font-weight:700; color:var(--head); margin-bottom:8px; font-size:15px}
 .task .topts{display:flex; gap:8px; flex-wrap:wrap}
@@ -1379,6 +1384,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
   <div id="tutCard">
     <p class="tstep" id="tutStep"></p>
     <p class="ttext" id="tutText"></p>
+    <p class="twait" id="tutAskWait" hidden></p>
     <div class="task" id="tutAskBox" hidden></div>
     <p class="tlink" id="tutLink" hidden></p>
     <div class="ttry" id="tutTryBox" hidden></div>
@@ -3821,7 +3827,7 @@ const TVH = { nm:'縦と横は同時に変わる', hint:'白質では T1 が約 
     why:'縦の M が戻る速さ T1 は、横の M が減る速さ T2 よりずっと遅いからです。' },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:true, onlyM:true, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
   on:() => { calm(); },
-  act:{ label:'90° 倒して、そのまま待つ', fn:() => { calm(); manualPulse(90, 'x', 1.0); }, dur:12000 }, loopGap:3500,   // 終わりの「横は消えたが縦は戻りきっていない」をしばらく見せる
+  act:{ label:'90° 倒して、そのまま待つ', fn:() => { calm(); manualPulse(90, 'x', 1.0); }, dur:10000 }, loopGap:3500,   // 終わりの「横は消えたが縦は戻りきっていない」をしばらく見せる
   text:'倒れたあと[[mz:縦の M]] は戻り、[[mxy:横の M]] は減ります。<b>2つは同時に</b>進みます。<br>ただし速さは別々で、<b>横の M の方がずっと速く</b>減ります。' };
 const PRIN = [
 /* 全体の地図：① 機械が電流で磁場を作る → ② 水素の M が倒れて回る → ③ 受信コイルに電流（信号）が流れる。
@@ -5279,8 +5285,15 @@ function scopeSync() {
 }
 /* 見たことを確かめる問い：動きをひと回り見せ終えてから出す（見る前に予想させない）。
    本文には問いを書かない（問いは1つだけ）。答えたら正解と理由だけを残す */
+function tutAskWait(st) {   // 問いが出るまでの間：問いがあることと、あと少しで出ることを見せる
+  const box = $('tutAskBox'), w = $('tutAskWait');
+  if (!st.ask) { w.hidden = true; return; }
+  const acts = actsOf(st), sec = ((st.autoAt || 1000) + acts.reduce((a, x) => a + (x.dur || 4000), 0) + 800) / 1000;
+  w.innerHTML = '<span>動きを見終わると、ここに確かめの問いが出ます</span><i><b style="animation-duration:' + sec + 's"></b></i>';
+  w.hidden = false; box.hidden = true;
+}
 function tutAsk(st) {
-  const box = $('tutAskBox'); box.innerHTML = ''; box.hidden = true; if (!st.ask) return;
+  const box = $('tutAskBox'); box.innerHTML = ''; box.hidden = true; tutAskWait(st); if (!st.ask) return;
   const A = st.ask;
   box.innerHTML = (A.q ? '<span class="tq">' + A.q + '</span>' : '') + '<span class="topts"></span>';
   const row = box.querySelector('.topts');
@@ -5407,14 +5420,14 @@ function tutAutoRun(st) {
       if (tutI < 0 || tutList[tutI] !== st) return;
       const again = () => { P.paused = false; tutAutoTm = []; tutNow('↻ もう一度'); tutReset(st); cycle(); };
       if (st.ask && !tutAskOpen) {               // ひと回り見終えたところで止め、その場面を見ながら答える問いを出す
-        tutAskOpen = true; $('tutAskBox').hidden = false;
+        tutAskOpen = true; $('tutAskBox').hidden = false; $('tutAskWait').hidden = true;
         P.paused = true; tutNow(''); tutResume = again;
         const el = st.sel ? document.querySelector(st.sel) : null;
         tutPlace(el); tutFit(el); setTimeout(() => { tutPlace(el); tutFit(el); }, 60);
         return;
       }
       again();
-    }, t + (st.loopGap || 1500)));
+    }, t + (st.ask && !tutAskOpen ? 800 : (st.loopGap || 1500))));   // 問いを出す1回目は、見終えたらすぐ出す
   };
   cycle();
 }
