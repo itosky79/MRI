@@ -935,7 +935,8 @@ header{padding-block:18px 13px; margin-bottom:18px}
 .task[hidden]{display:none}
 .task .tq{display:block; font-weight:700; color:var(--head); margin-bottom:8px; font-size:15px}
 .task .topts{display:flex; gap:8px; flex-wrap:wrap}
-.task .topts button{flex:1 1 auto; padding:8px 12px; border-radius:10px; border:1.5px solid var(--line2); background:var(--panel); color:var(--text);
+.task .topts{flex-wrap:nowrap}
+.task .topts button{flex:1 1 0; min-width:0; line-height:1.45; padding:8px 10px; border-radius:10px; border:1.5px solid var(--line2); background:var(--panel); color:var(--text);
   font-family:var(--gothic); font-size:14.5px; cursor:pointer}
 .task .topts button:hover:not(:disabled){border-color:var(--teal)}
 .task .topts button:disabled{cursor:default}
@@ -3846,14 +3847,14 @@ L({ nm:'静磁場 B₀ の向き', hint:'すぐ前の手で見た電磁石と同
   act:{ label:'検査室から近づく', fn:() => roomPlay(), dur:7000 },
   text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い静磁場 [[b0:B₀]] ができます。<br>人は寝ているので B₀ は本当は水平ですが、<b>画面では上向き</b>に描きます。' }),
 
-L({ nm:'静磁場の中のプロトン', hint:'矢印の足し算は、矢印の先に次の矢印の根元をつないでいくやり方です。最後の矢印の先までが合計です。', zone:[1], tg:'足し合わせると M', sel:'#stage',
+L({ nm:'静磁場の中のプロトン', hint:'本当の差はとても小さいので、画面では差を大きく描いています。矢印の足し算は、矢印の先に次の矢印の根元をつないでいくやり方です。最後の矢印の先までが合計です。', zone:[1], tg:'足し合わせると M', sel:'#stage',
   tag:{ hlab:'プロトン', scope:'小さい矢印 ＝ 水素1個ずつ／太い矢印 M ＝ 全部の合計' },
   ask:{ q:'小さい矢印を全部足したとき、残ったのはどれでしたか？', opts:['上向きの M', '下向きの M', '何も残らない'], ans:0,
     why:'上と下は打ち消し合い、多かった上向きの分だけが残ります。' },
   link:'水素が多い所ほど M が長くなり、明るく写る元になります。',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
-  text:'[[h:プロトン]]は上向きが少し多く、足すと<b>上向きの分</b>が残ります。これが磁化 [[m:M]] です。<br>本当の差は100万個に約5個ですが、画面では差を大きく描いています。' }),
+  text:'[[h:プロトン]]は上向きが少し多く、足すと<b>上向きの分</b>が残ります。<br>これが磁化 [[m:M]] です。上と下の本当の差は、100万個に約5個です。' }),
 
 L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの合計 M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
@@ -3989,9 +3990,9 @@ L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで�
   tag:{ mark:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
-  ask:{ q:'TR を短くすると脳脊髄液が暗くなったのは、なぜでしょう？', opts:['縦の M が戻りきる前に倒すから', '横の M が速く消えるから'], ans:0,
+  ask:{ q:'脳脊髄液が暗くなったのは、なぜでしょう？', opts:['縦の M が戻りきらない', '横の M が速く消える'], ans:0,
     why:'戻りきらないうちに倒すので、倒したときの横の M も小さくなります。' },
-  text:'「倒す → 読む」をくり返す間隔が TR です。短くすると、<br>縦の M の戻りが遅い[[water:脳脊髄液]]が<b>暗く</b>なります。これが T1強調です。' }),
+  text:'「倒す → 読む」をくり返す間隔が TR です。短くすると、縦の M の戻りが遅い[[water:脳脊髄液]]が<b>暗く</b>なります。これが T1強調です。' }),
 
 L({ nm:'TE：倒してから読むまで', hint:'③の下のグラフで、TE の線が右へ動きます。脳脊髄液の線だけが高いところに残るのを見てください。', tg:'T2 の差をつける', sel:'#panRel',
   tag:{ mark:true },
