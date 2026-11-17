@@ -932,11 +932,6 @@ header{padding-block:18px 13px; margin-bottom:18px}
 @media (max-width:560px){ #scopeTag{font-size:12.5px; left:28px; top:6px; padding:2px 8px} #scopeTag b{display:none} }
 /* 予想してから見る：選ぶまで動きは始まらない */
 .task{margin:-4px 0 14px}
-.twait{margin:-4px 0 14px; padding:8px 12px; border-radius:8px; border:1.5px dashed var(--line2); font-size:14px; color:var(--muted)}
-.twait[hidden]{display:none}
-.twait i{display:block; height:4px; margin-top:6px; border-radius:2px; background:var(--fill); overflow:hidden}
-.twait i b{display:block; height:100%; width:0; background:var(--teal); animation:twaitGo linear forwards}
-@keyframes twaitGo{to{width:100%}}
 .task[hidden]{display:none}
 .task .tq{display:block; font-weight:700; color:var(--head); margin-bottom:8px; font-size:15px}
 .task .topts{display:flex; gap:8px; flex-wrap:wrap}
@@ -1384,7 +1379,6 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
   <div id="tutCard">
     <p class="tstep" id="tutStep"></p>
     <p class="ttext" id="tutText"></p>
-    <p class="twait" id="tutAskWait" hidden></p>
     <div class="task" id="tutAskBox" hidden></div>
     <p class="tlink" id="tutLink" hidden></p>
     <div class="ttry" id="tutTryBox" hidden></div>
@@ -3823,7 +3817,7 @@ function wellDraw(cv) {
    白質（T1 650・T2 80 ms）で、時間をゆっくり進めて両方の％を出す */
 const TVH = { nm:'縦と横は同時に変わる', hint:'白質では T1 が約 650 ms、T2 が約 80 ms です。値は装置や文献で幅があります。縦の M と横の M を足しても、いつも元の長さになるわけではありません。', zone:[1], tg:'横の方がずっと速い', sel:'#stage',
   tag:{ pct:true, pctz:true, tslow:0.3, scope:'縦の M・横の M ＝ M の縦向きの分と横向きの分' },
-  ask:{ q:'横の M がほぼ 0% になったとき、縦の M はどこまで戻っていましたか？', opts:['ほぼ 100%', '半分くらい'], ans:1,
+  ask:{ q:'横の M がほぼ 0% になったとき、縦の M はどこまで戻っていますか？', opts:['ほぼ 100%', '半分くらい'], ans:1,
     why:'縦の M が戻る速さ T1 は、横の M が減る速さ T2 よりずっと遅いからです。' },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:true, onlyM:true, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
   on:() => { calm(); },
@@ -3855,9 +3849,8 @@ L({ nm:'静磁場 B₀ の向き', hint:'すぐ前の手で見た電磁石と同
 
 L({ nm:'静磁場の中のプロトン', hint:'本当の差はとても小さいので、画面では差を大きく描いています。矢印の足し算は、矢印の先に次の矢印の根元をつないでいくやり方です。最後の矢印の先までが合計です。', zone:[1], tg:'足し合わせると M', sel:'#stage',
   tag:{ hlab:'プロトン', scope:'小さい矢印 ＝ 水素1個ずつ／太い矢印 M ＝ 全部の合計' },
-  ask:{ q:'小さい矢印を全部足したとき、残ったのはどれでしたか？', opts:['上向きの M', '下向きの M', '何も残らない'], ans:0,
+  ask:{ q:'小さい矢印を全部足すと、何が残りますか？', opts:['上向きの M', '下向きの M', '何も残らない'], ans:0,
     why:'上と下は打ち消し合い、多かった上向きの分だけが残ります。' },
-  link:'水素が多い所ほど M が長くなり、明るく写る元になります。',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
   text:'[[h:プロトン]]は上向きが少し多く、足すと<b>上向きの分</b>が残ります。<br>これが磁化 [[m:M]] です。上と下の本当の差は、100万個に約5個です。' }),
@@ -3878,7 +3871,7 @@ L({ nm:'脳のどこにも M がある', hint:'矢印1本は、画像の1マス�
    √(90² + off²) = 360 → off ≈ 349°）。そのあいだ M は最大で約 29°しか倒れない */
 L({ nm:'共鳴：リズムが合うと倒れる', hint:'電波は、電気と磁気が細かく向きを変えながら進む波です。MRI で M を倒すのは、そのうちの磁気、つまり磁場の方です。磁場には向きがあるので矢印で描けます。送信コイルの作り方で、この矢印が横の面の中を回るようにしています。ブランコを揺れのリズムに合わせて押すと大きく揺れるのと同じで、回る速さが合うときだけ M は倒れます。RF は電波のこと、パルスは短く当てることです。', zone:[0, 1], tg:'周波数が合うと倒れる', sel:'#stage',
   tag:{ rf:'RFパルスの磁場', scope:'太い矢印 M ＝ たくさんの水素の合計' },
-  ask:{ q:'速さのずれた電波を当てたとき、M はどうなりましたか？', opts:['同じように倒れた', '少し揺れただけ'], ans:1,
+  ask:{ q:'速さのずれた電波を当てると、M はどうなりますか？', opts:['同じように倒れる', '少し揺れるだけ'], ans:1,
     why:'速さが合わないと、押したり引いたりになって倒れません。' },
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
@@ -3913,19 +3906,20 @@ L({ nm:'電流が磁場を作る（電磁石）', hint:'右ねじの法則：電
 L({ nm:'プロトン：水素の原子核は小さな磁石', hint:'MRI が水素を使うのは、体の大部分が水で、水素がいちばん多いからです。小さな矢印の1本1本がプロトンで、方位磁石の針のように磁場の向きにそろおうとしますが、熱で揺さぶられて上か下を向きます。', tg:'体は水素だらけ', sel:'#stage',
   tag:{ hlab:'プロトン ＝ 水素の磁石', noM0:true, noKey:true, scope:'小さい矢印1本 ＝ 水素1個' },
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
-  text:'体のほとんどは水で、水素がたくさんあります。<br>水素の原子核、[[h:プロトン]]は小さな磁石で、磁場の中で首を振っています。' }),
+  text:'体のほとんどは水で、水素がたくさんあります。<br>水素の原子核、[[h:プロトン]]は小さな磁石で、磁場の向きにそろおうとします。' }),
 
 L({ nm:'歳差運動：首を振って回る', hint:'傾けたコマが倒れずに首を振るのと同じ動きです。T はテスラで、磁場の強さの単位です。実際の水素は 1.5 T で1秒に約6400万回まわりますが、画面ではとても遅くしています。', tg:'磁場が強いほど速く回る', sel:'#stage',
   tag:{ m:() => 'プロトン：1周 ' + (2 * Math.PI / (0.85 * P.spd * P.B0 / 1.5)).toFixed(1) + ' 秒', zname:'磁場 {B} T', noKey:true, scope:'水素1個を拡大' },
+  link:'水素が多い所ほど M が長くなり、明るく写る元になります。',
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, showTrail:true, tissue:'csf', T2p:Infinity, B0:1.5 },
   on:() => { calm(); pulse(35, 'x'); },
   act:{ label:'磁場を 1.5 → 3.0 T に強くする', fn:() => { P.B0 = 3; precB0 = true; }, dur:8000 },
   autoAt:8000,   // はじめに 1.5 T で1周するのを見てから強くする
-  text:'[[m:プロトン]]は磁場の中で<b>首を振って回ります</b>。これが歳差運動です。<br>磁場の強さを 1.5 T から 3.0 T に上げると、<b>1周の時間が半分</b>になります。' }),
+  text:'[[m:プロトン]]も M も、磁場の中で<b>首を振って回ります</b>。これが歳差運動です。<br>磁場の強さを 1.5 T から 3.0 T に上げると、<b>1周の時間が半分</b>になります。' }),
 
 L({ nm:'電磁誘導：変化が電気を生む', hint:'自転車のライトの発電機と同じです。磁石が動いている間だけライトがつき、止まると消えます。', zone:[2], tg:'磁場が変わると電流', sel:'#stage',
   tag:{ scope:'太い矢印 ＝ 磁石／紫の矢印 ＝ 輪を通る磁場' },
-  ask:{ q:'磁石が止まったとき、電流はどうなりましたか？', opts:['流れ続けた', '止まった'], ans:1, why:'輪を通る磁場が変わらなくなると、電流は流れません。' },
+  ask:{ q:'磁石が止まると、電流はどうなりますか？', opts:['流れ続ける', '止まる'], ans:1, why:'輪を通る磁場が変わらなくなると、電流は流れません。' },
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, induct:true, showComp:false, tissue:'csf', T2p:Infinity },
   on:() => { calm(); IND.y = IND.yT = -12; IND.dphi = 0; IND.phi = indPhi(IND.y); },
   acts:[
@@ -4238,16 +4232,16 @@ L({ nm:'1枚の画像ができるまで', hint:'②の図の「位相エンコ�
 const CHAPTERS = [
   { no:'序章', nm:'MRI 画像で見えているもの', goal:'同じ脳でも、撮り方で水の白黒が逆になる。その理由を、水素の小さな磁石から順に見ていく。',
     steps:['T1強調と T2強調を撮り比べる', 'MRI が画像を作るまで'] },
-  { no:'第1章', nm:'水素は首を振る小さな磁石', goal:'水素の原子核、プロトンは小さな磁石。磁場の中で首を振って回り、足し合わせると1本の矢印 M になる。',
-    steps:['プロトン：水素の原子核は小さな磁石', '歳差運動：首を振って回る', '静磁場の中のプロトン'] },
+  { no:'第1章', nm:'水素は首を振る小さな磁石', goal:'水素の原子核、プロトンは小さな磁石。磁場の中で足し合わせると1本の矢印 M になり、M は首を振って回る。',
+    steps:['プロトン：水素の原子核は小さな磁石', '静磁場の中のプロトン', '歳差運動：首を振って回る'] },
   { no:'第2章', nm:'倒して、戻るのを見る', goal:'同じ周波数の電波で磁化の矢印 M を倒すと、縦の M は T1 で戻り、横の M は T2・T2* で減る。2つは同時に進む。',
     steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す', 'T1：縦磁化がもどる', 'T2：横磁化が短くなる', '縦と横は同時に変わる', 'T2*：磁場のムラで もっと速く'] },
   { no:'第3章', nm:'装置の中の電気と磁気', goal:'電流が磁場を作り（静磁場）、回る M の磁場の変化が電流（信号）を生む。',
-    steps:['電流が磁場を作る（電磁石）', '電磁誘導：変化が電気を生む', '静磁場 B₀ の向き', '回る M でコイルに電流が流れる'] },
+    steps:['電流が磁場を作る（電磁石）', '静磁場 B₀ の向き', '電磁誘導：変化が電気を生む', '回る M でコイルに電流が流れる'] },
   { no:'第4章', nm:'どこからの信号かを見分ける', goal:'傾斜磁場で場所ごとに周波数と角度を変え、集めた信号の表（k 空間）から画像を作る。',
     steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表'] },
   { no:'第5章', nm:'撮り方で明るさが変わる', goal:'SE と GRE、TR と TE で、組織の明るさの差（コントラスト）が決まる。ここで序章の答えが出る。',
-    steps:['1枚の画像ができるまで', 'スピンエコー：180°で呼びもどす', 'GRE：180° を使わない', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '矢印から画像へ', '水の白黒が逆になる理由', 'やってみよう：水をいちばん暗くする'] },
+    steps:['1枚の画像ができるまで', 'スピンエコー：180°で呼びもどす', 'GRE：180° を使わない', '矢印から画像へ', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'やってみよう：水をいちばん暗くする'] },
   { no:'第6章', nm:'狙った組織の信号を消す・残す', goal:'TI で脂肪や水の信号を消し、長い TE で水の信号だけを残す。MIP で1枚にまとめる。',
     steps:['IR：狙った組織の信号を消す', 'やってみよう：TI で脂肪の信号を消す', 'FLAIR：水の信号を消す', '強いT2強調：水の信号だけを残す', 'MIP：重ねて1枚にする'] },
 ];
@@ -5277,23 +5271,16 @@ function tutTry(st) {
   }
   box.appendChild(stat); judge();
 }
-let tutAsked = false, tutAskOpen = false, tutResume = null;
+let tutAsked = false;
 /* いま見ている矢印が何かを、3D の左上に出す（案内の間だけ） */
 function scopeSync() {
   const t = $('scopeTag'), v = document.body.classList.contains('tutOn') && P.tag && P.tag.scope;
   t.hidden = !v; if (v) t.innerHTML = '<b>いま見ている矢印</b>' + v;
 }
-/* 見たことを確かめる問い：動きをひと回り見せ終えてから出す（見る前に予想させない）。
-   本文には問いを書かない（問いは1つだけ）。答えたら正解と理由だけを残す */
-function tutAskWait(st) {   // 問いが出るまでの間：問いがあることと、あと少しで出ることを見せる
-  const box = $('tutAskBox'), w = $('tutAskWait');
-  if (!st.ask) { w.hidden = true; return; }
-  const acts = actsOf(st), sec = ((st.autoAt || 1000) + acts.reduce((a, x) => a + (x.dur || 4000), 0) + 800) / 1000;
-  w.innerHTML = '<span>動きを見終わると、ここに確かめの問いが出ます</span><i><b style="animation-duration:' + sec + 's"></b></i>';
-  w.hidden = false; box.hidden = true;
-}
+/* 確かめの問い：手を開いたときから出し、いつでも答えられる（文で分かった人はすぐ解ける。動きを見てから答えてもよい）。
+   本文には問いを書かない（問いは1手に1つだけ）。答えたら正解と理由だけを残す */
 function tutAsk(st) {
-  const box = $('tutAskBox'); box.innerHTML = ''; box.hidden = true; tutAskWait(st); if (!st.ask) return;
+  const box = $('tutAskBox'); box.innerHTML = ''; box.hidden = !st.ask; if (!st.ask) return;
   const A = st.ask;
   box.innerHTML = (A.q ? '<span class="tq">' + A.q + '</span>' : '') + '<span class="topts"></span>';
   const row = box.querySelector('.topts');
@@ -5307,7 +5294,6 @@ function tutAsk(st) {
       p.innerHTML = '<b>' + (i === A.ans ? '◯' : '✕') + ' 正解は「' + A.opts[A.ans] + '」。</b>' + A.why;
       box.appendChild(p);
       $('tutLink').hidden = !st.link;
-      if (tutResume) { const f = tutResume; tutResume = null; tutAutoTm.push(setTimeout(f, 2500)); }   // 答えを読んでから、もう一度動かす
       const el = st.sel ? document.querySelector(st.sel) : null;
       tutPlace(el); tutFit(el); setTimeout(() => { tutPlace(el); tutFit(el); }, 60);
     });
@@ -5329,7 +5315,7 @@ function tutReset(st) {
 function tutShow() {
   const st = tutList[tutI];
   tutEl.hidden = false; document.body.classList.add('tutOn'); cmpBarSync();
-  tutActI = 0; tutAsked = false; tutAskOpen = false; tutResume = null; P.paused = false;
+  tutActI = 0; tutAsked = false;
   tutReset(st);
   const counted = x => x.sel || x.map || actsOf(x).length;
   const n = tutList.filter(counted).length;
@@ -5418,16 +5404,8 @@ function tutAutoRun(st) {
     acts.forEach((a, k) => { tutAutoTm.push(setTimeout(() => tutAct(k), t)); t += a.dur || 4000; });
     tutAutoTm.push(setTimeout(() => {           // ひと回り終わったら、始めの状態に戻してもう一度
       if (tutI < 0 || tutList[tutI] !== st) return;
-      const again = () => { P.paused = false; tutAutoTm = []; tutNow('↻ もう一度'); tutReset(st); cycle(); };
-      if (st.ask && !tutAskOpen) {               // ひと回り見終えたところで止め、その場面を見ながら答える問いを出す
-        tutAskOpen = true; $('tutAskBox').hidden = false; $('tutAskWait').hidden = true;
-        P.paused = true; tutNow(''); tutResume = again;
-        const el = st.sel ? document.querySelector(st.sel) : null;
-        tutPlace(el); tutFit(el); setTimeout(() => { tutPlace(el); tutFit(el); }, 60);
-        return;
-      }
-      again();
-    }, t + (st.ask && !tutAskOpen ? 800 : (st.loopGap || 1500))));   // 問いを出す1回目は、見終えたらすぐ出す
+      tutAutoTm = []; tutNow('↻ もう一度'); tutReset(st); cycle();
+    }, t + (st.loopGap || 1500)));
   };
   cycle();
 }
@@ -5479,7 +5457,7 @@ function tutEnd() {
   tutAutoStop();
   tutI = -1; tutEl.hidden = true; document.body.classList.remove('tutOn', 'tutPanel');
   coilRx = true; imgFlash(false); if (RA.on) RA.t0 = performance.now() - 7000;   // 途中でやめたら、受信は戻し、検査室からの動きは最後まで飛ばす
-  P.tag = {}; P.paused = false; tutResume = null; scopeSync(); cmpBarSync(); layoutImg();
+  P.tag = {}; scopeSync(); cmpBarSync(); layoutImg();
   const f = tutAfter; tutAfter = null;
   if (f) f();
 }
