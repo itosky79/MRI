@@ -863,6 +863,10 @@ button.opt{padding:9px 4px 8px; gap:3px}
 .chap{margin-top:16px}
 .chap h4{gap:9px}
 .chap .cgoal{margin:4px 0 7px; line-height:1.7}
+.chap .cneed{margin:-3px 0 8px; font-size:12.5px; color:var(--dim); line-height:1.6}
+.chap .cneed b{font-weight:600; color:var(--muted); margin-right:7px}
+button.act.short{margin-top:8px; background:var(--panel); border:1.5px solid var(--line2); color:var(--text)}
+button.act.short:hover{border-color:var(--teal); color:var(--teal)}
 ol.seq{gap:4px}
 ol.seq button{padding:6px 8px; line-height:1.6}
 .gloss .gl{padding:9px 0; gap:3px 10px}
@@ -933,7 +937,9 @@ header{padding-block:18px 13px; margin-bottom:18px}
 /* 予想してから見る：選ぶまで動きは始まらない */
 .task{margin:-4px 0 14px}
 .task[hidden]{display:none}
-.task .tq{display:block; font-weight:700; color:var(--head); margin-bottom:8px; font-size:15px}
+.task .tq{display:flex; align-items:baseline; justify-content:space-between; gap:10px; font-weight:700; color:var(--head); margin-bottom:8px; font-size:15px}
+.task .tagain{flex:none; padding:3px 10px; border-radius:8px; border:1px solid var(--line2); background:var(--panel); color:var(--teal); font-family:var(--gothic); font-size:13px; font-weight:600; cursor:pointer}
+.task .tstat .tagain{display:inline-block; margin-left:8px; vertical-align:baseline}
 .task .topts{display:flex; gap:8px; flex-wrap:wrap}
 .task .topts{flex-wrap:nowrap}
 .task .topts button{flex:1 1 0; min-width:0; line-height:1.45; padding:8px 10px; border-radius:10px; border:1.5px solid var(--line2); background:var(--panel); color:var(--text);
@@ -1189,6 +1195,8 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
       <div class="pane" id="pane1" hidden>
         <p class="tiny" id="learnGuide" style="margin:0 0 9px">序章から順に、章ごとに進みます。1つの章は数分です。分からない言葉は、いちばん下の<b>用語の手引き</b>へ。</p>
         <button class="act wide" id="bLearn" type="button" style="width:100%">序章から始める</button>
+        <button class="act wide short" id="bShort" type="button" style="width:100%">近道：画像の白黒の理由だけを先に見る</button>
+        <p class="tiny" id="shortNote" style="margin:5px 0 0"></p>
         <div id="chList"></div>
         <details class="fold gloss" id="glossFold" style="margin-top:14px"><summary>用語の手引き</summary>
           <dl id="glossList"></dl>
@@ -3818,7 +3826,7 @@ function wellDraw(cv) {
 const TVH = { nm:'縦と横は同時に変わる', hint:'白質では T1 が約 650 ms、T2 が約 80 ms です。値は装置や文献で幅があります。縦の M と横の M を足しても、いつも元の長さになるわけではありません。', zone:[1], tg:'横の方がずっと速い', sel:'#stage',
   tag:{ pct:true, pctz:true, tslow:0.3, scope:'縦の M・横の M ＝ M の縦向きの分と横向きの分' },
   ask:{ q:'横の M がほぼ 0% になったとき、縦の M はどこまで戻っていますか？', opts:['ほぼ 100%', '半分くらい'], ans:1,
-    why:'縦の M が戻る速さ T1 は、横の M が減る速さ T2 よりずっと遅いからです。' },
+    why:'T1 は T2 よりずっと長い時間です。だから縦の M の戻りは、横の M の減りよりずっと遅くなります。' },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:true, onlyM:true, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
   on:() => { calm(); },
   act:{ label:'90° 倒して、そのまま待つ', fn:() => { calm(); manualPulse(90, 'x', 1.0); }, dur:10000 }, loopGap:3500,   // 終わりの「横は消えたが縦は戻りきっていない」をしばらく見せる
@@ -3939,7 +3947,7 @@ L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石か
 L({ nm:'T2：横磁化が短くなる', hint:'水素どうしが、互いの小さな磁場で回る速さを少しずつ乱し合うので、横の M が減ります。このため、スピン-スピン緩和とも呼ばれます。', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
   tag:{ pct:true, scope:'M ＝ たくさんの水素の合計／横の M ＝ その横向きの分' },
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
-  text:'M の横向きの分が[[mxy:横の M]]、横磁化です。時間とともに<b>短くなります</b>。<br>赤い矢印の横の<b>％の数字</b>が、37% まで減る時間を T2 といいます。' }),
+  text:'M の横向きの分が[[mxy:横の M]]、横磁化です。時間とともに<b>短くなります</b>。<br>赤い矢印の横の<b>％の数字</b>が 37% まで減る<b>時間</b>が T2 で、長いほど減りが遅いです。' }),
 
 L(TVH),
 
@@ -3958,9 +3966,9 @@ L({ nm:'スピンエコー：180°で呼びもどす', hint:'全員が途中で�
   } },
   text:'ばらけた細い矢印を[[rf:180° の RFパルス]]で折り返すと、<b>またそろいます</b>。<br>これが[[echo:エコー]]で、この撮り方がスピンエコー、SE です。' }),
 
-L({ nm:'T1：縦磁化がもどる', hint:'T1 は、縦の M が 63% まで戻る時間です。熱として周りに渡しながら戻るので、スピン-格子緩和とも呼ばれます。値は装置や文献で幅があります。', zone:[1], tg:'スピン-格子緩和', sel:'#panRel',
+L({ nm:'T1：縦磁化がもどる', hint:'③の上のグラフで、線の上がり方が組織ごとに違うのは、T1 が違うからです。熱として周りに渡しながら戻るので、スピン-格子緩和とも呼ばれます。値は装置や文献で幅があります。', zone:[1], tg:'スピン-格子緩和', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
-  text:'縦磁化 ＝ 縦の M は、倒れたあと時間とともに<b>戻ります</b>。<br>①のグラフで線が<b>上がる速さ</b>が T1 で、組織ごとに違います。' }),
+  text:'縦磁化 ＝ 縦の M は、倒れたあと<b>戻ります</b>。①のグラフで線が上がるようすです。<br>元の 63% まで戻る<b>時間</b>が T1 で、<b>T1 が長いほど戻りが遅い</b>です。' }),
 
 L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
@@ -3994,11 +4002,11 @@ L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで�
     why:'戻りきらないうちに倒すので、倒したときの横の M も小さくなります。' },
   text:'「倒す → 読む」をくり返す間隔が TR です。短くすると、縦の M の戻りが遅い[[water:脳脊髄液]]が<b>暗く</b>なります。これが T1強調です。' }),
 
-L({ nm:'TE：倒してから読むまで', hint:'③の下のグラフで、TE の線が右へ動きます。脳脊髄液の線だけが高いところに残るのを見てください。', tg:'T2 の差をつける', sel:'#panRel',
+L({ nm:'TE：倒してから読むまで', hint:'③の下のグラフで、TE の線が右へ動きます。どの線も下がっていきますが、脳脊髄液の線は下がり方がゆるやかで、高いところに残ります。', tg:'T2 の差をつける', sel:'#panRel',
   tag:{ mark:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:4000, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TE を 15 → 100 ms に長くする', fn:() => applySet({ TE:100 }, true) },
-  text:'TE を長くすると、横の M が消えにくい[[water:脳脊髄液]]が<b>明るく</b>残ります。<br>これが[[relw:T2強調]]です。' }),
+  text:'TE を長くすると、どの組織の信号も減りますが、T2 の短い組織が<b>先に</b>減ります。<br>減りの遅い[[water:脳脊髄液]]が<b>相対的に白く</b>目立ちます。これが[[relw:T2強調]]です。' }),
 
 L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
@@ -4010,13 +4018,13 @@ L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
   } },
   text:'<b>TR 短・TE 短＝T1強調</b>、TR 長・TE 短＝プロトン密度、<b>TR 長・TE 長＝T2強調</b>。' }),
 
-L({ nm:'やってみよう：水をいちばん暗くする', hint:'脳脊髄液は縦の M の戻りがとても遅い組織です。どちらのつまみを、どちらへ動かせばよいでしょう。', tg:'TR・TE を自分で選ぶ', sel:'#imgbox',
+L({ nm:'やってみよう：水を脳より暗くする', hint:'脳脊髄液は縦の M の戻りがとても遅い組織です。どちらのつまみを、どちらへ動かせばよいでしょう。', tg:'TR・TE を自分で選ぶ', sel:'#imgbox',
   tag:{ big:true, mark:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
   try:{ ctrls:[['TR', TRV, 'ms'], ['TE', TEV, 'ms']],
-    check:() => { const v = id => imgSig(TIS[TIX[id]]); return ['fat', 'wm', 'gm'].every(id => v('csf') < v(id) * 0.6); },
-    ok:'できました。TR を短くすると、戻りの遅い脳脊髄液が暗くなります。これが T1強調です。', ng:'まだ、脳脊髄液がいちばん暗くなっていません。' },
-  text:'TR と TE のつまみを動かして、[[water:脳脊髄液]]を<b>いちばん暗く</b>してください。' }),
+    check:() => { const v = id => imgSig(TIS[TIX[id]]); return ['wm', 'gm'].every(id => v('csf') < v(id) * 0.6); },
+    ok:'できました。TR を短くすると、戻りの遅い脳脊髄液が暗くなります。これが T1強調です。', ng:'まだ、脳脊髄液が白質・灰白質よりはっきり暗くなっていません。' },
+  text:'TR と TE のつまみを動かして、[[water:脳脊髄液]]を<b>白質・灰白質より暗く</b>してください。' }),
 
 L({ nm:'GRE：180° を使わない', hint:'GRE はグラジエントエコーの略で、グラジエントは傾斜磁場のことです。ばらけた細い矢印を 180° で戻さないので、信号は速く小さくなります。', tg:'T2 ではなく T2*', sel:'#panSeq',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:25, T2p:40 },
@@ -4215,7 +4223,7 @@ L({ nm:'水の白黒が逆になる理由', hint:'T1強調では上のグラフ�
     { label:'T1強調にする', fn:() => applySet(pre('t1'), true) },
     { label:'T2強調にする', fn:() => applySet(pre('t2'), true) },
   ],
-  text:'T1強調：脳脊髄液は①の<b>縦の戻りが遅い → 暗い</b>。<br>T2強調：脳脊髄液は②の<b>横の M が消えにくい → 明るい</b>。' }),
+  text:'T1強調：脳脊髄液は①の<b>縦の戻りが遅い → 暗い</b>。<br>T2強調：脳脊髄液は②の<b>横の M の減りが遅い → ほかより明るい</b>。' }),
 L({ nm:'1枚の画像ができるまで', hint:'②の図の「位相エンコード」の段は、くり返すたびに強さを変えます。256 回くり返すと、k 空間が 256 行そろいます。', tg:'倒す → 読む を何百回も', sel:'#panSeq',
   tag:{ pe:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
@@ -4234,15 +4242,15 @@ const CHAPTERS = [
     steps:['T1強調と T2強調を撮り比べる', 'MRI が画像を作るまで'] },
   { no:'第1章', nm:'水素は首を振る小さな磁石', goal:'水素の原子核、プロトンは小さな磁石。磁場の中で足し合わせると1本の矢印 M になり、M は首を振って回る。',
     steps:['プロトン：水素の原子核は小さな磁石', '静磁場の中のプロトン', '歳差運動：首を振って回る'] },
-  { no:'第2章', nm:'倒して、戻るのを見る', goal:'同じ周波数の電波で磁化の矢印 M を倒すと、縦の M は T1 で戻り、横の M は T2・T2* で減る。2つは同時に進む。',
+  { no:'第2章', need:'第1章', nm:'倒して、戻るのを見る', goal:'同じ周波数の電波で磁化の矢印 M を倒すと、縦の M は T1 で戻り、横の M は T2・T2* で減る。2つは同時に進む。',
     steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す', 'T1：縦磁化がもどる', 'T2：横磁化が短くなる', '縦と横は同時に変わる', 'T2*：磁場のムラで もっと速く'] },
-  { no:'第3章', nm:'装置の中の電気と磁気', goal:'電流が磁場を作り（静磁場）、回る M の磁場の変化が電流（信号）を生む。',
+  { no:'第3章', need:'第1・2章', nm:'装置の中の電気と磁気', goal:'電流が磁場を作り（静磁場）、回る M の磁場の変化が電流（信号）を生む。',
     steps:['電流が磁場を作る（電磁石）', '静磁場 B₀ の向き', '電磁誘導：変化が電気を生む', '回る M でコイルに電流が流れる'] },
-  { no:'第4章', nm:'どこからの信号かを見分ける', goal:'傾斜磁場で場所ごとに周波数と角度を変え、集めた信号の表（k 空間）から画像を作る。',
+  { no:'第4章', need:'第1〜3章', nm:'どこからの信号かを見分ける', goal:'傾斜磁場で場所ごとに周波数と角度を変え、集めた信号の表（k 空間）から画像を作る。',
     steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表'] },
-  { no:'第5章', nm:'撮り方で明るさが変わる', goal:'SE と GRE、TR と TE で、組織の明るさの差（コントラスト）が決まる。ここで序章の答えが出る。',
-    steps:['1枚の画像ができるまで', 'スピンエコー：180°で呼びもどす', 'GRE：180° を使わない', '矢印から画像へ', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'やってみよう：水をいちばん暗くする'] },
-  { no:'第6章', nm:'狙った組織の信号を消す・残す', goal:'TI で脂肪や水の信号を消し、長い TE で水の信号だけを残す。MIP で1枚にまとめる。',
+  { no:'第5章', need:'第1・2章。「1枚の画像ができるまで」と GRE は第4章も', nm:'撮り方で明るさが変わる', goal:'SE と GRE、TR と TE で、組織の明るさの差（コントラスト）が決まる。ここで序章の答えが出る。',
+    steps:['1枚の画像ができるまで', 'スピンエコー：180°で呼びもどす', 'GRE：180° を使わない', '矢印から画像へ', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'やってみよう：水を脳より暗くする'] },
+  { no:'第6章', need:'第5章', nm:'狙った組織の信号を消す・残す', goal:'TI で脂肪や水の信号を消し、長い TE で水の信号だけを残す。MIP で1枚にまとめる。',
     steps:['IR：狙った組織の信号を消す', 'やってみよう：TI で脂肪の信号を消す', 'FLAIR：水の信号を消す', '強いT2強調：水の信号だけを残す', 'MIP：重ねて1枚にする'] },
 ];
 {
@@ -4259,7 +4267,16 @@ const CHAPTERS = [
     last.go = () => { chDone(c); tutEnd(); if (hasNext) runChapter(nx, 0); };
   });
 }
-let curCh = -1, curStep = 0;   // いま開いている章と手（一覧の印に使う）
+let curCh = -1, curStep = 0;
+/* 近道：画像の白黒（T1強調・T2強調）の理由だけを先に見る。序章 → 第1・2章 → ボクセル → 第5章の白黒に関わる手 */
+const SHORT = CHAPTERS.slice(0, 3).flatMap(ch => ch.steps).concat(['脳のどこにも M がある', 'スピンエコー：180°で呼びもどす', '矢印から画像へ',
+  'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'やってみよう：水を脳より暗くする']);
+function runShort() {
+  const by = {}; CHAPTERS.forEach(ch => ch.list.forEach(st => { by[st.nm] = st; }));
+  const n = SHORT.length;
+  const list = SHORT.map((nm, i) => Object.assign({}, by[nm], { go:null, next:i === n - 1 ? '終わる' : null, head:'近道　' + (i + 1) + ' / ' + n }));
+  curCh = -1; tutRun(list, 0, markStep);
+}   // いま開いている章と手（一覧の印に使う）
 
 
 
@@ -4684,7 +4701,7 @@ function buildChList() {
   CHAPTERS.forEach((ch, c) => {
     const d = document.createElement('div'); d.className = 'chap' + (ch.soon ? ' soon' : '');
     d.innerHTML = '<h4><span class="cno">' + ch.no + '</span><span>' + ch.nm + '</span>' + (chDoneSet.has(c) ? '<span class="ck">✓ 済み</span>' : '') + '</h4>' +
-      '<p class="cgoal">' + ch.goal + '</p>';
+      '<p class="cgoal">' + ch.goal + '</p>' + (ch.need ? '<p class="cneed"><b>先に見ておく章</b>' + ch.need + '</p>' : '');
     if (ch.soon) { box.appendChild(d); return; }
     const ol = document.createElement('ol'); ol.className = 'seq';
     ch.list.forEach((st, i) => {
@@ -4710,6 +4727,8 @@ function markStep() {
   document.querySelectorAll('#chList ol.seq button').forEach(b =>
     (live && +b.dataset.c === curCh && +b.dataset.i === curStep) ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
 }
+$('bShort').addEventListener('click', runShort);
+$('shortNote').textContent = '序章 → 第1・2章 → 第5章の白黒に関わる手、全 ' + SHORT.length + ' 手です。電磁気と場所の見分け方は、あとで章ごとに見られます。';
 $('bLearn').addEventListener('click', () => { const nx = CHAPTERS.findIndex((ch, c) => !ch.soon && !chDoneSet.has(c)); runChapter(nx < 0 ? 0 : nx, 0); });
 
 /* ---- 用語の手引き：初めて出てくる言葉を、ふつうの言葉で1行ずつ。「見る」でその言葉が出てくる手へ飛ぶ ----
@@ -4726,8 +4745,8 @@ const GLOSS = [
     ['フリップ角', 'M を倒す角度。電波の強さ × 当てる時間で決まる。', 'RFパルスで倒す'],
     ['回転座標', 'M と一緒に回る目線。回る動きが消えて、倒れ方や広がり方が見やすくなる。', 'RFパルスで倒す'],
     ['縦磁化・横磁化', 'M の上向きの分（Mz）と横向きの分（Mxy）。信号になるのは横の分だけ。', '回る M'],
-    ['T1（縦緩和）', '縦磁化が元へ戻る速さ。脂肪は速く、水は遅い。', 'T1'],
-    ['T2（横緩和）', '横磁化が消えていく速さ。水は遅く、白質は速い。', 'T2'],
+    ['T1（縦緩和）', '縦磁化が元の 63% まで戻る時間。長いほど戻りが遅い。脂肪は短く、水は長い。', 'T1'],
+    ['T2（横緩和）', '横磁化が 37% まで減る時間。長いほど減りが遅い。水は長く、白質は短い。', 'T2'],
     ['T2*', '磁場のムラも加わって、T2 より速く消える減り方。', 'T2*'],
   ]],
   ['装置の中の電気と磁気（第3章）', [
@@ -5279,10 +5298,17 @@ function scopeSync() {
 }
 /* 確かめの問い：手を開いたときから出し、いつでも答えられる（文で分かった人はすぐ解ける。動きを見てから答えてもよい）。
    本文には問いを書かない（問いは1手に1つだけ）。答えたら正解と理由だけを残す */
+function tutReplay(st) {   // 動きを最初から見直す（自分のペースで）
+  if (tutList[tutI] !== st) return;
+  tutAutoStop(); tutNow(''); tutReset(st); tutAutoRun(st);
+}
 function tutAsk(st) {
   const box = $('tutAskBox'); box.innerHTML = ''; box.hidden = !st.ask; if (!st.ask) return;
   const A = st.ask;
-  box.innerHTML = (A.q ? '<span class="tq">' + A.q + '</span>' : '') + '<span class="topts"></span>';
+  const again = () => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tagain'; b.textContent = '↻ もう一度見る';
+    b.addEventListener('click', () => tutReplay(st)); return b; };
+  box.innerHTML = '<span class="tq"><span>' + (A.q || '') + '</span></span><span class="topts"></span>';
+  box.querySelector('.tq').appendChild(again());
   const row = box.querySelector('.topts');
   A.opts.forEach((o, i) => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = o;
@@ -5292,7 +5318,7 @@ function tutAsk(st) {
       box.innerHTML = '';   // 答えたら問いと選択肢は畳み、正解と理由だけを残す（カードを伸ばして図を隠さない）
       const p = document.createElement('p'); p.className = 'tstat';
       p.innerHTML = '<b>' + (i === A.ans ? '◯' : '✕') + ' 正解は「' + A.opts[A.ans] + '」。</b>' + A.why;
-      box.appendChild(p);
+      box.appendChild(p); p.appendChild(again());
       $('tutLink').hidden = !st.link;
       const el = st.sel ? document.querySelector(st.sel) : null;
       tutPlace(el); tutFit(el); setTimeout(() => { tutPlace(el); tutFit(el); }, 60);
