@@ -944,7 +944,8 @@ header{padding-block:18px 13px; margin-bottom:18px}
 .task .tstat{margin:9px 0 0; padding:8px 12px; border-radius:8px; background:var(--fill); font-size:14.5px; line-height:1.85}
 .task .tstat b{color:var(--teal); margin-right:4px}
 /* 章の終わり：この章の話が、画像の明るさとどうつながるか */
-.tlink{display:block; margin-top:10px; padding-top:8px; border-top:1px dashed var(--line2); font-size:14.5px; color:var(--muted); line-height:1.85}
+.tlink[hidden]{display:none}
+.tlink{display:block; margin:-4px 0 14px; padding-top:8px; border-top:1px dashed var(--line2); font-size:14.5px; color:var(--muted); line-height:1.85}
 .tlink b{color:var(--head); margin-right:8px}
 .tw.mz{color:#1C8A5C}
 .gloss .gl button{font-size:13px}
@@ -1378,6 +1379,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
     <p class="tstep" id="tutStep"></p>
     <p class="ttext" id="tutText"></p>
     <div class="task" id="tutAskBox" hidden></div>
+    <p class="tlink" id="tutLink" hidden></p>
     <div class="ttry" id="tutTryBox" hidden></div>
     <p class="thint" id="tutHintBox" hidden></p>
     <div class="tnav">
@@ -3226,7 +3228,7 @@ function updateScene(dt) {
   {
     const t = new THREE.Vector3(m[0] * ML, m[1] * ML, m[2] * ML).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('m', t.x * 1.13, t.y * 1.13, t.z * 1.13 + 0.35, (typeof P.tag.m === 'function' ? P.tag.m() : P.tag.m) || 'M', on && showSpin && L > 0.4);
-    if (P.tag.pctz) place('mz', 0.55, 0.55, Math.max(m[2] * ML, 1.6), '<i>縦の M</i><b>' + Math.round(Math.max(0, m[2]) * 100) + '%</b>', on && comp);
+    if (P.tag.pctz) place('mz', 0.55, 0.55, Math.max(m[2] * ML + 0.8, 2.8), '<i>縦の M</i><b>' + Math.round(Math.max(0, m[2]) * 100) + '%</b>', on && comp);
     else place('mz', 0.55, 0.55, m[2] * ML, '縦の M', on && comp && Math.abs(m[2]) > 0.18);
     const q = new THREE.Vector3(m[0] * ML, m[1] * ML, 0).applyAxisAngle(ZAX, spinGrp.rotation.z);
     place('mxy', q.x * 1.18, q.y * 1.18, -0.5, P.tag.pct ? '<i>横の M</i><b>' + Math.round(txy * 100) + '%</b>' : '横の M', on && comp && txy > 0.18);
@@ -3819,7 +3821,7 @@ const TVH = { nm:'縦と横は同時に変わる', hint:'白質では T1 が約 
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:true, onlyM:true, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
   on:() => { calm(); },
   act:{ label:'90° 倒して、そのまま待つ', fn:() => { calm(); manualPulse(90, 'x', 1.0); }, dur:11000 },
-  text:'倒れたあと、[[mz:縦の M]] は戻り、[[mxy:横の M]] は減ります。この2つは<b>同時に</b>進みます。<br>縦が戻るのと、横が減るのと、どちらが速いでしょう。' };
+  text:'倒れたあと[[mz:縦の M]] は戻り、[[mxy:横の M]] は減ります。<b>2つは同時に</b>進みます。<br>縦が戻るのと、横が減るのと、どちらが速いでしょう。' };
 const PRIN = [
 /* 全体の地図：① 機械が電流で磁場を作る → ② 水素の M が倒れて回る → ③ 受信コイルに電流（信号）が流れる。
    電磁気のきまりが出てくるのは ①（電流 → 磁場）と ③（磁場の変化 → 電流）だけで、② は水素の話。
@@ -3842,7 +3844,7 @@ L({ nm:'静磁場 B₀ の向き', hint:'すぐ前の手で見た電磁石と同
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, bore:true, showComp:false, tissue:'wm' },
   on:() => { calm(); roomHold(); }, autoAt:2200,   // 検査室の全体を少し見てから近づく
   act:{ label:'検査室から近づく', fn:() => roomPlay(), dur:7000 },
-  text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。これが静磁場です。<br>人は寝ているので B₀ は本当は水平ですが、<b>画面では上向き</b>に描きます。' }),
+  text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い静磁場 [[b0:B₀]] ができます。<br>人は寝ているので B₀ は本当は水平ですが、<b>画面では上向き</b>に描きます。' }),
 
 L({ nm:'静磁場の中のプロトン', hint:'矢印の足し算は、矢印の先に次の矢印の根元をつないでいくやり方です。最後の矢印の先までが合計です。', zone:[1], tg:'足し合わせると M', sel:'#stage',
   tag:{ hlab:'プロトン', noM0:true, scope:'小さい矢印 ＝ 水素1個ずつ' },
@@ -3878,7 +3880,7 @@ L({ nm:'共鳴：リズムが合うと倒れる', hint:'電波は、電気と磁
     { label:'同じ速さの電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0); }, dur:6000 },
     { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
   ],
-  text:'磁化の矢印 [[m:M]] を倒す電波が [[rf:RFパルス]] です。その磁場は<b>横向きに回る矢印</b>です。<br>この矢印が M の首振りと<b>同じ速さで回る</b>と、M が倒れます。これが共鳴です。' +
+  text:'[[m:M]] を倒す電波が [[rf:RFパルス]] で、その磁場は<b>横向きに回る矢印</b>です。<br>この矢印が M の首振りと<b>同じ速さで回る</b>と、M が倒れます。これが共鳴です。' +
        '<span class="eq">回る速さ ＝ 共鳴周波数 f ＝ 42.58 MHz × 磁場〔T〕 ＝ 1.5 T で約 64 MHz</span>' }),
 
 L({ nm:'RFパルスで倒す', hint:'このあとの手は、ほとんどこの回転座標系で描きます。実際の M は、そのあいだも1秒に約6400万回の速さで回っています。', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × 時間', sel:'#stage',
@@ -3888,7 +3890,7 @@ L({ nm:'RFパルスで倒す', hint:'このあとの手は、ほとんどこの�
     { label:'外から見る：らせんを描いて倒れる', fn:() => { calm(); applySet({ frame:'lab' }); manualPulse(90, 'x', 4.0); }, dur:6000 },
     { label:'M と一緒に回って見る：まっすぐ倒れる', fn:() => { calm(); applySet({ frame:'rot' }); manualPulse(90, 'x', 3.2); }, dur:5000 },
   ],
-  text:'メリーゴーランドに乗ると、となりの馬は止まって見えます。<br>同じように M と<b>一緒に回って</b>見ると、M は<b>まっすぐ倒れます</b>。これが回転座標系です。' +
+  text:'メリーゴーランドに乗ると、となりの馬は止まって見えます。<br>M と<b>一緒に回って</b>見ると、M は<b>まっすぐ倒れます</b>。これが回転座標系です。' +
        '<span class="eq">倒れる角度 ＝ RFパルスの強さ × 当てる時間</span>' }),
 
 L({ nm:'電流が磁場を作る（電磁石）', hint:'右ねじの法則：電流の向きに右ねじを回すと、ねじの進む向きが磁場の向きです。MRI の強い磁場 B₀ も、RF パルスも、傾斜磁場も、電線に流す電流で作ります。', tg:'電流 → 磁場', sel:'#stage',
@@ -4021,10 +4023,10 @@ L({ nm:'GRE：180° を使わない', hint:'GRE はグラジエントエコー�
   act:{ label:'T2*強調 GRE に切り替える', fn:() => applySet(pre('t2s'), true) },
   text:'180° の代わりに傾斜磁場でエコーを作る撮り方が GRE です。<br>②の図から <b>180° が消え</b>、信号は T2* で速く小さくなります。' }),
 
-L({ nm:'IR：狙った組織の信号を消す', hint:'IR は反転回復のことです。③の上のグラフで、線がいったんマイナスから始まります。0 を横切る瞬間に倒した組織は、信号が出ません。', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
+L({ nm:'IR：狙った組織の信号を消す', hint:'IR は反転回復のことです。③の上のグラフで、線がいったんマイナスから始まります。TI を約 180 ms にして脂肪を黒くする撮り方を STIR といいます。', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
   act:{ label:'TI を 180 ms にする（STIR）', fn:() => applySet(pre('stir'), true) },
-  text:'先に 180° で縦の M を下向きにし、<b>0 を通る瞬間</b>に倒すと、その組織は<b>信号が出ず黒く</b>写ります。<br>この撮り方が IR、待つ時間が TI です。脂肪を黒くするのが [[relw:STIR]] です。' }),
+  text:'縦の M を 180° で下向きにしてから待ち、<b>0 を通る瞬間</b>に倒します。<br>その組織は<b>信号が出ず黒く</b>写ります。この撮り方が IR、待つ時間が TI です。' }),
 
 L({ nm:'やってみよう：TI で脂肪の信号を消す', hint:'脂肪の縦の M が 0 を通る時刻に倒すと、脂肪の信号が出ません。TI を小さい方から少しずつ動かしてみてください。', tg:'TI を自分で合わせる', sel:'#imgbox',
   tag:{ big:true },
@@ -4045,7 +4047,7 @@ L({ nm:'強いT2強調：水の信号だけを残す', hint:'右の画像は、�
   tag:{ gb:true, scope:'左の矢印 ＝ 肝臓の M／右の矢印 ＝ 胆汁の M' },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:false, region:'abd', sl:{ ori:'cor', pos:2 }, seq:'SE', TR:6000, TE:100, T2p:40, tissue:'wat', cmp:['liv', 'wat'], cmpLay:'side' },
   act:{ label:'TE を 100 → 800 ms にする', fn:() => applySet({ TE:800 }, true) },
-  text:'画像を腹部に変えます。TE をうんと長くすると、T2 の短い肝臓は信号が消えて黒くなり、<br>T2 の長い[[bile:胆汁などの水]]だけが<b>白く残ります</b>。これが強い T2強調です。' }),
+  text:'画像を腹部に変えます。TE をうんと長くすると、T2 の短い肝臓は<b>黒く</b>なり、<br>T2 の長い[[bile:胆汁などの水]]だけが<b>白く残ります</b>。これが強い T2強調です。' }),
 
 L({ nm:'MIP：重ねて1枚にする', hint:'胆管と膵管をこうして写す検査が MRCP です。厚くするほど管が長くつながって見えます。そのかわり、胃や腸の水も重なって写ります。細かいところは、もとの断面1枚ずつでも確かめます。「詳細」で結石の模型を入れて比べられます。', tg:'いちばん明るい所を集める', sel:'#imgbox',
   tag:{ duct:true, big:true },
@@ -5291,6 +5293,7 @@ function tutAsk(st) {
       p.innerHTML = (i === A.ans ? '<b>◯ そのとおり。</b>' : '<b>答えは「' + A.opts[A.ans] + '」。</b>') + A.why;
       box.appendChild(p);
       if (A.tag) { Object.assign(P.tag, A.tag); scopeSync(); }
+      $('tutLink').hidden = !st.link;
       tutAutoRun(st);
       const el = st.sel ? document.querySelector(st.sel) : null;
       tutPlace(el); tutFit(el); setTimeout(() => { tutPlace(el); tutFit(el); }, 60);
@@ -5331,8 +5334,9 @@ function tutShow() {
   tutTry(st);
   tutAsk(st);
   const wtxt = st.text.replace(/\[\[(\w+):([^\]]+)\]\]/g, '<span class="tw $1" data-w="$1" role="button" tabindex="0">$2</span>');
-  $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + wtxt +
-    (st.link ? '<span class="tlink"><b>画像では</b>' + st.link + '</span>' : '');
+  $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + wtxt;
+  $('tutLink').innerHTML = st.link ? '<b>画像では</b>' + st.link : '';
+  $('tutLink').hidden = !st.link || !!st.ask;   // 予想を聞く手では、答えたあとに出す（先に答えを言わない）
 
   $('tutBack').hidden = !(st.back && tutI > 0);
   /* ヒント：押すとカードの中に開く。ヒントのない手でもボタンの場所は取っておく（次へボタンの位置をそろえる） */
