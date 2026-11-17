@@ -3998,7 +3998,7 @@ L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで�
   tag:{ mark:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
-  ask:{ q:'脳脊髄液が暗くなったのは、なぜでしょう？', opts:['縦の M が戻りきらない', '横の M が速く消える'], ans:0,
+  ask:{ q:'暗くなった理由はどちらでしょう？', opts:['縦の M が戻りきらない', '横の M が速く消える'], ans:0,
     why:'戻りきらないうちに倒すので、倒したときの横の M も小さくなります。' },
   text:'「倒す → 読む」をくり返す間隔が TR です。短くすると、縦の M の戻りが遅い[[water:脳脊髄液]]が<b>暗く</b>なります。これが T1強調です。' }),
 
@@ -5305,7 +5305,7 @@ function tutReplay(st) {   // 動きを最初から見直す（自分のペー�
 function tutAsk(st) {
   const box = $('tutAskBox'); box.innerHTML = ''; box.hidden = !st.ask; if (!st.ask) return;
   const A = st.ask;
-  const again = () => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tagain'; b.textContent = '↻ もう一度見る';
+  const again = () => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tagain'; b.textContent = '↻ 見直す';
     b.addEventListener('click', () => tutReplay(st)); return b; };
   box.innerHTML = '<span class="tq"><span>' + (A.q || '') + '</span></span><span class="topts"></span>';
   box.querySelector('.tq').appendChild(again());
