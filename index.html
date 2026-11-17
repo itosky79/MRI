@@ -3191,10 +3191,10 @@ function updateScene(dt) {
   const near3d = !P.showBody || ctrl.dist < 45;
   const on = P.showLab && near3d && !P.slab && !P.grid && !cmpOn && !basic;
   const rot = P.frame === 'rot';
+  const tOn = document.body.classList.contains('tutOn');   // 学習の案内の間は、文に出てこない軸の文字（x・y・B₀ の向き）を出さない
   const cbOn = !$('cmpBar').hidden;   // 組織ボタンが出ているときは、ボタンに隠れないよう少し下に（スマホは場所がないので出さない）
-  place('z', 1.7, 0, cbOn || (P.tag && P.tag.zname) ? AX * 0.72 : AX - 0.2, P.tag && P.tag.zname ? P.tag.zname.replace('{B}', P.B0.toFixed(1)) : '↑ B₀ の向き', on && !(cbOn && smallScr));
+  place('z', 1.7, 0, cbOn || (P.tag && P.tag.zname) ? AX * 0.72 : AX - 0.2, P.tag && P.tag.zname ? P.tag.zname.replace('{B}', P.B0.toFixed(1)) : '↑ B₀ の向き', on && !(cbOn && smallScr) && (!tOn || !!(P.tag && P.tag.zname)));
   place('b0', 0, 0, 0, '', false);
-  const tOn = document.body.classList.contains('tutOn');   // 学習の案内の間は x・y の文字を出さない（文に出てこないので）
   place('x', AX + 0.5, 0, 0, rot ? "x'" : 'x', on && !P.showBody && !tOn);
   place('y', 0, AX + 0.5, 0, rot ? "y'" : 'y', on && !P.showBody && !tOn);
   {
@@ -3791,7 +3791,7 @@ L({ nm:'MRI が画像を作るまで', hint:'電波は RFパルス、強い磁�
   set:{ quantum:false, manual:true, frame:'lab', view:1, showBody:false, coil:true, showComp:false, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   act:{ label:'流れを通して見る', fn:mapPlay, dur:8500 },
-  tag:{ m:'水素の矢印', rf:'電波', zname:'↑ 磁場の向き', plain:true, noFlux:true },
+  tag:{ m:'水素の矢印', rf:'電波', plain:true, noFlux:true },
   text:'MRI は、この3つで画像を作ります。' +
        '<span class="tmap">' +
          '<span class="z"><span class="zl">①</span><span class="zt">体の[[hyd:水素]]は、強い磁場の中でそろって上を向く</span></span>' +
@@ -3808,7 +3808,7 @@ L({ nm:'静磁場 B₀ の向き', hint:'電線を巻いて電流を流すと磁
   text:'[[wire:筒の電線]]に電流を流すと、<b>体の長い方向</b>に強い磁場 [[b0:B₀]] ができます。<br>これを静磁場といい、画面では上向きに描きます。' }),
 
 L({ nm:'静磁場の中のプロトン', hint:'上向きと下向きの差は、本当は100万個に5個ほどです。見えるように、ここでは差を大きく描いています。足し合わせた M が、このあとずっと主役になります。', zone:[1], tg:'足し合わせると M', sel:'#stage',
-  tag:{ zname:'↑ 磁場の向き', hlab:'プロトン' },
+  tag:{ hlab:'プロトン' },
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
   text:'[[h:プロトン]]は上向きが少し多く、全部足すと上と下が打ち消し合います。<br><b>余った上向きの分</b>が残り、これが磁化 [[m:M]] です。' }),
@@ -3826,19 +3826,19 @@ L({ nm:'脳のどこにも M がある', hint:'矢印1本は、画像の1マス�
 /* 共鳴：B₁ の速さが M と合えば倒れ、ずれれば少しぐらつくだけ。
    ずれの量は、パルスの終わりに M がちょうど真上へ戻る値にしている（M から見た実効磁場のまわりの回転がちょうど1周：
    √(90² + off²) = 360 → off ≈ 349°）。そのあいだ M は最大で約 29°しか倒れない */
-L({ nm:'共鳴：リズムが合うと倒れる', hint:'ブランコは、揺れのリズムに合わせて押すと大きく揺れます。リズムがずれると押したり引いたりになり、揺れは大きくなりません。RF は電波のこと、パルスは短く当てることです。', zone:[0, 1], tg:'周波数が合うと倒れる', sel:'#stage',
-  tag:{ zname:'↑ 磁場の向き' },
+L({ nm:'共鳴：リズムが合うと倒れる', hint:'電波は、電気と磁気が細かく向きを変えながら進む波です。MRI で M を倒すのは、そのうちの磁気、つまり磁場の方です。磁場には向きがあるので矢印で描けます。送信コイルの作り方で、この矢印が横の面の中を回るようにしています。ブランコを揺れのリズムに合わせて押すと大きく揺れるのと同じで、回る速さが合うときだけ M は倒れます。RF は電波のこと、パルスは短く当てることです。', zone:[0, 1], tg:'周波数が合うと倒れる', sel:'#stage',
+  tag:{ rf:'RFパルスの磁場' },
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   acts:[
     { label:'同じ速さの電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0); }, dur:6000 },
     { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
   ],
-  text:'[[m:M]] を倒すには電波を当てます。この電波が[[rf:RFパルス]]です。<br><b>同じ速さで回る</b>ときだけ倒れ、ずれると揺れるだけ。これが共鳴です。' +
+  text:'[[m:M]] を倒す電波が [[rf:RFパルス]] です。その磁場は<b>横向きに回る矢印</b>です。<br>M の首振りと<b>同じ速さで回る</b>ときだけ倒れます。これが共鳴です。' +
        '<span class="eq">回る速さ ＝ 共鳴周波数 f ＝ 42.58 MHz × 磁場〔T〕 ＝ 1.5 T で約 64 MHz</span>' }),
 
-L({ nm:'RFパルスで倒す', hint:'回るメリーゴーランドに乗って見ると、となりの馬は止まって見えます。回転座標系は、それと同じ見方です。', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × 時間', sel:'#stage',
-  tag:{ zname:'↑ 磁場の向き', ang:true },
+L({ nm:'RFパルスで倒す', hint:'回るメリーゴーランドに乗って見ると、となりの馬は止まって見えます。回転座標系は、それと同じ見方です。M と同じ速さで回っている RFパルスの磁場も、止まって見えます。', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × 時間', sel:'#stage',
+  tag:{ rf:'RFパルスの磁場', ang:true },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:false, tissue:'wm', T2p:40 },
   act:{ label:'ゆっくり 90°パルスを当てる', fn:() => { calm(); manualPulse(90, 'x', 3.2); } },
   text:'回転座標系 ＝ [[m:M]] と一緒に回る目線。M はまっすぐ倒れて見えます。<br>[[ang:倒れた角度]] ＝ [[rf:RFパルス]]の強さ × 当てる時間。' }),
@@ -3855,12 +3855,12 @@ L({ nm:'電流が磁場を作る（電磁石）', hint:'右ねじの法則：電
   text:'輪の電線に[[cur:電流]]を流すと、輪を通る向きに[[flux:磁場]]ができます。<br>電流の向きを逆にすると、<b>磁場の向きも逆</b>になります。これが電磁石です。' }),
 
 L({ nm:'プロトン：水素の原子核は小さな磁石', hint:'MRI が水素を使うのは、体の大部分が水で、水素がいちばん多いからです。小さな矢印の1本1本がプロトンで、方位磁石の針のように磁場の向きにそろおうとしますが、熱で揺さぶられて上か下を向きます。', tg:'体は水素だらけ', sel:'#stage',
-  tag:{ hlab:'プロトン ＝ 水素の磁石', noM0:true, zname:'↑ 磁場の向き', noKey:true },
+  tag:{ hlab:'プロトン ＝ 水素の磁石', noM0:true, noKey:true },
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   text:'体のほとんどは水で、水素がたくさんあります。<br>水素の原子核、[[h:プロトン]]は小さな磁石で、磁場の中で首を振っています。' }),
 
 L({ nm:'歳差運動：首を振って回る', hint:'プロトンを1つだけ大きく見ています。傾けたコマが倒れずに首を振るのと同じ動きです。T はテスラで、磁場の強さの単位です。実際の水素は 1.5 T で1秒に約6400万回まわりますが、画面ではとても遅くしています。', tg:'磁場が強いほど速く回る', sel:'#stage',
-  tag:{ m:() => 'プロトン：1周 ' + (2 * Math.PI / (0.85 * P.spd * P.B0 / 1.5)).toFixed(1) + ' 秒', zname:'↑ 磁場の向き　{B} T', noKey:true },
+  tag:{ m:() => 'プロトン：1周 ' + (2 * Math.PI / (0.85 * P.spd * P.B0 / 1.5)).toFixed(1) + ' 秒', zname:'磁場 {B} T', noKey:true },
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, showComp:false, onlyM:true, showTrail:true, tissue:'csf', T2p:Infinity, B0:1.5 },
   on:() => { calm(); pulse(35, 'x'); },
   act:{ label:'磁場を 1.5 → 3.0 T に強くする', fn:() => { P.B0 = 3; precB0 = true; }, dur:8000 },
@@ -3883,12 +3883,12 @@ L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石か
   text:'輪は受信コイルです。縦向きの [[m:M]] は止まっていて、電流は流れません。<br><b>倒して回すと</b>[[flux:輪を通る分]]が変わり、電流が流れます。これが信号です。' }),
 
 L({ nm:'T2：横磁化が短くなる', hint:'横の M の赤い矢印の横に出る「○%」を見てください。100% から少しずつ減っていきます。', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
-  tag:{ zname:'↑ 磁場の向き', pct:true },
+  tag:{ pct:true },
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
   text:'M の横向きの分が[[mxy:横の M]]、横磁化です。時間とともに<b>短くなります</b>。<br>37% まで減るまでの時間を T2 といいます。' }),
 
 L({ nm:'T2*：磁場のムラで もっと速く', hint:'走る速さが少しずつ違うと、スタートでそろっていた列がだんだんばらけていきます。それと同じです。', zone:[1], tg:'ムラの分だけ速く消える', sel:'#stage',
-  tag:{ zname:'↑ 磁場の向き', fan:true },
+  tag:{ fan:true },
   set:{ onlyM:false, quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
   text:'M は細い矢印、水素1つずつの合計。[[fan:磁場のムラ]]で速さがばらつくと、<br>[[mxy:横の M]] は <b>T2 より速く</b>消えます。これが T2* です。' }),
 
@@ -3902,7 +3902,6 @@ L({ nm:'スピンエコー：180°で呼びもどす', hint:'全員が途中で�
   text:'ばらけた細い矢印を[[rf:180° の RFパルス]]で折り返すと、<b>またそろいます</b>。<br>これが[[echo:エコー]]で、この撮り方がスピンエコー、SE です。' }),
 
 L({ nm:'T1：縦磁化がもどる', hint:'③の上のグラフ①を見てください。線が上がっていくのが「縦に戻る」ようすで、上がる速さが組織ごとに違います。', zone:[1], tg:'スピン-格子緩和', sel:'#panRel',
-  tag:{ zname:'↑ 磁場の向き' },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   text:'縦磁化 ＝ 縦の M は、倒れたあと時間とともに<b>戻ります</b>。<br>戻る速さが T1 で、①のグラフのとおり組織ごとに違います。' }),
 
