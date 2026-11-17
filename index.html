@@ -879,10 +879,31 @@ ol.seq button{padding:6px 8px; line-height:1.6}
 .key{gap:15px; height:22px}
 .lab{padding:1px 7px}
 .lab.axis{padding:2px 5px}
+
+/* ---- 圧迫感を減らす：パネルどうしの隙間・内側の余白・字間を広げる ---- */
+body{letter-spacing:.03em}          /* BIZ UDPゴシックは字送りが詰まり気味。少しだけ空けると楽に読める */
+.ttext,.thint,.note,.lede,.tiny,.gloss dd,.chap .cgoal{letter-spacing:.04em}
+.wrap{padding-inline:28px}
+header{padding-block:18px 13px; margin-bottom:18px}
+.work{gap:18px; height:calc(100vh - 116px); height:calc(100dvh - 116px)}
+.left{gap:18px}
+.panels{gap:18px}
+.pan{padding:15px 20px 14px}
+.pan .cvwrap{margin-top:9px}
+.bar{top:14px; left:14px; right:14px}
+.rail{gap:18px}
+@media (max-width:900px){
+  .wrap{padding-inline:16px}
+  header{padding-block:14px 11px; margin-bottom:14px}
+  .work{gap:16px; height:auto}
+  .rail{gap:16px; margin-top:16px}
+  .panels{margin-top:16px; gap:16px}
+  .bar{top:9px; left:9px; right:9px}
+}
 /* 学習のカード */
-#tutCard{padding:18px 20px 16px}
-.tstep{margin-bottom:8px}
-.ttext{margin-bottom:14px; line-height:1.95}
+#tutCard{padding:22px 24px 20px}
+.tstep{margin-bottom:10px}
+.ttext{margin-bottom:16px; line-height:1.95}
 .ttext .big{margin-bottom:9px}
 .tw{padding:0 8px; margin:2px 3px; line-height:1.55}
 .tmap{margin:11px 0 10px}
@@ -895,9 +916,9 @@ ol.seq button{padding:6px 8px; line-height:1.6}
 .ttry .tstat{padding:8px 12px; margin-top:8px}
 #tutActs .now{padding:5px 13px}
 @media (max-width:560px){
-  .wrap{padding-inline:14px}
-  #tutCard{padding:16px 16px 14px}
-  .pan{padding:11px 12px 11px}
+  .wrap{padding-inline:16px}
+  #tutCard{padding:18px 18px 16px}
+  .pan{padding:13px 15px 13px}
 }
 .gloss dd{font-size:13.5px}
 .gloss .gl button{font-size:13px}
@@ -987,7 +1008,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
 <div class="wrap">
 <header>
   <h1>MRI スピン3Dシミュレーター</h1>
-  <button class="hbtn" id="bGuide" type="button">使い方をもう一度</button>
+  <button class="hbtn" id="bGuide" type="button">使い方</button>
 </header>
 
 <div class="work">
@@ -5101,7 +5122,7 @@ addEventListener('keydown', e => {
    読ませるより押させる。6手で「T1強調 → T2強調 で白黒が入れ替わる」まで連れていく。
    スポットライトは穴の空いた影（box-shadow の広がり）で作る。
    当たり判定は持たせないので、光っているボタンはそのまま押せる。 */
-const GKEY = 'mri-tutorial-v3';   // 案内の中身を変えたら番号を上げる（前に見た人にもう一度出す）
+const GKEY = 'mri-tutorial-v4';   // 案内の中身を変えたら番号を上げる（前に見た人にもう一度出す）
 const coarse = matchMedia('(pointer:coarse)').matches || innerWidth <= 900;
 const tap = coarse ? 'タップ' : 'クリック';
 const TUT = [
@@ -5122,7 +5143,7 @@ const TUT = [
     text:'<b>① 3D</b> は、体の中で実際に起きていることです。組織ごとに立っている矢印の<b>横向きの長さ</b>が、その組織の信号の大きさです。' },
   { text:'<span class="big">使い方はこれだけです</span>あとは右の <b>TR・TE のつまみ</b>を動かすと、3つの図と画像が一緒に変わります。<br>' +
          '順を追って学びたいときは<b>「学習」</b>タブへ。序章から第6章・終章まで、短い章に分けて見ていけます。' +
-         'この案内は、題字の横の<b>「使い方をもう一度」</b>でいつでも見られます。',
+         'この案内は、題字の横の<b>「使い方」</b>でいつでも見られます。',
     next:'はじめる' }
 ];
 let tutList = TUT, tutI = -1, tutWaiting = null, tutActI = 0, tutAfter = null;
