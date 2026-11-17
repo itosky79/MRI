@@ -1195,7 +1195,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
       <div class="pane" id="pane1" hidden>
         <p class="tiny" id="learnGuide" style="margin:0 0 9px">序章から順に、章ごとに進みます。1つの章は数分です。分からない言葉は、いちばん下の<b>用語の手引き</b>へ。</p>
         <button class="act wide" id="bLearn" type="button" style="width:100%">序章から始める</button>
-        <button class="act wide short" id="bShort" type="button" style="width:100%">近道：画像の白黒の理由だけを先に見る</button>
+        <button class="act wide short" id="bShort" type="button" style="width:100%">近道：水の白黒が変わる理由を体験する</button>
         <p class="tiny" id="shortNote" style="margin:5px 0 0"></p>
         <div id="chList"></div>
         <details class="fold gloss" id="glossFold" style="margin-top:14px"><summary>用語の手引き</summary>
@@ -4268,13 +4268,28 @@ const CHAPTERS = [
   });
 }
 let curCh = -1, curStep = 0;
-/* 近道：画像の白黒（T1強調・T2強調）の理由だけを先に見る。序章 → 第1・2章 → ボクセル → 第5章の白黒に関わる手 */
-const SHORT = CHAPTERS.slice(0, 3).flatMap(ch => ch.steps).concat(['脳のどこにも M がある', 'スピンエコー：180°で呼びもどす', '矢印から画像へ',
-  'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'やってみよう：水を脳より暗くする']);
+/* 近道：水の白黒が変わる理由を、専門用語をほとんど使わずに体験する4手。
+   撮り比べる → TR を短くすると水が黒い → TE を長くすると水が白い → 自分で水を暗くする。終わったら「仕組みを詳しく学ぶ」で序章から本編へ */
+const SHSET = { quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TE:15, T2p:40 };
+const SHORT_EXTRA = [
+L({ nm:'TR を短くすると、水が黒くなる', tg:'T1強調', sel:'#imgbox', hint:'水は、元の状態へ戻るのにとても時間がかかります。この「戻るのにかかる時間」が T1 で、詳しくは第2章で見ます。',
+  tag:{ mark:true },
+  set:Object.assign({}, SHSET, { TR:4000 }),
+  act:{ label:'TR を 4000 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
+  text:'TR は、撮影をくり返す間隔です。短くすると、水は次の撮影までに<b>元に戻りきれず</b>、<br>[[water:水]]が<b>黒く</b>写ります。脳は戻るのが速いので明るいままです。これが T1強調です。' }),
+L({ nm:'TE を長くすると、水が白く目立つ', tg:'T2強調', sel:'#imgbox', hint:'信号が減る速さを決める時間が T2 で、水は T2 がとても長い組織です。詳しくは第2章で見ます。',
+  tag:{ mark:true },
+  set:Object.assign({}, SHSET, { TR:4000 }),
+  act:{ label:'TE を 15 → 100 ms に長くする', fn:() => applySet({ TE:100 }, true) },
+  text:'TE は、信号を読むまでの待ち時間です。待つ間にどの組織の信号も減りますが、<br>[[water:水]]は減りが遅いので<b>相対的に白く</b>目立ちます。これが T2強調です。' }),
+];
+const SHORT = ['T1強調と T2強調を撮り比べる', 'TR を短くすると、水が黒くなる', 'TE を長くすると、水が白く目立つ', 'やってみよう：水を脳より暗くする'];
 function runShort() {
-  const by = {}; CHAPTERS.forEach(ch => ch.list.forEach(st => { by[st.nm] = st; }));
+  const by = {}; CHAPTERS.forEach(ch => ch.list.forEach(st => { by[st.nm] = st; })); SHORT_EXTRA.forEach(st => { by[st.nm] = st; });
   const n = SHORT.length;
-  const list = SHORT.map((nm, i) => Object.assign({}, by[nm], { go:null, next:i === n - 1 ? '終わる' : null, head:'近道　' + (i + 1) + ' / ' + n }));
+  const list = SHORT.map((nm, i) => Object.assign({}, by[nm], { go:null, next:null, head:'近道　' + (i + 1) + ' / ' + n }));
+  Object.assign(list[0], { text:'同じ脳でも、T1強調では[[water:水]]が<b>黒</b>、T2強調では<b>白</b>に写ります。<br>撮り方の2つのつまみ、TR と TE で、なぜ変わるのかを体験します。' });
+  Object.assign(list[n - 1], { next:'仕組みを詳しく学ぶ', go:() => { tutEnd(); runChapter(0, 0); } });
   curCh = -1; tutRun(list, 0, markStep);
 }   // いま開いている章と手（一覧の印に使う）
 
@@ -4691,10 +4706,29 @@ $('modeTabs').addEventListener('click', e => {
 const CHKEY = 'mri-chapters-done-v6';   // 章の並びを変えたので、前の記録は使わない   // 章の並びを変えたので、前の記録（章の番号）は使わない
 let chDoneSet = new Set();
 try { chDoneSet = new Set(JSON.parse(localStorage.getItem(CHKEY) || '[]')); } catch (e) { }
+const RKEY = 'mri-resume-v1';   // 最後に見た章と手（章の途中から続けられるように）
+let resume = null;
+try { resume = JSON.parse(localStorage.getItem(RKEY) || 'null'); } catch (e) { }
+function saveResume(c, i) {
+  resume = { c:c, i:i };
+  try { localStorage.setItem(RKEY, JSON.stringify(resume)); } catch (e) { }
+}
 function chDone(c) {
   chDoneSet.add(c);
   try { localStorage.setItem(CHKEY, JSON.stringify([...chDoneSet])); } catch (e) { }
   buildChList();
+}
+/* 続きの場所：途中でやめた手があればそこ。章を終えていれば、まだ終えていない次の章の最初 */
+function resumeAt() {
+  if (!resume || !CHAPTERS[resume.c] || resume.i >= CHAPTERS[resume.c].list.length) return null;
+  if (chDoneSet.has(resume.c)) return null;
+  if (resume.c === 0 && resume.i === 0) return null;
+  return resume;
+}
+function learnLabel() {
+  const nx = CHAPTERS.findIndex((ch, c) => !ch.soon && !chDoneSet.has(c)), rs = resumeAt();
+  $('bLearn').textContent = rs ? CHAPTERS[rs.c].no + 'の ' + (rs.i + 1) + ' つ目から続ける' :
+    nx < 0 ? '序章からもう一度' : nx === 0 ? '序章から始める' : CHAPTERS[nx].no + '（' + CHAPTERS[nx].nm + '）から続ける';
 }
 function buildChList() {
   const box = $('chList'); box.innerHTML = '';
@@ -4713,8 +4747,7 @@ function buildChList() {
     });
     d.appendChild(ol); box.appendChild(d);
   });
-  const nx = CHAPTERS.findIndex((ch, c) => !ch.soon && !chDoneSet.has(c));
-  $('bLearn').textContent = nx < 0 ? '序章からもう一度' : nx === 0 ? '序章から始める' : CHAPTERS[nx].no + '（' + CHAPTERS[nx].nm + '）から続ける';
+  learnLabel();
   markStep();
 }
 function runChapter(c, i) {
@@ -4723,13 +4756,13 @@ function runChapter(c, i) {
 }
 function markStep() {
   const live = curCh >= 0 && tutI >= 0 && tutList === CHAPTERS[curCh].full;
-  if (live) curStep = tutI;
+  if (live) { curStep = tutI; saveResume(curCh, tutI); learnLabel(); }
   document.querySelectorAll('#chList ol.seq button').forEach(b =>
     (live && +b.dataset.c === curCh && +b.dataset.i === curStep) ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
 }
 $('bShort').addEventListener('click', runShort);
-$('shortNote').textContent = '序章 → 第1・2章 → 第5章の白黒に関わる手、全 ' + SHORT.length + ' 手です。電磁気と場所の見分け方は、あとで章ごとに見られます。';
-$('bLearn').addEventListener('click', () => { const nx = CHAPTERS.findIndex((ch, c) => !ch.soon && !chDoneSet.has(c)); runChapter(nx < 0 ? 0 : nx, 0); });
+$('shortNote').textContent = '全 ' + SHORT.length + ' 手、数分です。TR と TE を動かして、水が黒くなる・白くなるのを体験します。終わったら、仕組みを序章から詳しく学べます。';
+$('bLearn').addEventListener('click', () => { const rs = resumeAt(); if (rs) { runChapter(rs.c, rs.i); return; } const nx = CHAPTERS.findIndex((ch, c) => !ch.soon && !chDoneSet.has(c)); runChapter(nx < 0 ? 0 : nx, 0); });
 
 /* ---- 用語の手引き：初めて出てくる言葉を、ふつうの言葉で1行ずつ。「見る」でその言葉が出てくる手へ飛ぶ ----
    s は手の名前の書き出し（手の番号は増減するので、名前で探す） */
