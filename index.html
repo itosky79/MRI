@@ -4272,11 +4272,11 @@ let curCh = -1, curStep = 0;
    撮り比べる → TR を短くすると水が黒い → TE を長くすると水が白い → 自分で水を暗くする。終わったら「仕組みを詳しく学ぶ」で序章から本編へ */
 const SHSET = { quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TE:15, T2p:40 };
 const SHORT_EXTRA = [
-L({ nm:'TR を短くすると、水が黒くなる', tg:'T1強調', sel:'#imgbox', hint:'水は、元の状態へ戻るのにとても時間がかかります。この「戻るのにかかる時間」が T1 で、詳しくは第2章で見ます。',
+L({ nm:'TR を短くすると、水が黒くなる', tg:'T1強調', sel:'#imgbox', hint:'脳は元に戻るのが速いので、TR を短くしても明るいままです。水は戻るのにとても時間がかかります。この「戻るのにかかる時間」が T1 で、詳しくは第2章で見ます。',
   tag:{ mark:true },
   set:Object.assign({}, SHSET, { TR:4000 }),
   act:{ label:'TR を 4000 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
-  text:'TR は、撮影をくり返す間隔です。短くすると、水は次の撮影までに<b>元に戻りきれず</b>、<br>[[water:水]]が<b>黒く</b>写ります。脳は戻るのが速いので明るいままです。これが T1強調です。' }),
+  text:'TR は撮影をくり返す間隔です。短くすると、水は次までに<b>元に戻りきれません</b>。<br>そのため[[water:水]]が<b>黒く</b>写ります。これが T1強調です。' }),
 L({ nm:'TE を長くすると、水が白く目立つ', tg:'T2強調', sel:'#imgbox', hint:'信号が減る速さを決める時間が T2 で、水は T2 がとても長い組織です。詳しくは第2章で見ます。',
   tag:{ mark:true },
   set:Object.assign({}, SHSET, { TR:4000 }),
