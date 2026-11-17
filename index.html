@@ -4025,7 +4025,7 @@ L({ nm:'GRE：180° を使わない', hint:'GRE はグラジエントエコー�
 L({ nm:'IR：狙った組織の信号を消す', hint:'IR は反転回復のことです。③の上のグラフで、線がいったんマイナスから始まります。TI を約 180 ms にして脂肪を黒くする撮り方を STIR といいます。', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
   act:{ label:'TI を 180 ms にする（STIR）', fn:() => applySet(pre('stir'), true) },
-  text:'縦の M を 180° で下向きにしてから待ち、<b>0 を通る瞬間</b>に倒します。<br>その組織は<b>信号が出ず黒く</b>写ります。この撮り方が IR、待つ時間が TI です。' }),
+  text:'縦の M を 180° で下向きにし、TI だけ待って <b>0 を通る瞬間</b>に倒します。<br>その組織は<b>信号が出ず黒く</b>写ります。この撮り方が IR です。' }),
 
 L({ nm:'やってみよう：TI で脂肪の信号を消す', hint:'脂肪の縦の M が 0 を通る時刻に倒すと、脂肪の信号が出ません。TI を小さい方から少しずつ動かしてみてください。', tg:'TI を自分で合わせる', sel:'#imgbox',
   tag:{ big:true },
