@@ -3947,7 +3947,7 @@ L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石か
 L({ nm:'T2：横磁化が短くなる', hint:'水素どうしが、互いの小さな磁場で回る速さを少しずつ乱し合うので、横の M が減ります。このため、スピン-スピン緩和とも呼ばれます。', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
   tag:{ pct:true, scope:'M ＝ たくさんの水素の合計／横の M ＝ その横向きの分' },
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
-  text:'M の横向きの分が[[mxy:横の M]]、横磁化です。時間とともに<b>短くなります</b>。<br>赤い矢印の横の<b>％の数字</b>が 37% まで減る<b>時間</b>が T2 で、長いほど減りが遅いです。' }),
+  text:'M の横向きの分が[[mxy:横の M]]、横磁化です。時間とともに<b>短くなります</b>。<br>横の％が 37% まで減る<b>時間</b>が T2 で、<b>T2 が長いほど減りが遅い</b>です。' }),
 
 L(TVH),
 
@@ -4024,7 +4024,7 @@ L({ nm:'やってみよう：水を脳より暗くする', hint:'脳脊髄液は
   try:{ ctrls:[['TR', TRV, 'ms'], ['TE', TEV, 'ms']],
     check:() => { const v = id => imgSig(TIS[TIX[id]]); return ['wm', 'gm'].every(id => v('csf') < v(id) * 0.6); },
     ok:'できました。TR を短くすると、戻りの遅い脳脊髄液が暗くなります。これが T1強調です。', ng:'まだ、脳脊髄液が白質・灰白質よりはっきり暗くなっていません。' },
-  text:'TR と TE のつまみを動かして、[[water:脳脊髄液]]を<b>白質・灰白質より暗く</b>してください。' }),
+  text:'TR と TE を動かして、[[water:脳脊髄液]]を<b>白質・灰白質より暗く</b>してください。' }),
 
 L({ nm:'GRE：180° を使わない', hint:'GRE はグラジエントエコーの略で、グラジエントは傾斜磁場のことです。ばらけた細い矢印を 180° で戻さないので、信号は速く小さくなります。', tg:'T2 ではなく T2*', sel:'#panSeq',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:25, T2p:40 },
