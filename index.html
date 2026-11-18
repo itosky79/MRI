@@ -955,6 +955,20 @@ header{padding-block:18px 13px; margin-bottom:18px}
 .tlink{display:block; margin:-4px 0 14px; padding-top:8px; border-top:1px dashed var(--line2); font-size:14.5px; color:var(--muted); line-height:1.85}
 .tlink b{color:var(--head); margin-right:8px}
 .tw.mz{color:#1C8A5C}
+/* 国家試験に挑戦 */
+.task.kq{margin:0 0 12px}
+#tutCard{max-height:calc(100vh - 16px); max-height:calc(100dvh - 16px); overflow-y:auto}
+.task.kq .ksrc{display:block; font-size:12.5px; color:var(--dim); margin-bottom:6px}
+.task.kq .kqq{display:block; font-size:15px; line-height:1.85; color:var(--text); margin-bottom:10px}
+.task.kq .kopts{display:flex; flex-direction:column; gap:6px}
+.task.kq .kopts button{display:flex; gap:10px; align-items:baseline; text-align:left; width:100%; padding:7px 12px; border-radius:10px;
+  border:1.5px solid var(--line2); background:var(--panel); color:var(--text); font-family:var(--gothic); font-size:14.5px; line-height:1.6; cursor:pointer}
+.task.kq .kopts button:hover:not(:disabled){border-color:var(--teal)}
+.task.kq .kopts button:disabled{cursor:default}
+.task.kq .kopts button .kn{flex:none; font-family:var(--mono); color:var(--dim)}
+.task.kq .kopts button.ok{background:var(--sel); border-color:var(--teal); color:var(--teal); font-weight:700}
+.task.kq .kopts button.ng{color:var(--dim); text-decoration:line-through}
+.task.kq .tstat{margin-top:10px}
 .gloss .gl button{font-size:13px}
 .gloss .gh{font-size:12.5px}
 .lab{font-size:15px}
@@ -3888,7 +3902,7 @@ L({ nm:'共鳴：リズムが合うと倒れる', hint:'電波は、電気と磁
     { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
   ],
   text:'[[m:M]] を倒す電波が [[rf:RFパルス]] で、その磁場は<b>横向きに回る矢印</b>です。<br>この矢印が M と<b>同じ速さで回る</b>ときだけ、M は倒れます。これが共鳴です。' +
-       '<span class="eq">回る速さ ＝ 共鳴周波数 f ＝ 42.58 MHz × 磁場〔T〕 ＝ 1.5 T で約 64 MHz</span>' }),
+       '<span class="eq">共鳴周波数 f ＝ γB₀ ÷ 2π。γ は磁気回転比で、水素は γ ÷ 2π ＝ 42.58 MHz/T。1.5 T で約 64 MHz</span>' }),
 
 L({ nm:'RFパルスで倒す', hint:'このあとの手は、ほとんどこの回転座標系で描きます。実際の M は、そのあいだも1秒に約6400万回の速さで回っています。', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × 時間', sel:'#stage',
   tag:{ rf:'RFパルスの磁場', ang:true, scope:'太い矢印 M ＝ たくさんの水素の合計' },
@@ -3947,7 +3961,8 @@ L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石か
 L({ nm:'T2：横磁化が短くなる', hint:'水素どうしが、互いの小さな磁場で回る速さを少しずつ乱し合うので、横の M が減ります。このため、スピン-スピン緩和とも呼ばれます。', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
   tag:{ pct:true, scope:'M ＝ たくさんの水素の合計／横の M ＝ その横向きの分' },
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
-  text:'M の横向きの分が[[mxy:横の M]]、横磁化です。時間とともに<b>短くなります</b>。<br>横の％が 37% まで減る<b>時間</b>が T2 で、<b>T2 が長いほど減りが遅い</b>です。' }),
+  text:'M の横向きの分が[[mxy:横の M]]、横磁化です。時間とともに<b>短くなります</b>。<br>横の％が 37% まで減る<b>時間</b>が T2 で、<b>T2 が長いほど減りが遅い</b>です。' +
+       '<span class="eq">横の M の割合 ＝ e^(−t ÷ T2)。t ＝ T2 のとき e⁻¹ ≒ 37%</span>' }),
 
 L(TVH),
 
@@ -4000,7 +4015,7 @@ L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで�
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
   ask:{ q:'暗くなった理由はどちらでしょう？', opts:['縦の M が戻りきらない', '横の M が速く消える'], ans:0,
     why:'戻りきらないうちに倒すので、倒したときの横の M も小さくなります。' },
-  text:'「倒す → 読む」をくり返す間隔が TR です。短くすると、縦の M の戻りが遅い[[water:脳脊髄液]]が<b>暗く</b>なります。これが T1強調です。' }),
+  text:'「倒す → 読む」をくり返す間隔が TR です。短くすると、縦の M の戻りが遅い[[water:脳脊髄液]]が<b>暗く</b>、<br>戻りの速い脂肪が<b>いちばん明るく</b>写ります。これが T1強調です。' }),
 
 L({ nm:'TE：倒してから読むまで', hint:'③の下のグラフで、TE の線が右へ動きます。どの線も下がっていきますが、脳脊髄液の線は下がり方がゆるやかで、高いところに残ります。', tg:'T2 の差をつける', sel:'#panRel',
   tag:{ mark:true },
@@ -4034,7 +4049,8 @@ L({ nm:'GRE：180° を使わない', hint:'GRE はグラジエントエコー�
 L({ nm:'IR：狙った組織の信号を消す', hint:'IR は反転回復のことです。③の上のグラフで、線がいったんマイナスから始まります。TI を約 180 ms にして脂肪を黒くする撮り方を STIR といいます。', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
   act:{ label:'TI を 180 ms にする（STIR）', fn:() => applySet(pre('stir'), true) },
-  text:'縦の M を 180° で下向きにし、TI だけ待って <b>0 を通る瞬間</b>に倒します。<br>その組織は<b>信号が出ず黒く</b>写ります。この撮り方が IR です。' }),
+  text:'縦の M を 180° で下向きにし、TI だけ待って <b>0 を通る瞬間</b>に倒します。<br>その組織は<b>信号が出ず黒く</b>写ります。この撮り方が IR です。' +
+       '<span class="eq">IR は共鳴周波数の差ではなく T1 の差を使う。T1 が近い組織は一緒に消える</span>' }),
 
 L({ nm:'やってみよう：TI で脂肪の信号を消す', hint:'脂肪の縦の M が 0 を通る時刻に倒すと、脂肪の信号が出ません。TI を小さい方から少しずつ動かしてみてください。', tg:'TI を自分で合わせる', sel:'#imgbox',
   tag:{ big:true },
@@ -4049,7 +4065,7 @@ L({ nm:'FLAIR：水の信号を消す', hint:'画像の「水」の印のとこ�
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:180, T2p:40 },
   on:() => { if (!lesOn) $('bLes').click(); },   // 文で「病変が浮かぶ」と言うので、病変を入れておく
   act:{ label:'FLAIR（TI 2400 ms）に切り替える', fn:() => applySet(pre('flair'), true) },
-  text:'TI を約 2400 ms にすると、[[water:脳脊髄液]]の<b>信号が消えて黒く</b>なり、<br>そばの病変が白く浮かびます。この撮り方が FLAIR です。' }),
+  text:'TI を約 2400 ms にすると、[[water:脳脊髄液]]のように自由に動ける水、自由水の<b>信号が消えて黒く</b>なり、<br>そばの病変が白く浮かびます。この撮り方が FLAIR です。' }),
 
 L({ nm:'強いT2強調：水の信号だけを残す', hint:'右の画像は、体を前から見た腹部の模式図です。TE の間に、肝臓の横の M だけが消えます。', tg:'TE をうんと長く', sel:'#imgbox',
   tag:{ gb:true, scope:'左の矢印 ＝ 肝臓の M／右の矢印 ＝ 胆汁の M' },
@@ -4171,7 +4187,7 @@ L({ nm:'スライスの位置と厚さ', hint:'オレンジの帯が動くと選
     { label:'傾斜を急にする', fn:() => { slabSet({ g:2 }); later(slabRF, 1300); } },
   ],
   text:'電波の<b>中心の周波数</b>で位置が、<b>範囲の広さ</b>と傾斜で[[thick:厚さ]]が決まります。' +
-       '<span class="eq">範囲の広さが帯域幅。スライス厚 ＝ 帯域幅 ÷ 傾斜磁場の強さ</span>' }),
+       '<span class="eq">範囲の広さが帯域幅。スライス厚 ＝ 帯域幅 ÷（42.58 MHz/T × 傾斜磁場の強さ）</span>' }),
 
 L({ nm:'周波数エンコード：横は音の高さで', hint:'合唱で、列ごとに声の高さを変えて歌ってもらうと、声の高さでどの列か分かります。', zone:[0, 2], tg:'読んでいる間に左右の傾斜', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
@@ -4203,8 +4219,51 @@ L({ nm:'k 空間：集めたデータの表', hint:'k 空間は、画像を作�
        '表の<b>中心は明暗、外側は輪郭</b>を決めています。' })
 ];
 
+/* ---------- 国家試験に挑戦：厚生労働省が公開している診療放射線技師国家試験の問題（出典を表示）。
+   章の終わりに置く。どの選択肢も、それより前の手で教えた知識だけで正誤を判断できる問題だけを選んだ
+   （直前の1手を見れば答えが分かる、という読み方をされないように、章の中の複数の手の知識を使う問題にする） */
+const KQ = (src, q, opts, ans, why) => L({ nm:'国家試験：' + src, tg:'国家試験に挑戦', head:'国家試験に挑戦',
+  kq:{ src:src, q:q, opts:opts, ans:ans, why:why }, text:'' });
+const KOKU = [
+KQ('第69回（2017年）午前 問11', '7 T の MRI における水素原子核の共鳴周波数〔MHz〕に最も近いのはどれか。ただし、1.5 T での水素原子核の共鳴周波数を 64 MHz とする。',
+  ['43', '64', '128', '256', '299'], 5, '共鳴周波数は磁場の強さに比例します。64 MHz × 7 ÷ 1.5 ≒ 299 MHz です。'),
+KQ('第74回（2022年）午前 問74', 'Larmor〈ラーモア〉周波数を表す式はどれか。ただし、γ は磁気回転比、B₀ は磁束密度である。',
+  ['2πγB₀', '2π ÷ γB₀', '2πγ ÷ B₀', 'B₀ ÷ 2πγ', 'γB₀ ÷ 2π'], 5, '共鳴周波数 f ＝ γB₀ ÷ 2π です。磁場 B₀ に比例するので、B₀ が分母にある式は誤りです。'),
+KQ('第71回（2019年）午後 問12', 'MRI において、ある物質の T1、T2、T2＊ の値の関係として正しいのはどれか。',
+  ['T1 ＞ T2 ＞ T2＊', 'T1 ＞ T2＊ ＞ T2', 'T2 ＞ T1 ＞ T2＊', 'T2 ＞ T2＊ ＞ T1', 'T2＊ ＞ T2 ＞ T1'], 1,
+  '縦の M の戻りは横の M の減りよりずっと遅いので T1 ＞ T2。磁場のムラのぶん横の M はさらに速く減るので T2 ＞ T2＊ です。'),
+KQ('第69回（2017年）午後 問74', '90 度 RF パルス照射 100 ms 後に横磁化が 50％まで減衰する核磁気共鳴現象を起こす試料がある。この試料の横緩和時間〔ms〕に最も近いのはどれか。ただし、logₑ2 ＝ 0.693 とする。',
+  ['34.7', '69.3', '72.2', '144.3', '288.6'], 4, 'e^(−100 ÷ T2) ＝ 0.5 なので、100 ÷ T2 ＝ logₑ2 ＝ 0.693。T2 ＝ 100 ÷ 0.693 ≒ 144.3 ms です。'),
+KQ('第78回（2026年）午前 問2', '1.5 T MRI 装置で最小バンド幅 426 Hz、スライス選択傾斜磁場が最大 20 mT･m⁻¹ のときの最小スライス厚〔mm〕はどれか。',
+  ['0.2', '0.5', '1.0', '2.0', '5.0'], 2, 'スライス厚 ＝ 426 Hz ÷（42.58 MHz/T × 0.020 T/m）≒ 0.0005 m ＝ 0.5 mm です。'),
+KQ('第70回（2018年）午前 問15', 'パラレルイメージングを併用した高速スピンエコー法で撮影した場合の撮影時間〔s〕はどれか。ただし、TR 4,000 ms、TE 100 ms、FOV 32 cm、周波数エンコード数 512、位相エンコード数 256、エコートレイン数 32、加算回数 2、パラレルイメージングファクタ 4 とする。',
+  ['8', '16', '32', '262', '512'], 2, '4 s × 256 × 2 ÷ 32 ÷ 4 ＝ 16 s です。TE・FOV・周波数エンコード数は撮影時間に関係しません。'),
+KQ('第73回（2021年）午後 問15', 'MRI で撮影時間が 1/2 になるのはどれか。',
+  ['加算回数を 2 倍にする。', 'SENSE factor を 2 倍にする。', '位相エンコード数を 2 倍にする。', '周波数エンコード数を 1/2 にする。', '高速スピンエコー法のエコートレイン数を 1/2 にする。'], 2,
+  'SENSE の倍率を 2 倍にすると半分になります。加算回数・位相エンコード数を 2 倍、エコートレイン数を 1/2 にすると 2 倍になり、周波数エンコード数は時間を変えません。'),
+KQ('第76回（2024年）午後 問16', 'MRI の高速 SE 法で数値を大きくすると撮影時間が短縮するのはどれか。',
+  ['TE', 'TR', '加算回数', '位相エンコード数', 'エコートレイン数'], 5, 'エコートレイン数で割るので、大きくすると短くなります。TR・加算回数・位相エンコード数は長くなり、TE は時間を変えません。'),
+KQ('第76回（2024年）午後 問15', 'SE 法 TR 500 ms、TE 10 ms の頭部 MR 像で最も高信号を呈するのはどれか。',
+  ['基底核', '側脳室', '下垂体前葉', '眼窩内脂肪', '頭蓋骨皮質'], 4,
+  'TR も TE も短いので T1強調像で、戻りの速い脂肪がいちばん明るく写ります。側脳室の水は暗く、骨の皮質は水素がほとんどないので黒く写ります。'),
+KQ('第75回（2023年）午前 問24', 'MRI の IR 法で正しいのはどれか。',
+  ['IR パルスとして 90 度パルスを使用する。', 'FLAIR 法は自由水の信号を抑制する目的で使用する。', 'STIR 法は脂肪信号を特異的に抑制することが可能である。', '信号を抑制したい組織の縦磁化がゼロになる時間に TR を設定する。', '組織間の共鳴周波数の差を利用して特定組織の信号を抑制する手法である。'], 2,
+  'FLAIR は自由水の信号を消します。IR パルスは 180°、合わせるのは TR ではなく TI、使うのは共鳴周波数ではなく T1 の差で、T1 の近い組織も一緒に消えるので脂肪だけを選んで消すわけではありません。'),
+];
+
 /* ---------- 章立てのために足した手（序章・第6章の答え合わせ・終章） ---------- */
 const EXTRA = [
+L({ nm:'撮像時間：加算回数と高速 SE', tg:'時間を延ばす・縮める', sel:'#panSeq',
+  hint:'加算回数を増やすと、平均するぶん画像のざらつきは減りますが、時間はかかります。',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
+  text:'同じ行を何回撮って平均するかが加算回数で、そのぶん時間がかかります。<br>1回のくり返しで 180° を何回も当てて何行も集めるのが高速 SE、その行数がエコートレイン数です。' +
+       '<span class="eq">撮像時間 ＝ TR × 位相エンコード数 × 加算回数 ÷ エコートレイン数</span>' }),
+L({ nm:'撮像時間：パラレルイメージング', tg:'行を間引く', sel:'#panSeq',
+  hint:'間引いた行は、並べた受信コイルそれぞれの感度の違いを使って、計算で補います。',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
+  text:'受信コイルを何個も並べ、行を間引いて撮るのがパラレルイメージングで、SENSE はその1つです。<br>間引く倍率のぶん時間が短くなります。周波数エンコード数や TE は撮像時間を変えません。' +
+       '<span class="eq">撮像時間 ＝ TR × 位相エンコード数 × 加算回数 ÷ エコートレイン数 ÷ 倍率</span>' }),
+
 L({ nm:'T1強調と T2強調を撮り比べる', hint:'左が T1強調、右が T2強調です。「水」の印のところを比べてください。黒と白が入れ替わっています。', tg:'水の白黒が逆になる', sel:'#strip',
   tag:{ mark:true, bigStrip:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
@@ -4243,18 +4302,20 @@ const CHAPTERS = [
   { no:'第1章', nm:'水素は首を振る小さな磁石', goal:'水素の原子核、プロトンは小さな磁石。磁場の中で足し合わせると1本の矢印 M になり、M は首を振って回る。',
     steps:['プロトン：水素の原子核は小さな磁石', '静磁場の中のプロトン', '歳差運動：首を振って回る'] },
   { no:'第2章', need:'第1章', nm:'倒して、戻るのを見る', goal:'同じ周波数の電波で磁化の矢印 M を倒すと、縦の M は T1 で戻り、横の M は T2・T2* で減る。2つは同時に進む。',
-    steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す', 'T1：縦磁化がもどる', 'T2：横磁化が短くなる', '縦と横は同時に変わる', 'T2*：磁場のムラで もっと速く'] },
+    steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す', 'T1：縦磁化がもどる', 'T2：横磁化が短くなる', '縦と横は同時に変わる', 'T2*：磁場のムラで もっと速く',
+      '国家試験：第69回（2017年）午前 問11', '国家試験：第74回（2022年）午前 問74', '国家試験：第71回（2019年）午後 問12', '国家試験：第69回（2017年）午後 問74'] },
   { no:'第3章', need:'第1・2章', nm:'装置の中の電気と磁気', goal:'電流が磁場を作り（静磁場）、回る M の磁場の変化が電流（信号）を生む。',
     steps:['電流が磁場を作る（電磁石）', '静磁場 B₀ の向き', '電磁誘導：変化が電気を生む', '回る M でコイルに電流が流れる'] },
   { no:'第4章', need:'第1〜3章', nm:'どこからの信号かを見分ける', goal:'傾斜磁場で場所ごとに周波数と角度を変え、集めた信号の表（k 空間）から画像を作る。',
-    steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表'] },
+    steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表', '国家試験：第78回（2026年）午前 問2'] },
   { no:'第5章', need:'第1・2章。「1枚の画像ができるまで」と GRE は第4章も', nm:'撮り方で明るさが変わる', goal:'SE と GRE、TR と TE で、組織の明るさの差（コントラスト）が決まる。ここで序章の答えが出る。',
-    steps:['1枚の画像ができるまで', 'スピンエコー：180°で呼びもどす', 'GRE：180° を使わない', '矢印から画像へ', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'やってみよう：水を脳より暗くする'] },
+    steps:['1枚の画像ができるまで', 'スピンエコー：180°で呼びもどす', 'GRE：180° を使わない', '撮像時間：加算回数と高速 SE', '撮像時間：パラレルイメージング', '矢印から画像へ', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'やってみよう：水を脳より暗くする',
+      '国家試験：第70回（2018年）午前 問15', '国家試験：第73回（2021年）午後 問15', '国家試験：第76回（2024年）午後 問16', '国家試験：第76回（2024年）午後 問15'] },
   { no:'第6章', need:'第5章', nm:'狙った組織の信号を消す・残す', goal:'TI で脂肪や水の信号を消し、長い TE で水の信号だけを残す。MIP で1枚にまとめる。',
-    steps:['IR：狙った組織の信号を消す', 'やってみよう：TI で脂肪の信号を消す', 'FLAIR：水の信号を消す', '強いT2強調：水の信号だけを残す', 'MIP：重ねて1枚にする'] },
+    steps:['IR：狙った組織の信号を消す', 'やってみよう：TI で脂肪の信号を消す', 'FLAIR：水の信号を消す', '強いT2強調：水の信号だけを残す', 'MIP：重ねて1枚にする', '国家試験：第75回（2023年）午前 問24'] },
 ];
 {
-  const pool = PRIN.concat(METH, LOC, EXTRA), byNm = {};
+  const pool = PRIN.concat(METH, LOC, EXTRA, KOKU), byNm = {};
   for (const st of pool) byNm[st.nm] = st;
   CHAPTERS.forEach((ch, c) => {
     ch.list = (ch.steps || []).map(nm => { if (!byNm[nm]) throw new Error('手が見つからない: ' + nm); return byNm[nm]; });
@@ -4703,10 +4764,10 @@ $('modeTabs').addEventListener('click', e => {
 
 /* ================= 学習 ================= */
 /* 学習は案内カードそのもの。設定・光らせる場所・やることは各手が持っている。章ごとに案内カードを流す */
-const CHKEY = 'mri-chapters-done-v6';   // 章の並びを変えたので、前の記録は使わない   // 章の並びを変えたので、前の記録（章の番号）は使わない
+const CHKEY = 'mri-chapters-done-v7';   // 章の並びを変えたので、前の記録は使わない   // 章の並びを変えたので、前の記録（章の番号）は使わない
 let chDoneSet = new Set();
 try { chDoneSet = new Set(JSON.parse(localStorage.getItem(CHKEY) || '[]')); } catch (e) { }
-const RESKEY = 'mri-resume-v1';   // 最後に見た章と手（章の途中から続けられるように）
+const RESKEY = 'mri-resume-v2';   // 最後に見た章と手（章の途中から続けられるように）
 let resume = null;
 try { resume = JSON.parse(localStorage.getItem(RESKEY) || 'null'); } catch (e) { }
 function saveResume(c, i) {
@@ -5335,8 +5396,30 @@ function tutReplay(st) {   // 動きを最初から見直す（自分のペー�
   if (tutList[tutI] !== st) return;
   tutAutoStop(); tutNow(''); tutReset(st); tutAutoRun(st);
 }
+function tutKq(st) {   // 国家試験の問題：出典・問題文・5つの選択肢。答えたら選択肢は残し、正解に印を付けて理由を出す
+  const box = $('tutAskBox'), K = st.kq;
+  box.className = 'task kq'; box.hidden = false;
+  box.innerHTML = '<span class="ksrc">出典：厚生労働省 診療放射線技師国家試験 ' + K.src + '</span><span class="kqq">' + K.q + '</span><span class="kopts"></span>';
+  const row = box.querySelector('.kopts');
+  K.opts.forEach((o, i) => {
+    const b = document.createElement('button'); b.type = 'button';
+    b.innerHTML = '<span class="kn">' + (i + 1) + '</span><span>' + o + '</span>';
+    b.addEventListener('click', () => {
+      if (tutAsked || tutList[tutI] !== st) return;
+      tutAsked = true;
+      row.querySelectorAll('button').forEach((x, j) => { x.disabled = true; if (j === K.ans - 1) x.classList.add('ok'); else if (j === i) x.classList.add('ng'); });
+      const p = document.createElement('p'); p.className = 'tstat';
+      p.innerHTML = '<b>' + (i === K.ans - 1 ? '◯' : '✕') + ' 正解は ' + K.ans + '。</b>' + K.why;
+      box.appendChild(p);
+      tutPlace(null); setTimeout(() => tutPlace(null), 60);
+    });
+    row.appendChild(b);
+  });
+}
 function tutAsk(st) {
-  const box = $('tutAskBox'); box.innerHTML = ''; box.hidden = !st.ask; if (!st.ask) return;
+  const box = $('tutAskBox'); box.className = 'task'; box.innerHTML = '';
+  if (st.kq) { tutKq(st); return; }
+  box.hidden = !st.ask; if (!st.ask) return;
   const A = st.ask;
   const again = () => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tagain'; b.textContent = '↻ 見直す';
     b.addEventListener('click', () => tutReplay(st)); return b; };
@@ -5392,7 +5475,7 @@ function tutShow() {
   tutTry(st);
   tutAsk(st);
   const wtxt = st.text.replace(/\[\[(\w+):([^\]]+)\]\]/g, '<span class="tw $1" data-w="$1" role="button" tabindex="0">$2</span>');
-  $('tutText').innerHTML = (st.nm ? '<span class="big">' + st.nm + '</span>' : '') + wtxt;
+  $('tutText').innerHTML = (st.nm ? '<span class="big">' + (st.kq ? '国家試験に挑戦' : st.nm) + '</span>' : '') + wtxt;
   $('tutLink').innerHTML = st.link ? '<b>画像では</b>' + st.link : '';
   $('tutLink').hidden = !st.link || !!st.ask;   // 予想を聞く手では、答えたあとに出す（先に答えを言わない）
 
