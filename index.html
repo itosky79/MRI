@@ -4211,7 +4211,7 @@ function fsDraw() {
   const p = Math.min(1, (performance.now() - FS.t0) / 1800);       // 波を左から描いていく割合
   x.clearRect(0, 0, W, H);
   x.font = '600 19px sans-serif'; x.textBaseline = 'middle';
-  const colX = k => 70 + k * ((W - 90) / (N - 1));
+  const colX = k => 106 + k * ((W - 142) / (N - 1));   // 左に「M」「信号」などの見出しを置くので、列は右へ寄せる
   /* 上：5列のボクセルと、それぞれの M（縦の棒） */
   x.fillStyle = dim; x.fillText('M', 8, 58);
   for (let k = 0; k < N; k++) {
@@ -4223,7 +4223,7 @@ function fsDraw() {
   const y0 = 182, amp = 52 / FS.a.reduce((s, v) => s + v, 0);
   x.fillStyle = dim; x.fillText('信号', 8, y0);
   x.strokeStyle = ink; x.lineWidth = 2.4; x.beginPath();
-  const x0 = 70, x1 = W - 16;
+  const x0 = 80, x1 = W - 10;
   for (let i = 0; i <= 400 * p; i++) {
     const t = i / 400; let v = 0;
     for (let k = 0; k < N; k++) {
@@ -4296,7 +4296,7 @@ L({ nm:'周波数に分ける：信号から列の明るさへ', hint:'周波数
     { label:'傾斜なしで受信する', fn:() => fsSet(0), dur:2600 },
     { label:'左右に傾斜をかけて受信する', fn:() => fsSet(1), dur:2600 },
     { label:'周波数に分ける', fn:() => fsSet(2), dur:3000 },
-  ],
+  ], loopGap:4000,
   text:'読む間に左右の傾斜をかけると、受信コイルには<b>列ごとに周波数の違う波</b>が混ざって届きます。' +
        '<canvas class="fs" id="fsCv" width="440" height="410"></canvas>' +
        '混ざった信号を<b>周波数ごとに分ける</b>と、それぞれの強さが、その列の [[m:M]] の大きさ、つまり<b>明るさ</b>になります。' +
@@ -4314,7 +4314,7 @@ L({ nm:'位相エンコード：縦は角度のずれで', hint:'時計の針を
 L({ nm:'k 空間：1回の信号を1行に書く', hint:'上から順に埋めていくと、真ん中の行が入ったところで急に画像らしくなります。その理由は次の手で見ます。256 行の画像なら、「倒す → 読む」を 256 回くり返します。', zone:[2], tg:'くり返すたびに1行', map:true,
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
   on:() => { calm(); later(kFillInit, 60); },
-  act:{ label:'1行ずつ埋める', fn:() => kFillRun(), dur:5200 },
+  act:{ label:'1行ずつ埋める', fn:() => kFillRun(), dur:5200 }, loopGap:4500,   // できあがった画像をしばらく見せてから、もう一度
   text:'1回の信号は、表の<b>1行</b>に書き込みます。この表を <b>k 空間</b>といい、位相エンコードの強さを変えてくり返すたびに、次の行が埋まります。' +
        '<span class="kpair"><span><canvas id="kCv" width="256" height="256" style="width:150px"></canvas><b id="kRows">0 / 256 行</b></span>' +
        '<span><canvas id="kImg" width="176" height="208" style="width:127px"></canvas>画像</span></span>' +
@@ -4342,7 +4342,7 @@ L({ nm:'M から画像まで', hint:'⑤の明るさは、第5章で TR と TE �
          '<span class="z"><span class="zl">②</span><span class="zt">読む間の左右の傾斜で、<b>列ごとに</b>回る速さを変える（周波数エンコード）</span></span>' +
          '<span class="z"><span class="zl">③</span><span class="zt">読む前の上下の傾斜で、<b>行ごとに</b>角度をずらす（位相エンコード）</span></span>' +
          '<span class="z"><span class="zl">④</span><span class="zt">くり返して k 空間を埋め、フーリエ変換する</span></span>' +
-         '<span class="z"><span class="zl">⑤</span><span class="zt">1マスの明るさ ＝ そのボクセルから届いた信号の大きさ</span></span>' +
+         '<span class="z"><span class="zl">⑤</span><span class="zt">1マスの明るさは、そのボクセルから届いた信号の大きさで決まる</span></span>' +
        '</span>' })
 ];
 
