@@ -3894,18 +3894,20 @@ const FIG = {
   /* 同じ速さ → 倒れる、ずれる → 少し揺れるだけ */
   res: fSvg(330, 118,
     '<line x1="80" y1="96" x2="80" y2="22" stroke="' + FC.dim + '" stroke-dasharray="3 3"/>' + fArr(80, 96, 142, 96, FC.m, 4) +
-    fT(22, 14, '速さが同じ', FC.ink, ' font-weight="700"') + fT(30, 114, '→ 倒れる', FC.ink) +
+    fT(80, 14, '速さが同じ', FC.ink, ' font-weight="700" text-anchor="middle"') + fT(80, 114, '倒れる', FC.ink, ' text-anchor="middle"') +
     '<line x1="250" y1="96" x2="250" y2="22" stroke="' + FC.dim + '" stroke-dasharray="3 3"/>' + fArr(250, 96, 266, 34, FC.m, 4) +
-    fT(184, 14, '速さがずれる', FC.ink, ' font-weight="700"') + fT(184, 114, '→ 少し揺れるだけ', FC.ink)),
+    fT(250, 14, '速さがずれる', FC.ink, ' font-weight="700" text-anchor="middle"') + fT(250, 114, '少し揺れるだけ', FC.ink, ' text-anchor="middle"')),
   /* 外から見る：らせん／一緒に回って見る：まっすぐ */
   frame: fSvg(330, 124, (() => {
     let d = '';
     for (let i = 0; i <= 200; i++) { const t = i / 200, a = t * 2 * Math.PI * 4, th = t * Math.PI / 2;
       d += (i ? 'L' : 'M') + (80 + 52 * Math.sin(th) * Math.cos(a)).toFixed(1) + ' ' + (82 - 56 * Math.cos(th) + 14 * Math.sin(th) * Math.sin(a)).toFixed(1); }
-    return '<path d="' + d + '" fill="none" stroke="' + FC.m + '" stroke-width="1.6"/>' +
+    const ex = 80 + 52 * Math.cos(2 * Math.PI * 4), ey = 82;   // らせんの終わり ＝ 倒れきった M の先
+    return '<line x1="80" y1="82" x2="80" y2="22" stroke="' + FC.dim + '" stroke-dasharray="3 3"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + FC.m + '" stroke-width="1.6" opacity=".75"/>' + fArr(80, 82, ex, ey, FC.m, 3.5) +
       fT(30, 118, '外から見る：らせん', FC.ink) +
       '<path d="M240 26 A56 56 0 0 1 296 82" fill="none" stroke="' + FC.m + '" stroke-width="3"/>' + fArr(292, 70, 296, 82, FC.m, 3) +
-      '<line x1="240" y1="82" x2="240" y2="22" stroke="' + FC.dim + '" stroke-dasharray="3 3"/>' +
+      '<line x1="240" y1="82" x2="240" y2="22" stroke="' + FC.dim + '" stroke-dasharray="3 3"/>' + fArr(240, 82, 293, 82, FC.m, 3.5) +
       fT(180, 118, '一緒に回って見る：まっすぐ', FC.ink);
   })()),
   /* 45° 倒した M を、縦の分と横の分に分ける */
