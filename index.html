@@ -1008,6 +1008,8 @@ body.bigStrip .strip img{height:auto; aspect-ratio:176 / 208}
 .mk.smk{font-size:12.5px}
 .mk b{font-weight:700}
 .mk small{display:block; font-size:11px; font-weight:500; line-height:1.25; opacity:.92}   /* 代表の言葉を上に、正式な名前を下に */
+#imgbox{container-type:inline-size}
+@container (max-width:150px){ #imgbox .ih{display:none} #imgbox .mk small{display:none} #imgbox .mk{font-size:11px; padding:0 5px} }   /* 小さく出しているときは、画像の上の字を減らす */
 body.tutOn #viewSeg, body.tutOn #scaleSeg, body.tutOn #frameSeg, body.tutOn #bShot, body.tutOn .stage .playbar{display:none}   /* 学習の案内の間は、表示の切り替えボタンを出さない（手ごとに自動で切り替える） */
 body.noKey p.key, body.tutOn p.key{display:none}   /* 学習の案内の間は凡例を出さない（色の意味はカードの札と画面のラベルで言う） */
 body.noBand .kband{display:none}
