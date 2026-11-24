@@ -156,6 +156,8 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
 }
 .lab.axis{color:var(--dim); background:none; border:none; font-family:var(--mono); font-size:12.5px; letter-spacing:.04em}
 .lab.m{color:var(--selT); border-color:var(--labMline); background:var(--labMbg)}
+/* 札の字の色は、指している物（3D の矢印）とカードの札と同じ色にする */
+.lab.cz{color:#1C8A5C} .lab.cxy{color:#BE3B30} .lab.cfl{color:#7E57C9} .lab.cb0{color:#4E7083}
 .lab i{font-style:normal; font-size:12.5px; color:var(--muted); margin-right:5px}
 .lab b{font-weight:700; font-size:15px; letter-spacing:.02em}
 .key[hidden]{display:none}
@@ -1020,12 +1022,12 @@ body.markOn .mk.smk{display:block}
 .tw{display:inline-block; padding:0 7px; margin:1px 2px; border-radius:7px; border:1.5px solid currentColor; background:var(--panel);
   font-weight:700; line-height:1.5; cursor:pointer; white-space:nowrap}
 .tw:hover{background:var(--fill)}
-.tw.m,.tw.m0,.tw.h,.tw.mag,.tw.hyd,.tw.img{color:#11788F} .tw.sig{color:#7E57C9}
+.tw.m,.tw.m0,.tw.h,.tw.mag,.tw.hyd,.tw.img{color:#11788F} .tw.sig{color:#7E57C9} .tw.pduct{color:#BE3B30}
 .tw.mxy{color:#BE3B30}
 .tw.spins{color:#8A97A1; }
 .tw.spins{background:linear-gradient(90deg,#1C8A5C,#A3700F,#5F4FB5); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
 .tw.rf,.tw.band{color:#A3700F}
-.tw.b0{color:#40566A}
+.tw.b0{color:#4E7083}
 .tw.coil{color:#5E7386}
 .tw.flux{color:#7E57C9}
 .tw.wire{color:#5E7386} .tw.ang,.tw.echo{color:#11788F} .tw.fan{color:#5E7386} .tw.frame,.tw.relw,.tw.thick{color:#11788F} .tw.water,.tw.duct,.tw.bile{color:#11788F} .tw.cur{color:#2F4C5D}
@@ -2222,8 +2224,8 @@ const GLT = {
   },
   light: {
     bg:0xF2F6F9, ax:0x7B94A4, axz:0x5A7587, ring:0xA9BCC8, b0:0x4E7083, field:0xCCD9E2,
-    plane:0xA2C8D6, planeOp:0.42, m:0x0E6B83, mz:0x1A8456, mxy:0xB4332A, comp:0x8CA2B0,
-    rf:0xA3700F, conePar:0x2E7A94, coneAnti:0x9A4A4A,
+    plane:0xA2C8D6, planeOp:0.42, m:0x11788F, mz:0x1C8A5C, mxy:0xBE3B30, comp:0x8CA2B0,
+    rf:0xA3700F, conePar:0x11788F, coneAnti:0x11788F,   // プロトンは上向きも下向きも同じ色（向きは矢印で分かる。カードの「プロトン」の札と同じ色）
     skull:0x9A8A7E, skullOp:0.10, brain:0xA98E96, brainOp:0.18, vent:0x2C7AAC, ventOp:0.55,
     skin:0x6E8598, skinOp:0.13, edge:0x2E7A8C, vox:0xB5781A, voxOp:0.14,
     amb:0.92, dir:0.42, dir2:0.18, emis:0.04, spinL:0.40, spinE:0.00,
@@ -2368,7 +2370,7 @@ const coilMat = new THREE.MeshPhongMaterial({ color:0xA9BCCB, shininess:40, emis
   coilGrp.add(lead(-0.4), lead(0.4));
 }
 /* 輪を貫いている分＝Mxy の y 成分。y 軸にのせて描くので「横磁化のうち、どれだけが輪を貫く向きか」が見える */
-const fluxArrow = mkArrow(0xB08BE0, 0.105, 0.34, 0.85, 0.98); coilGrp.add(fluxArrow.grp);
+const fluxArrow = mkArrow(0x7E57C9, 0.105, 0.34, 0.85, 0.98);   // カードの「輪を通る磁場」の札と同じ紫 coilGrp.add(fluxArrow.grp);
 /* 電流の向き（電磁石の手）：輪の上を電流の向きに進む小さな矢印（円錐）。電流を逆にすると向きも進み方も逆になる。
    輪は x-z 面にあり、+y の向きに磁場ができるのは、+y から見て反時計回り（y 軸まわりの正の回転）に流れるとき（右ねじの法則） */
 const CUR_N = 8, curCones = [];
@@ -2491,7 +2493,7 @@ const BORE_R = 62, BORE_L = 320;
 }
 const boreB0 = [];
 for (let k = 0; k < 4; k++) {
-  const a = mkArrow(0x40566A, 1.1, 3.2, 7.2); const t = Math.PI / 4 + k * Math.PI / 2;
+  const a = mkArrow(0x4E7083, 1.1, 3.2, 7.2); const t = Math.PI / 4 + k * Math.PI / 2;
   a.grp.position.set(Math.cos(t) * 42, Math.sin(t) * 42, -45); setArrow(a, 0, 0, 1, 90);
   boreGrp.add(a.grp); boreB0.push(a);
 }
@@ -2624,7 +2626,7 @@ for (let k = 0; k < SLN; k++) {
   const a = mkArrow(0x11788F, 0.11, 0.34, 0.8); a.grp.position.z = z; slabGrp.add(a.grp); SLB.arr.push(a); tint(a, 'm');
 }
 const slBand = new THREE.Mesh(new THREE.BoxGeometry(1, 0.05, 1),
-  new THREE.MeshBasicMaterial({ color:0xF0B24B, transparent:true, opacity:0.22, depthWrite:false }));
+  new THREE.MeshBasicMaterial({ color:0xA3700F, transparent:true, opacity:0.20, depthWrite:false }));   // カードの「周波数の範囲」の札と同じ橙
 slBand.position.y = 0.3; slabGrp.add(slBand);
 const slFreq = k => SLB.g * (k - SLC);                       // 層 k の周波数（中心からのずれ、刻み単位）
 const slInBand = (k, g, fc, hw) => Math.abs(g * (k - SLC) - fc) <= hw + 1e-6;
@@ -2650,7 +2652,7 @@ function slabUpdate(dt) {
     const th = SLB.tip[k] * Math.PI / 180;
     setArrow(SLB.arr[k], Math.sin(th) * Math.cos(SLB.ph), Math.sin(th) * Math.sin(SLB.ph), Math.cos(th), SLML);
     const sel = SLB.tipT[k] > 0;
-    SLB.disc[k].material.color.setHex(sel ? 0xF0B24B : 0xB9C6CF);
+    SLB.disc[k].material.color.setHex(sel ? 0xA3700F : 0xB9C6CF);
     SLB.disc[k].material.opacity = sel ? 0.45 : 0.32;
     SLB.bar[k].scale.x = SLFB + slFreq(k) * SLST;
     SLB.bar[k].material.color.setHex(slBand.visible && Math.abs(slFreq(k) - SLB.fc) <= SLB.hw + 0.02 ? 0xE09A2B : 0xAEBBC4);   // 帯を出さない手では、棒はみな灰色
@@ -2947,13 +2949,13 @@ function mkLab(key, cls) {
   labelBox.appendChild(d); LABS[key] = d; return d;
 }
 ['z', 'x', 'y'].forEach(k => mkLab(k, 'axis'));
-mkLab('b0', 'axis'); mkLab('m', 'm'); mkLab('b1', 'rf');
-mkLab('mz', 'm'); mkLab('mxy', 'm'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
-mkLab('coil', 'axis'); mkLab('cur', 'axis'); mkLab('flux', 'm'); mkLab('m0', 'm');
+mkLab('b0', 'axis cb0'); mkLab('m', 'm'); mkLab('b1', 'rf');
+mkLab('mz', 'm cz'); mkLab('mxy', 'm cxy'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
+mkLab('coil', 'axis'); mkLab('cur', 'axis'); mkLab('flux', 'm cfl'); mkLab('m0', 'm');
 mkLab('hcone', 'm'); mkLab('rmMri', 'axis'); mkLab('rmBed', 'axis');
 mkLab('cmp0', 'm'); mkLab('cmp1', 'm'); mkLab('cmp2', 'm');
 mkLab('ang', 'm'); mkLab('fan', 'axis'); mkLab('echo', 'm'); mkLab('fBrain', 'axis'); mkLab('fVox', 'm'); mkLab('slThick', 'rf');
-mkLab('gL', 'axis'); mkLab('gR', 'axis'); mkLab('gT', 'axis'); mkLab('gB', 'axis'); mkLab('gOn', 'rf'); mkLab('mag', 'm'); mkLab('boreB0', 'axis'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
+mkLab('gL', 'axis'); mkLab('gR', 'axis'); mkLab('gT', 'axis'); mkLab('gB', 'axis'); mkLab('gOn', 'rf'); mkLab('mag', 'm'); mkLab('boreB0', 'axis cb0'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
 ['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm ta'));
 const _p = new THREE.Vector3();
 let labW = 0, labH = 0;   // 3D の大きさ（1コマに1回だけ測る）
@@ -3008,7 +3010,7 @@ const WFL = {};
 const WKEYS = ['m', 'm0', 'mz', 'mxy', 'spins', 'rf', 'b0', 'flux', 'cur', 'hyd', 'sig', 'mag', 'h', 'coil', 'band', 'wire', 'ang', 'fan', 'echo', 'thick'];
 const WLAB = { m:['m', 'fVox'], hyd:['m'], h:['hcone'], sig:['coil'], m0:['m0'], mz:['mz'], mxy:['mxy'], rf:['b1'], b0:['z', 'boreB0'], coil:['coil'], flux:['flux'], cur:['cur'], mag:['mag'], band:['slBand'],
   wire:['boreW'], ang:['ang'], fan:['fan'], echo:['echo'], thick:['slThick'] };
-const WDOM = { frame:'#frameSeg', relw:'#relW', img:'#imgbox', water:'#mkW', duct:'#mkB, #mkP', bile:'#mkG' };   // 画面の部品（ボタンや印）を光らせる
+const WDOM = { frame:'#frameSeg', relw:'#relW', img:'#imgbox', water:'#mkW', duct:'#mkB', pduct:'#mkP', bile:'#mkG' };   // 画面の部品（ボタンや印）を光らせる
 function wFlash(k) {
   if (WDOM[k]) {
     document.querySelectorAll(WDOM[k]).forEach(e => { e.classList.add('wflash'); setTimeout(() => e.classList.remove('wflash'), 1800); });
@@ -4162,7 +4164,7 @@ L({ nm:'MIP：重ねて1枚にする', hint:'胆管と膵管をこうして写�
     { label:'板を 0 → 60 mm に厚くする', fn:() => animGeom('mip', [0, 60], 2400), dur:4200 },
     { label:'縦の軸のまわりに回す', fn:() => { P.mip = 60; animGeom('mipRot', [0, 60, -60, 0], 6000); }, dur:6800 },
   ],
-  text:'見る向きに重なったボクセルの中から、いちばん明るいものだけを選んで、1枚にするのが MIP です。<br>途切れていた[[duct:胆管と膵管]]が、つながって見えます。' })
+  text:'見る向きに重なったボクセルの中から、いちばん明るいものだけを選んで、1枚にするのが MIP です。<br>途切れていた[[duct:胆管]]と[[pduct:膵管]]が、つながって見えます。' })
 ];
 
 /* ---------- k 空間：今の模擬画像を 256 × 256 にして2次元 FFT し、中心だけ・外側だけで画像に戻す ---------- */
