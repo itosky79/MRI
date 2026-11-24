@@ -71,13 +71,13 @@ html[data-theme="light"]{
   --sel:#D5EAF2; --sel2:#E0F0F6; --selT:#0C3441; --hoverBg:#C7E2EC; --stepRuby:#1B6B80;
   --tgLine:#5FA3B5; --tgBg:rgba(62,143,163,.10); --tgOn:#1B6B80; --tgOnT:#FFFFFF; --tgT:#1B6B80;
   --teal:#11788F; --amber:#A3700F; --alert:#BE3B30; --grass:#1C8A5C; --violet:#5F4FB5;
-  --b0:#4D6E7F; --sig:#11788F; --rf:#A3700F;
+  --b0:#4E7083; --sig:#11788F; --rf:#A3700F;
   --rfBg:#F6E7CB; --rfBg2:rgba(250,240,222,.92); --rfBg3:#EFD9AF; --rfLine:#C09B5C;
   --rfText:#7A5208; --rfText2:#5E3E04; --rfLabBg:rgba(250,238,216,.9); --rfDim:#8A6213;
   --scrim:rgba(255,255,255,.86); --scrim2:rgba(255,255,255,.92); --scrim0:rgba(255,255,255,0);
   --labTxt:#16303D; --labBg:rgba(255,255,255,.82); --labLine:rgba(140,165,180,.8);
   --labMbg:rgba(214,238,245,.9); --labMline:#5FA3B5;
-  --grad:#5C7384; --grid:#E3EBF1; --grid2:#BCCBD6; --gap:#0E6C83; --axisT:#60788A;
+  --cursor:#1C2935; --grad:#5C7384; --grid:#E3EBF1; --grid2:#BCCBD6; --gap:#0E6C83; --axisT:#60788A;
   --tagbg:rgba(255,255,255,.88); --env:rgba(190,59,48,.85);
   --okBg:#DCF3E6; --okLine:#58B084; --okText:#0E6B41; --okN:#1C8A5C;
   --ngBg:#FBE2E1; --ngLine:#D08A86; --ngText:#8E2A22; --ngN:#B03A30;
@@ -1000,10 +1000,11 @@ details.fold summary{font-size:14.5px}
 /* 画面に足した印・見出し */
 .relw{margin-left:auto; font-size:15px; font-weight:700; color:var(--teal); padding:2px 10px; border-radius:9px; background:var(--fill)}
 .mk{position:absolute; display:none; transform:translate(-50%,-140%); padding:1px 7px; border-radius:7px; font-size:14px; font-weight:700;
-  color:#fff; background:rgba(17,120,143,.92); white-space:nowrap; pointer-events:none}
-.mk::after{content:""; position:absolute; left:50%; top:100%; margin-left:-5px; border:5px solid transparent; border-top-color:rgba(17,120,143,.92)}
-.mk.mkl{background:rgba(190,59,48,.92); transform:translate(-50%,45%)}   /* 病変は点の下に出して、水の印と重ならないように */
-.mk.mkl::after{top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(190,59,48,.92)}
+  color:#fff; background:rgba(37,99,235,.92); white-space:nowrap; pointer-events:none}   /* 水の印：組織の水（脳脊髄液・胆汁）と同じ青 */
+.mk::after{content:""; position:absolute; left:50%; top:100%; margin-left:-5px; border:5px solid transparent; border-top-color:rgba(37,99,235,.92)}
+.mk.mkl{background:rgba(124,139,30,.95); transform:translate(-50%,45%)}   /* 病変の印：病変の色。点の下に出して、水の印と重ならないように */
+.mk.mkp{transform:translate(-50%,45%)} .mk.mkp::after{top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(37,99,235,.92)}
+.mk.mkl::after{top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:rgba(124,139,30,.95)}
 .strip figure{position:relative}
 body.bigStrip .strip figure, body.bigStrip .strip img{width:min(190px, 40vw)}   /* 撮り比べの手：2枚を大きく並べる */
 body.bigStrip .strip img{height:auto; aspect-ratio:176 / 208}
@@ -1025,12 +1026,12 @@ body.markOn .mk.smk{display:block}
 .tw.m,.tw.m0,.tw.h,.tw.mag,.tw.hyd,.tw.img{color:#11788F} .tw.sig{color:#7E57C9} .tw.pduct{color:#BE3B30}
 .tw.mxy{color:#BE3B30}
 .tw.spins{color:#8A97A1; }
-.tw.spins{background:linear-gradient(90deg,#1C8A5C,#A3700F,#5F4FB5); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
+
 .tw.rf,.tw.band{color:#A3700F}
 .tw.b0{color:#4E7083}
 .tw.coil{color:#5E7386}
 .tw.flux{color:#7E57C9}
-.tw.wire{color:#5E7386} .tw.ang,.tw.echo{color:#11788F} .tw.fan{color:#5E7386} .tw.frame,.tw.relw,.tw.thick{color:#11788F} .tw.water,.tw.duct,.tw.bile{color:#11788F} .tw.cur{color:#2F4C5D}
+.tw.wire{color:#5E7386} .tw.ang,.tw.echo{color:#11788F} .tw.fan{color:#5E7386} .tw.frame,.tw.relw,.tw.thick{color:#11788F} .tw.water,.tw.duct,.tw.bile{color:#2563EB} .tw.cur{color:#2F4C5D}
 .ttext b .tw{background:var(--panel)}
 .lab.flash{box-shadow:0 0 0 3px rgba(17,120,143,.5); font-weight:700}
 /* アプリ全体を大きくしたのに合わせて、学習タブの一覧・説明も1段上げる */
@@ -1077,7 +1078,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
         <canvas id="mri" width="176" height="208"></canvas>
         <div class="xh" id="xhair"></div>
         <span class="mk mkw" id="mkW"><b>水</b><small>脳脊髄液</small></span><span class="mk mkl" id="mkL">病変</span>
-        <span class="mk mkw" id="mkB">胆管</span><span class="mk mkl" id="mkP">膵管</span><span class="mk mkw" id="mkG">胆嚢の胆汁</span>
+        <span class="mk mkw" id="mkB">胆管</span><span class="mk mkw mkp" id="mkP">膵管</span><span class="mk mkw" id="mkG">胆嚢の胆汁</span>
       </div>
 
       <div class="bar">
@@ -1103,20 +1104,19 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
 
 
       <p class="key" id="keyQ" hidden>
-        <span><i style="background:var(--teal)"></i>上向きの水素</span>
-        <span><i style="background:var(--alert)"></i>下向きの水素</span>
+        <span><i style="background:var(--teal)"></i>小さい矢印＝水素1つずつ（上向き・下向き）</span>
         <span><i style="background:var(--teal); opacity:.35"></i><b>薄い矢印＝M₀（差を全部足したもの）</b></span>
       </p>
       <p class="key" id="keyCoil" hidden>
         <span><i style="background:var(--sig)"></i>太い矢印＝M</span>
-        <span><i style="background:#B08BE0"></i><b>紫＝輪を通る分。この変化が信号（コイルが光る）</b></span>
+        <span><i style="background:#7E57C9"></i><b>紫＝輪を通る分。この変化が信号（コイルが光る）</b></span>
       </p>
       <p class="key" id="keyInd" hidden>
         <span><i style="background:var(--sig)"></i>磁石</span>
-        <span><i style="background:#B08BE0"></i><b>紫＝輪を通る磁場。これが変わるあいだだけ電流が流れる（コイルが光る）</b></span>
+        <span><i style="background:#7E57C9"></i><b>紫＝輪を通る磁場。これが変わるあいだだけ電流が流れる（コイルが光る）</b></span>
       </p>
       <p class="key" id="keyBore" hidden>
-        <span><i style="background:#40566A"></i><b>濃い矢印＝静磁場 B₀（体の長い方向）</b></span>
+        <span><i style="background:#4E7083"></i><b>濃い矢印＝静磁場 B₀（体の長い方向）</b></span>
         <span><i style="background:#8FA3B2"></i>灰色の輪＝筒の壁に巻いた電線</span>
       </p>
       <p class="key" id="keyCmp" hidden>
@@ -1136,7 +1136,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
         <span><i style="background:var(--amber)"></i><b>オレンジ＝RFパルス（B₁）</b></span>
       </p>
       <p class="key" id="key3d">
-        <span><i style="background:linear-gradient(90deg,var(--grass),var(--amber),var(--violet))"></i>細い矢印＝水素1つずつ（色＝向き）</span>
+        <span><i style="background:#5E7386"></i>細い矢印＝水素1つずつ</span>
         <span><i style="background:var(--sig)"></i>太い矢印＝M（合計）</span>
         <span><i style="background:var(--grass)"></i>縦の M</span>
         <span><i style="background:var(--alert)"></i><b>横の M（＝信号）</b></span>
@@ -1452,22 +1452,24 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
    e1 は 3T で報告されている値との比からきめた組織ごとの指数。
    T2 は磁場依存が小さいので固定にしている。          */
 const TIS = [
-  { id:'fat',  nm:'脂肪',       col:'#E8C77A', colL:'#A86F0C', T1:270,  T2:85,   PD:1.00, e1:0.50 },
-  { id:'wm',   nm:'白質',       col:'#CBD6DF', colL:'#2F4C5D', T1:650,  T2:80,   PD:0.70, e1:0.39 },
-  { id:'gm',   nm:'灰白質',     col:'#9FAFBD', colL:'#7B909F', T1:920,  T2:100,  PD:0.80, e1:0.53 },
-  { id:'csf',  nm:'脳脊髄液',   col:'#6FA8C9', colL:'#13679A', T1:4000, T2:2000, PD:1.00, e1:0.05 },
-  { id:'mus',  nm:'筋肉',       col:'#B07A7A', colL:'#96403F', T1:870,  T2:45,   PD:0.75, e1:0.70 },
-  { id:'les',  nm:'病変（浮腫）',col:'#C4A6E8', colL:'#6341AC', T1:1200, T2:180,  PD:0.85, e1:0.45 },
+  { id:'fat',  nm:'脂肪',       col:'#E8C77A', colL:'#B83280', T1:270,  T2:85,   PD:1.00, e1:0.50 },
+  { id:'wm',   nm:'白質',       col:'#CBD6DF', colL:'#24323D', T1:650,  T2:80,   PD:0.70, e1:0.39 },
+  { id:'gm',   nm:'灰白質',     col:'#9FAFBD', colL:'#8796A3', T1:920,  T2:100,  PD:0.80, e1:0.53 },
+  { id:'csf',  nm:'脳脊髄液',   col:'#6FA8C9', colL:'#2563EB', T1:4000, T2:2000, PD:1.00, e1:0.05 },
+  { id:'mus',  nm:'筋肉',       col:'#B07A7A', colL:'#8B5E3C', T1:870,  T2:45,   PD:0.75, e1:0.70 },
+  { id:'les',  nm:'病変（浮腫）',col:'#C4A6E8', colL:'#7C8B1E', T1:1200, T2:180,  PD:0.85, e1:0.45 },
   { id:'bone', nm:'皮質骨',     col:'#46545F', colL:'#55636E', T1:250,  T2:1,    PD:0.05, e1:0.30 },
-  { id:'cus',  nm:'自由な組織', col:'#E3D35A', colL:'#8A7A05', T1:500,  T2:100,  PD:1.00, e1:0 },   // T1・T2・プロトン密度を自分で決める（静磁場で T1 は変えない）。画像には出ない
+  { id:'cus',  nm:'自由な組織', col:'#E3D35A', colL:'#5E7386', T1:500,  T2:100,  PD:1.00, e1:0 },   // T1・T2・プロトン密度を自分で決める（静磁場で T1 は変えない）。画像には出ない
+  /* 組織の色（colL）は、意味の決まった色（M 青緑・縦の M 緑・横の M 赤・RF 橙・磁場 紫・B₀ 灰青）と重ならない色にしている。
+     水（脳脊髄液・胆汁）は青。画像の「水」の印とカードの札も同じ青 */
   /* 腹部（模式図）の組織。並びを変えると頭部の立体データの番号がずれるので、必ず後ろに足す。
      T1・T2 は 1.5 T と 3.0 T で測った報告（de Bazelaire CM, et al. Radiology 2004;230:652-659）を目安にした値で、
      e1 は 1.5 T → 3.0 T の T1 の伸びから決めた。報告によって幅がある。胆汁・水の値は模型としての目安 */
-  { id:'liv',  nm:'肝臓',       col:'#B98A64', colL:'#7A4A22', T1:586,  T2:46,   PD:0.75, e1:0.47 },
-  { id:'spl',  nm:'脾臓',       col:'#C58AA8', colL:'#9A3A6E', T1:1057, T2:79,   PD:0.80, e1:0.33 },
-  { id:'pan',  nm:'膵臓',       col:'#9FBF8A', colL:'#4F7A35', T1:584,  T2:46,   PD:0.75, e1:0.31 },
-  { id:'kid',  nm:'腎臓',       col:'#A79BD6', colL:'#4D4396', T1:966,  T2:87,   PD:0.85, e1:0.24 },
-  { id:'wat',  nm:'胆汁・水',   col:'#6FA8C9', colL:'#13679A', T1:3000, T2:1000, PD:1.00, e1:0.05 }
+  { id:'liv',  nm:'肝臓',       col:'#B98A64', colL:'#8B5E3C', T1:586,  T2:46,   PD:0.75, e1:0.47 },
+  { id:'spl',  nm:'脾臓',       col:'#C58AA8', colL:'#7C8B1E', T1:1057, T2:79,   PD:0.80, e1:0.33 },
+  { id:'pan',  nm:'膵臓',       col:'#9FBF8A', colL:'#9AA56A', T1:584,  T2:46,   PD:0.75, e1:0.31 },
+  { id:'kid',  nm:'腎臓',       col:'#A79BD6', colL:'#5B6770', T1:966,  T2:87,   PD:0.85, e1:0.24 },
+  { id:'wat',  nm:'胆汁・水',   col:'#6FA8C9', colL:'#2563EB', T1:3000, T2:1000, PD:1.00, e1:0.05 }
 ];
 const TIX = {}; TIS.forEach((t, i) => TIX[t.id] = i);
 /* 明るい配色では、暗い地むけの色は白地に埋もれるので別の色を使う */
@@ -3011,7 +3013,7 @@ const WFL = {};
 const WKEYS = ['m', 'm0', 'mz', 'mxy', 'spins', 'rf', 'b0', 'flux', 'cur', 'hyd', 'sig', 'mag', 'h', 'coil', 'band', 'wire', 'ang', 'fan', 'echo', 'thick'];
 const WLAB = { m:['m', 'fVox'], hyd:['m'], h:['hcone'], sig:['coil'], m0:['m0'], mz:['mz'], mxy:['mxy'], rf:['b1'], b0:['z', 'boreB0'], coil:['coil'], flux:['flux'], cur:['cur'], mag:['mag'], band:['slBand'],
   wire:['boreW'], ang:['ang'], fan:['fan'], echo:['echo'], thick:['slThick'] };
-const WDOM = { frame:'#frameSeg', relw:'#relW', img:'#imgbox', water:'#mkW', duct:'#mkB', pduct:'#mkP', bile:'#mkG' };   // 画面の部品（ボタンや印）を光らせる
+const WDOM = { frame:'#frameSeg', relw:'#relW', img:'#imgbox', water:'#mkW', duct:'#mkB, #mkP', bile:'#mkG' };   // 画面の部品（ボタンや印）を光らせる
 function wFlash(k) {
   if (WDOM[k]) {
     document.querySelectorAll(WDOM[k]).forEach(e => { e.classList.add('wflash'); setTimeout(() => e.classList.remove('wflash'), 1800); });
@@ -3080,9 +3082,7 @@ function updateScene(dt) {
     const i = dispIx[k];
     setArrow(a, mx[i], my[i], mz[i], ML);
     const tr = Math.hypot(mx[i], my[i]);
-    const h = (Math.atan2(my[i], mx[i]) / (Math.PI * 2) + 1) % 1;
-    a.mat.color.setHSL(h, Math.min(0.78, tr * 1.5), TH.spinL + 0.06 * (1 - tr));
-    a.mat.emissive.setHSL(h, Math.min(0.6, tr * 1.2), TH.spinE);
+    a.mat.color.setHex(0x5E7386); a.mat.emissive.setHex(0x000000);   // 灰色1色（意味の決まった色を使わない）
   }
   /* --- 合成ベクトル --- */
   const m = netM();
@@ -3385,7 +3385,7 @@ function fitCv(cv) {
 const C = {};
 function readColors() {
   const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
-  ['line', 'dim', 'muted', 'text', 'rf', 'sig', 'grad', 'alert', 'grid', 'grid2',
+  ['line', 'dim', 'muted', 'text', 'rf', 'sig', 'grad', 'alert', 'grid', 'grid2', 'cursor',
    'gap', 'tagbg', 'env', 'rfDim', 'axisT', 'inputLine'].forEach(k => { C[k] = g('--' + k); });
   C.mut = C.muted;
   /* グラフの字。数字は等幅のまま、日本語は等幅の全角フォントに落ちると字間が空いて読みにくいので、ふつうのゴシックへ回す */
@@ -3523,7 +3523,7 @@ function drawSeq() {
   /* 信号：実際に計算している |Mxy| の記録 */
   const sy = rows[4].y, sh = h * 0.11;
   if (R.trace.length > 1) {
-    cx.strokeStyle = C.sig; cx.lineWidth = 1.5; cx.beginPath();
+    cx.strokeStyle = C.text; cx.lineWidth = 1.5; cx.beginPath();   // 信号の線は濃い灰色（青緑は M にだけ使う。カードの「信号の波」の図と同じ）
     let first = true;
     for (const p of R.trace) {
       const x = X(p[0]), y = sy - p[1] * sh;
@@ -3553,7 +3553,7 @@ function drawSeq() {
   if (te) {
     /* 読み出しの段と信号の段の間は狭いので、言葉はエコーの右（入らなければ左）に、信号の高さで置く */
     const xe = X(te.t), ye = sy + sh * 0.6, word = '← ここで信号を読む';
-    cx.fillStyle = C.sig;
+    cx.fillStyle = C.text;
     const ww = cx.measureText(word).width;
     if (xe + 22 + ww <= Rr) { cx.textAlign = 'left'; cx.fillText(word, xe + 22, ye); }
     else { cx.textAlign = 'right'; cx.fillText('ここで信号を読む →', xe - 22, ye); }
@@ -3573,7 +3573,7 @@ function drawSeq() {
   if (P.manual) { cx.fillStyle = C.rf; cx.fillText('手動：パルスは自分で撃ちます', Rr, h * 0.115); }
   /* いまの時刻 */
   const xc = X(R.t);
-  cx.strokeStyle = C.alert; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xc, h * 0.08); cx.lineTo(xc, h * 0.92); cx.stroke();
+  cx.strokeStyle = C.cursor; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xc, h * 0.08); cx.lineTo(xc, h * 0.92); cx.stroke();
 }
 
 /* ---- 緩和曲線 ---- */
@@ -3706,11 +3706,11 @@ function drawRel() {
     const y0 = Math.min.apply(null, arr), y1 = Math.max.apply(null, arr);
     if (y1 - y0 < 4) return;
     if (!right && xg + 4 + cx.measureText(nm).width + 12 > Rr) right = true;   // 右の組織の名前にかかるときは、線の左に置く
-    cx.strokeStyle = C.gap; cx.lineWidth = 1; cx.beginPath();
+    cx.strokeStyle = C.text; cx.lineWidth = 1; cx.beginPath();
     cx.moveTo(xg, y0); cx.lineTo(xg, y1);
     cx.moveTo(xg - 3, y0); cx.lineTo(xg + 3, y0);
     cx.moveTo(xg - 3, y1); cx.lineTo(xg + 3, y1); cx.stroke();
-    tagBg(cx, right ? xg - 4 : xg + 4, (y0 + y1) / 2, nm, right ? 'right' : 'left', C.gap);
+    tagBg(cx, right ? xg - 4 : xg + 4, (y0 + y1) / 2, nm, right ? 'right' : 'left', C.text);
   };
   /* 右端の名前が重ならないようにずらす（上下どちらのグラフにも、線の色がどの組織かを書く）。
      名前どうしは字の高さぶん離し、グラフの枠の高さに収める。線の端から離れた名前は、細い線で端とつなぐ */
@@ -3745,9 +3745,9 @@ function drawRel() {
   cx.fillText('1', L - 3, Y2(1));
   /* 標本化の線 */
   const vline = (x, y0, y1, nm) => {
-    cx.strokeStyle = C.alert; cx.setLineDash([3, 3]); cx.lineWidth = 1;
+    cx.strokeStyle = C.cursor; cx.setLineDash([3, 3]); cx.lineWidth = 1;
     cx.beginPath(); cx.moveTo(x, y0); cx.lineTo(x, y1); cx.stroke(); cx.setLineDash([]);
-    cx.fillStyle = C.alert; cx.textAlign = x > Rr - 14 ? 'right' : 'center'; cx.fillText(nm, x > Rr - 14 ? x - 3 : x, y0 - 1);   // 右端では、名前の列にはみ出さないよう左へ寄せる
+    cx.fillStyle = C.cursor; cx.textAlign = x > Rr - 14 ? 'right' : 'center'; cx.fillText(nm, x > Rr - 14 ? x - 3 : x, y0 - 1);   // 右端では、名前の列にはみ出さないよう左へ寄せる
   };
   vline(Math.min(X1(sampT), Rr), top.y0, top.y1, isIR ? 'TI' : 'TR');
   vline(Math.min(X2(P.TE), Rr), bot.y0, bot.y1, 'TE');
@@ -3768,7 +3768,7 @@ function drawRel() {
   cx.fillText(nar ? '時間 →' : '90° パルスからの時間 →', L + 2, bot.y1 + 9);
   /* いまの時刻（②の赤い線と同じ時刻）。上は 90°（IR は反転の 180°）から、下は 90° からの時間 */
   const now = (x, r) => {
-    cx.strokeStyle = C.alert; cx.lineWidth = 1.6; cx.setLineDash([]);
+    cx.strokeStyle = C.cursor; cx.lineWidth = 1.6; cx.setLineDash([]);
     cx.beginPath(); cx.moveTo(x, r.y0 - 2); cx.lineTo(x, r.y1); cx.stroke();
   };
   const t1 = R.t, t2 = isIR ? R.t - P.TI : R.t;
@@ -4094,7 +4094,7 @@ L({ nm:'矢印から画像へ', hint:'「組織ごとに塗ってみる」を押
   act:{ label:'組織ごとに塗ってみる', fn:() => paintDemo(), dur:6500 },
   text:'画像の明るさは、倒したときの横の M の長さと、その場所にある水素の量で決まります。' }),
 
-L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで、赤い TR の線が左へ動きます。そのとき、脳脊髄液の線はまだ低いところにあります。', tg:'T1 の差をつける', sel:'#panRel',
+L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで、TR の縦の線が左へ動きます。そのとき、脳脊髄液の線はまだ低いところにあります。', tg:'T1 の差をつける', sel:'#panRel',
   tag:{ mark:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
@@ -4165,7 +4165,7 @@ L({ nm:'MIP：重ねて1枚にする', hint:'胆管と膵管をこうして写�
     { label:'板を 0 → 60 mm に厚くする', fn:() => animGeom('mip', [0, 60], 2400), dur:4200 },
     { label:'縦の軸のまわりに回す', fn:() => { P.mip = 60; animGeom('mipRot', [0, 60, -60, 0], 6000); }, dur:6800 },
   ],
-  text:'見る向きに重なったボクセルの中から、いちばん明るいものだけを選んで、1枚にするのが MIP です。<br>途切れていた[[duct:胆管]]と[[pduct:膵管]]が、つながって見えます。' })
+  text:'見る向きに重なったボクセルの中から、いちばん明るいものだけを選んで、1枚にするのが MIP です。<br>途切れていた[[duct:胆管と膵管]]が、つながって見えます。' })
 ];
 
 /* ---------- k 空間：今の模擬画像を 256 × 256 にして2次元 FFT し、中心だけ・外側だけで画像に戻す ---------- */
@@ -4231,9 +4231,9 @@ function kDraw(keep, ring, fix) {
   }
   kx.putImageData(kd, 0, 0);
   if (ring) {
-    kx.save(); kx.strokeStyle = '#7FD3E6'; kx.setLineDash([5, 4]); kx.lineWidth = 2;   // 中心と外側の境目
+    kx.save(); kx.strokeStyle = '#E5ECF1'; kx.setLineDash([5, 4]); kx.lineWidth = 2;   // 中心と外側の境目
     kx.beginPath(); kx.arc(KN / 2, KN / 2, KS.R0 * 1.15, 0, Math.PI * 2); kx.stroke(); kx.restore();
-    kx.font = 'bold 21px sans-serif'; kx.fillStyle = '#7FD3E6'; kx.textAlign = 'center';
+    kx.font = 'bold 21px sans-serif'; kx.fillStyle = '#E5ECF1'; kx.textAlign = 'center';
     kx.fillText('中心', KN / 2, KN / 2 - KS.R0 * 1.15 - 8); kx.fillText('外側', KN / 2, KN - 14);
   }
   /* 右：残した分だけで画像に戻す（逆 FFT の大きさ） */
@@ -4360,7 +4360,7 @@ function t5Draw() {
     x.fillStyle = 'rgb(' + g + ',' + g + ',' + g + ')'; x.fillRect(X + 1, Y + 1, cs - 2, cs - 2);
   });
   const cur = T5.run ? T5.p + 2 : -1;                   // いま埋めている行に枠
-  if (cur >= 0 && cur < 5) { x.strokeStyle = teal; x.lineWidth = 3; x.strokeRect(236, 40 + cur * cs, G, cs); }
+  if (cur >= 0 && cur < 5) { x.strokeStyle = ink; x.lineWidth = 3; x.strokeRect(236, 40 + cur * cs, G, cs); }   // 枠は濃い灰色（青緑は M にだけ）
   x.fillStyle = ink; x.fillText(T5.rows + ' / 5 行', 236 + G / 2, 40 + G + 20);
   if (T5.run) { x.fillStyle = dim; x.fillText((T5.p + 3) + ' 回目：行ごとのずれ ' + ['−2', '−1', '0', '+1', '+2'][T5.p + 2], 14 + G / 2, 40 + G + 20); }
   /* 下：フーリエ変換で戻した画像 */
@@ -5579,7 +5579,7 @@ const TUT = [
   { sel:'#imgbox',
     text:'白と黒が入れ替わり、今度は水が白く写っています。<br>同じ体なのに、なぜ変わったのか。その手がかりが下の図にあります。' },
   { sel:'#panRel', scroll:'#panRel',
-    text:'③の図です。赤い縦線は信号を読む時刻で、そこでの組織ごとの線の高さの差が、そのまま画像の明るさの差になります。' },
+    text:'③の図です。TE の縦の線は信号を読む時刻で、そこでの組織ごとの線の高さの差が、そのまま画像の明るさの差になります。' },
   { sel:'#stage', scroll:'#stage',
     text:'①の 3D は、体の中で起きていることです。組織ごとの矢印の横向きの長さが、その組織の信号の大きさです。' },
   { text:'<span class="big">使い方はこれだけです</span>右のつまみで撮り方を変えると、図と画像が一緒に変わります。<br>' +
