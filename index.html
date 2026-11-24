@@ -4196,6 +4196,87 @@ function kFillRun() {
   kDraw(() => false, false, KS.full); step();
 }
 
+
+/* ---------- 5×5 で画像を作る：位相エンコードを変えて5回くり返し、k 空間の5行を埋めて、フーリエ変換で戻す ----------
+   ボクセル (行 r, 列 c) の M の大きさを m[r][c] とする。p 回目のくり返しでは、位相エンコードで行 r の M を
+   角度 2π·p·r/5 だけずらしてから読む。読む間は列 c が周波数で分かれるので、k 空間の (p, q) には
+   S(p, q) ＝ Σ m[r][c]·exp(−i·2π(p·r + q·c)/5) が入る（ちょうど2次元の離散フーリエ変換）。
+   5行そろってから逆変換すると、m がそのまま戻る。色は M の青緑だけ。k 空間と画像は灰色 */
+const T5 = { n:5, m:[[0, .45, .45, .45, 0], [.45, 1, 1, 1, .45], [.45, 1, .15, 1, .45], [.45, 1, 1, .7, .45], [0, .45, .45, .45, 0]],
+  rows:0, p:0, run:false, ang:0, angT:0, img:0, raf:0, tok:0 };
+function t5S(p, q) {   // k 空間の1点（p、q は −2〜2）
+  let re = 0, im = 0;
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) { const a = -2 * Math.PI * (p * (r - 2) + q * (c - 2)) / 5; re += T5.m[r][c] * Math.cos(a); im += T5.m[r][c] * Math.sin(a); }
+  return [re, im];
+}
+function t5Recon() {   // 埋まった行だけで画像に戻す（大きさ）
+  const out = [];
+  for (let r = 0; r < 5; r++) { out.push([]); for (let c = 0; c < 5; c++) {
+    let re = 0, im = 0;
+    for (let i = 0; i < T5.rows; i++) for (let q = -2; q <= 2; q++) { const p = i - 2, [a, b] = t5S(p, q), w = 2 * Math.PI * (p * (r - 2) + q * (c - 2)) / 5; re += a * Math.cos(w) - b * Math.sin(w); im += a * Math.sin(w) + b * Math.cos(w); }
+    out[r].push(Math.hypot(re, im) / 25);
+  } }
+  return out;
+}
+function t5Init() { T5.tok++; T5.rows = 0; T5.p = 0; T5.run = false; T5.ang = T5.angT = 0; T5.img = 0; t5Draw(); }
+function t5Run() {   // 5回くり返す：1回ごとに、行ごとの角度をずらしてから1行を埋める
+  const tok = ++T5.tok; T5.rows = 0; T5.img = 0;
+  const one = i => {
+    if (tok !== T5.tok || !$('t5Cv')) return;
+    if (i >= 5) { T5.run = false; T5.angT = 0; t5Anim(); return; }
+    T5.run = true; T5.p = i - 2; T5.angT = 2 * Math.PI * T5.p / 5; t5Anim();
+    learnTm.push(setTimeout(() => { if (tok !== T5.tok) return; T5.rows = i + 1; t5Draw(); learnTm.push(setTimeout(() => one(i + 1), 450)); }, 700));
+  };
+  one(0);
+}
+function t5Fourier() { T5.img = 1; t5Draw(); }
+function t5Anim() {
+  cancelAnimationFrame(T5.raf);
+  const go = () => { T5.ang += (T5.angT - T5.ang) * 0.15; t5Draw(); if (Math.abs(T5.angT - T5.ang) > 0.01) T5.raf = requestAnimationFrame(go); else { T5.ang = T5.angT; t5Draw(); } };
+  go();
+}
+function t5Draw() {
+  const cv = $('t5Cv'); if (!cv) return;
+  const x = cv.getContext('2d'), W = cv.width, teal = fsCol('--teal'), dim = fsCol('--dim'), ink = fsCol('--text');
+  x.clearRect(0, 0, W, cv.height);
+  x.font = '600 18px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const G = 190, cs = G / 5;
+  const grid = (gx, gy, title, cell) => {
+    x.fillStyle = dim; x.fillText(title, gx + G / 2, gy - 16);
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) cell(gx + c * cs, gy + r * cs, r, c);
+    x.strokeStyle = dim; x.lineWidth = 1.2; x.strokeRect(gx, gy, G, G);
+  };
+  /* 左上：ボクセルの M。矢印の長さが M の大きさ、向きは位相エンコードでずれた角度（行ごとに違う） */
+  grid(14, 40, 'ボクセルの M', (X, Y, r, c) => {
+    x.strokeStyle = 'rgba(128,128,128,.25)'; x.lineWidth = 1; x.strokeRect(X, Y, cs, cs);
+    const v = T5.m[r][c]; if (v < 0.05) return;
+    const a = T5.ang * (r - 2), L = v * cs * 0.42, cx = X + cs / 2, cy = Y + cs / 2, dx = Math.sin(a) * L, dy = -Math.cos(a) * L;
+    x.strokeStyle = teal; x.fillStyle = teal; x.lineWidth = 3.2;
+    x.beginPath(); x.moveTo(cx - dx, cy - dy); x.lineTo(cx + dx, cy + dy); x.stroke();
+    const hx = Math.sin(a), hy = -Math.cos(a), h = 6;
+    x.beginPath(); x.moveTo(cx + dx + hx * 2, cy + dy + hy * 2); x.lineTo(cx + dx - hx * h + hy * h * 0.8, cy + dy - hy * h - hx * h * 0.8); x.lineTo(cx + dx - hx * h - hy * h * 0.8, cy + dy - hy * h + hx * h * 0.8); x.closePath(); x.fill();
+  });
+  /* 右上：k 空間。埋まった行だけ明るさを出す。いま埋めている行に枠 */
+  let mx = 0; for (let p = -2; p <= 2; p++) for (let q = -2; q <= 2; q++) mx = Math.max(mx, Math.hypot(...t5S(p, q)));
+  grid(236, 40, 'k 空間', (X, Y, r, c) => {
+    let g = 18;
+    if (r < T5.rows) g = Math.round(40 + 215 * Math.sqrt(Math.hypot(...t5S(r - 2, c - 2)) / mx));
+    x.fillStyle = 'rgb(' + g + ',' + g + ',' + g + ')'; x.fillRect(X + 1, Y + 1, cs - 2, cs - 2);
+  });
+  const cur = T5.run ? T5.p + 2 : -1;                   // いま埋めている行に枠
+  if (cur >= 0 && cur < 5) { x.strokeStyle = teal; x.lineWidth = 3; x.strokeRect(236, 40 + cur * cs, G, cs); }
+  x.fillStyle = ink; x.fillText(T5.rows + ' / 5 行', 236 + G / 2, 40 + G + 20);
+  if (T5.run) { x.fillStyle = dim; x.fillText((T5.p + 3) + ' 回目：行ごとのずれ ' + ['−2', '−1', '0', '+1', '+2'][T5.p + 2], 14 + G / 2, 40 + G + 20); }
+  /* 下：フーリエ変換で戻した画像 */
+  x.fillStyle = dim; x.fillText('↓ フーリエ変換', 236 + G / 2, 40 + G + 52);
+  const img = T5.img ? t5Recon() : null;
+  grid(236, 345, '画像', (X, Y, r, c) => {
+    const g = img ? Math.round(Math.min(1, img[r][c]) * 235) : 18;
+    x.fillStyle = 'rgb(' + g + ',' + g + ',' + g + ')'; x.fillRect(X + 1, Y + 1, cs - 2, cs - 2);
+  });
+  if (img) { x.fillStyle = dim; x.textAlign = 'left'; x.fillText('M の大きさと', 24, 425); x.fillText('同じ並びに戻る', 24, 451); x.textAlign = 'center'; }
+}
+
 /* ---------- 周波数に分ける：1回の信号から、列ごとの M の大きさ（明るさ）を取り出す ----------
    横に並んだ5列のボクセル。M の大きさを a[k] とする。
    ・傾斜なし：どの列も同じ周波数なので、信号は1つの波（高さは合計）。どの列の分か分からない
@@ -4311,17 +4392,29 @@ L({ nm:'位相エンコード：縦は角度のずれで', hint:'時計の針を
   ],
   text:'上下の傾斜を一瞬かけると、<b>行ごとに</b> [[m:M]] の角度がずれます。<br>この角度のずれを位相といい、位相で行の位置が分かります。これが位相エンコードです。' }),
 
-L({ nm:'k 空間：1回の信号を1行に書く', hint:'上から順に埋めていくと、真ん中の行が入ったところで急に画像らしくなります。その理由は次の手で見ます。256 行の画像なら、「倒す → 読む」を 256 回くり返します。', zone:[2], tg:'くり返すたびに1行', map:true,
-  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+L({ nm:'5×5 の小さな画像で通してみる', hint:'1回目は角度のずれなし、2回目からは行ごとのずれを少しずつ大きくしていきます。同じ列にいる5つの M は同じ周波数ですが、角度のずれ方がくり返すたびに違うので、5回分を合わせると、どの行の M かが計算で分かります。', zone:[2], tg:'5回くり返す → 5行 → 画像', map:true,
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
+  on:() => { calm(); gridInit(); later(t5Init, 60); },
+  acts:[
+    { label:'位相エンコードを変えて5回くり返す', fn:() => t5Run(), dur:6800 },
+    { label:'フーリエ変換で画像にする', fn:() => t5Fourier(), dur:3000 },
+  ], loopGap:4000,
+  text:'1回読むたびに、信号を表の<b>1行</b>に書き込みます。この表を <b>k 空間</b>といいます。位相エンコードの強さを変えて5回くり返すと、5行が埋まります。' +
+       '<canvas class="fs" id="t5Cv" width="440" height="550"></canvas>' +
+       '5行そろってからフーリエ変換すると、ボクセルごとの [[m:M]] の大きさの並び、つまり<b>画像</b>に戻ります。' +
+       '<span class="eq">行の数だけくり返す必要があります。256 行の画像なら、256 回くり返します。</span>' }),
+
+L({ nm:'k 空間：脳の画像で1行ずつ埋める', hint:'上から順に埋めていくと、真ん中の行が入ったところで急に画像らしくなります。その理由は次の手で見ます。256 行の画像なら、「倒す → 読む」を 256 回くり返します。', zone:[2], tg:'くり返すたびに1行', map:true,
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm', seq:'SE', TR:2500, TE:15, T2p:40 },   // 後ろは「どのボクセルにも M」の絵だけにして、組織の札を出さない
   on:() => { calm(); later(kFillInit, 60); },
   act:{ label:'1行ずつ埋める', fn:() => kFillRun(), dur:5200 }, loopGap:4500,   // できあがった画像をしばらく見せてから、もう一度
-  text:'1回の信号は、表の<b>1行</b>に書き込みます。この表を <b>k 空間</b>といい、位相エンコードの強さを変えてくり返すたびに、次の行が埋まります。' +
+  text:'実際の脳の画像でも同じです。くり返すたびに、k 空間が<b>1行ずつ</b>埋まっていきます。' +
        '<span class="kpair"><span><canvas id="kCv" width="256" height="256" style="width:150px"></canvas><b id="kRows">0 / 256 行</b></span>' +
        '<span><canvas id="kImg" width="176" height="208" style="width:127px"></canvas>画像</span></span>' +
        '行がそろうと、フーリエ変換で<b>ボクセルごとの明るさ</b>、つまり画像になります。' }),
 
 L({ nm:'k 空間：中心と外側', hint:'中心だけ残すとぼやけ、外側だけ残すと輪郭だけになります。', zone:[2], tg:'中心＝明暗、外側＝輪郭', map:true,
-  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm', seq:'SE', TR:2500, TE:15, T2p:40 },
   on:() => { calm(); later(kInit, 60); },
   acts:[
     { label:'中心だけ残す', fn:() => kShow('c') },
@@ -4449,7 +4542,7 @@ const CHAPTERS = [
   { no:'第3章', need:'第1・2章', nm:'装置の中の電気と磁気', goal:'電流が磁場を作り（静磁場）、回る M の磁場の変化が電流（信号）を生む。',
     steps:['電流が磁場を作る（電磁石）', '静磁場 B₀ の向き', '電磁誘導：変化が電気を生む', '回る M でコイルに電流が流れる'] },
   { no:'第4章', need:'第1〜3章', nm:'どこからの信号かを見分ける', goal:'傾斜磁場で場所ごとに周波数と角度を変え、1回の信号を k 空間の1行に書く。行がそろうと画像になる。',
-    steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '周波数に分ける：信号から列の明るさへ', '位相エンコード：縦は角度のずれで', 'k 空間：1回の信号を1行に書く', 'k 空間：中心と外側', 'M から画像まで', '国家試験：第72回（2020年）午前 問10', '国家試験：第74回（2022年）午後 問12'] },
+    steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '周波数に分ける：信号から列の明るさへ', '位相エンコード：縦は角度のずれで', '5×5 の小さな画像で通してみる', 'k 空間：脳の画像で1行ずつ埋める', 'k 空間：中心と外側', 'M から画像まで', '国家試験：第72回（2020年）午前 問10', '国家試験：第74回（2022年）午後 問12'] },
   { no:'第5章', need:'第1・2章。「1枚の画像ができるまで」と GRE は第4章も', nm:'撮り方で明るさが変わる', goal:'SE と GRE、TR と TE で、組織の明るさの差（コントラスト）が決まる。ここで序章の答えが出る。',
     steps:['1枚の画像ができるまで', 'スピンエコー：180°で呼びもどす', 'GRE：180° を使わない', '撮像時間：加算回数と高速 SE', '撮像時間：パラレルイメージング', '矢印から画像へ', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'やってみよう：水を脳より暗くする',
       '国家試験：第66回（2014年）午前 問24', '国家試験：第65回（2013年）午前 問32', '国家試験：第76回（2024年）午後 問15', '国家試験：第66回（2014年）午前 問30', '国家試験：第73回（2021年）午後 問15'] },
