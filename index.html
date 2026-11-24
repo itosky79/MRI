@@ -2970,6 +2970,34 @@ function place(key, x, y, z, txt, on) {
     ((_p.x * .5 + .5) * labW).toFixed(1) + 'px,' + ((-_p.y * .5 + .5) * labH).toFixed(1) + 'px)';
 }
 
+/* 重なった札を間引く：札どうし、または右上の画像と重なったら、大事でない方を隠す（読めない文字を出さない）。
+   大事な順：カードの文で色を付けて指している物 → M・縦横の M・RF → ほか → 組織ごとの数値 */
+const LAB_HI = ['m', 'mz', 'mxy', 'b1', 'flux', 'coil', 'mag', 'cur', 'echo', 'fan', 'slBand', 'slThick', 'ang', 'h', 'hcone'];
+let declTm = 0;
+function declutter() {
+  const now = performance.now(); if (now - declTm < 120) return; declTm = now;
+  const want = new Set();
+  if (tutI >= 0 && tutList[tutI] && tutList[tutI].text) {
+    for (const m of String(tutList[tutI].text).matchAll(/\[\[(\w+):/g)) (WLAB[m[1]] || [m[1]]).forEach(k => want.add(k));
+  }
+  const rank = k => want.has(k) ? 0 : LAB_HI.includes(k) ? 1 : k.startsWith('ta_') || k.startsWith('cmp') ? 3 : 2;
+  const ib = imgbox && imgbox.offsetParent ? imgbox.getBoundingClientRect() : null;
+  const items = [];
+  for (const k in LABS) {
+    const e = LABS[k]; e.style.visibility = '';
+    if (e.style.display === 'none' || !e._t) continue;
+    const r = e.getBoundingClientRect(); if (!r.width) continue;
+    items.push({ k, e, r, p:rank(k) });
+  }
+  items.sort((a, b) => a.p - b.p);
+  const hit = (a, b) => a.left < b.right - 2 && b.left < a.right - 2 && a.top < b.bottom - 2 && b.top < a.bottom - 2;
+  const kept = [];
+  for (const it of items) {
+    if (kept.some(o => hit(o.r, it.r)) || (ib && it.p > 0 && hit(ib, it.r))) { it.e.style.visibility = 'hidden'; continue; }
+    kept.push(it);
+  }
+}
+
 /* ================= 画面の更新 ================= */
 let labPhase = 0, echoFlash = 0;
 P.tag = {};
@@ -3272,7 +3300,7 @@ function updateScene(dt) {
     const sl = !!P.slab && P.showLab, top = SLC * SLDZ;
     place('slHead', SLOFF - SLR - 0.6, 0, SLZ + top + 0.9, '頭側の層', sl);
     place('slFoot', SLOFF - SLR - 0.6, 0, SLZ - top - 0.9, '足側の層', sl);
-    place('slFreq', SLOFF + SLXB + SLFB, 0, SLZ - top - 1.6, SLB.g > 0.05 ? '各層の周波数：傾斜磁場あり' : '各層の周波数：傾斜なしで全部同じ', sl);
+    place('slFreq', SLOFF + SLXB + SLFB * 0.5, 0, SLZ - top - 2.8, SLB.g > 0.05 ? '層ごとに周波数が違う' : '周波数は全部同じ', sl);   // 「足側の層」と重ならないよう、下へ
     const selK = []; for (let k = 0; k < SLN; k++) if (SLB.tipT[k] > 0) selK.push(k);
     const zc = selK.length ? (selK.reduce((a, b) => a + b, 0) / selK.length - SLC) * SLDZ : 0;
     place('slThick', SLOFF - SLR - 3.6, 0, SLZ + zc, '選ばれた断面：' + selK.length + ' 層ぶんの厚さ', sl && selK.length > 0 && selK.length < SLN);
@@ -3429,6 +3457,7 @@ function drawSeq() {
   const exP = P.seq === 'IR' ? rfAll.find(e => Math.abs(e.t - P.TI) < 1e-6) : rfAll.find(e => e.t === 0);
   const nxP = P.seq === 'GRE' ? ecAll : rfAll.find(e => e.a === 180 && e.t > (exP ? exP.t : 0));
   const hw = exP && nxP ? Math.max(4, Math.min(10, (X(nxP.t) - X(exP.t)) * (P.seq === 'GRE' ? 0.12 : 0.18))) : 10;
+  let rfLabR = -1e9;
   evs.forEach(e => {
     if (e.k !== 'rf') return;
     const x = X(e.t), hh = (e.a / 180) * (h * 0.09) + h * 0.025;
@@ -3441,9 +3470,10 @@ function drawSeq() {
     cx.stroke();
     cx.fillStyle = C.rf; cx.textAlign = 'center'; cx.font = MONO;
     /* 180° は山が高く、上の端からはみ出して見えなくなっていたので、はみ出すときは山の右肩に置く */
-    const ty = rows[0].y - hh - 8;
-    if (ty < 9) { cx.textAlign = 'left'; cx.fillText(Math.round(e.a) + '°', x + 7, 9); }
-    else cx.fillText(Math.round(e.a) + '°', x, ty);
+    const ty = rows[0].y - hh - 8, lab = Math.round(e.a) + '°', lw = cx.measureText(lab).width;
+    let lx = ty < 9 ? x + 7 : x - lw / 2;
+    if (lx < rfLabR + 4) lx = rfLabR + 4;           // 前のパルスの角度の字と重なるときは、右へずらす
+    cx.textAlign = 'left'; cx.fillText(lab, lx, ty < 9 ? 9 : ty); rfLabR = lx + lw;
   });
   /* 傾斜磁場（3段）。形は教科書のパルスシーケンス図と同じ約束で描く（時間の幅は見やすさのため一定の画素数）。
      ・スライス：RF を当てる間だけ台形。90°（GRE は α）のあとには、向きを逆にした半分の面積の台形（位相を戻すため）
@@ -3510,7 +3540,7 @@ function drawSeq() {
     cx.fillText('T2 の包絡線', L + wDet - 4, sy - a0 * Math.exp(-(Td - t0) / T2) * sh - 8);
   } else {
     cx.fillStyle = C.env; cx.textAlign = 'left';
-    cx.fillText('T2* で速く減る', L + 6, sy - sh * 1.25);
+    cx.textAlign = 'right'; cx.fillText('T2* で速く減る', Rr, sy - sh * 0.5);   // 読み出しの段と重ならないよう、信号の段の右に
   }
   /* エコーの位置に「ここで読む」と書く。
      以前は「↓ ここで信号を読む」を1つの文字列としてエコーの位置に中央ぞろえで書いていたので、
@@ -3603,6 +3633,7 @@ function drawRel() {
   const L = 40, Rr = w - nameW - 16;   // 右に、いちばん長い名前が入るだけあける
   const top = { y0:h * 0.145, y1:h * 0.44 }, bot = { y0:h * 0.635, y1:h * 0.92 };
   const isIR = P.seq === 'IR';
+  const nar = w < 460;   // スマホ：見出しと軸の言葉を短くして、線や名前と重ねない
   const sampT = isIR ? P.TI : P.TR;
   const tmax1 = isIR ? Math.min(P.TR, P.TI * 1.6) : P.TR;
   const tmax2 = Math.max(P.TE * 2.2, 60);
@@ -3618,9 +3649,9 @@ function drawRel() {
     }
     cx.fillStyle = C.dim; cx.textAlign = 'left'; cx.fillText(ttl, L - 26, r.y0 - 9);
   };
-  frame(top, isIR ? -1 : 0, 1,
-    isIR ? '① 反転させた縦の M が TI までにどこまで戻るか' : '① T1：TR のあいだに縦の M がどこまで戻るか');
-  frame(bot, 0, 1, '② ' + (P.seq === 'GRE' ? 'T2*' : 'T2') + '：TE までに横の M がどれだけ残るか');
+  frame(top, isIR ? -1 : 0, 1, nar ? '① 縦の M（' + (isIR ? 'TI' : 'TR') + ' まで）'
+    : isIR ? '① 反転させた縦の M が TI までにどこまで戻るか' : '① T1：TR のあいだに縦の M がどこまで戻るか');
+  frame(bot, 0, 1, nar ? '② 横の M（TE まで）' : '② ' + (P.seq === 'GRE' ? 'T2*' : 'T2') + '：TE までに横の M がどれだけ残るか');
 
   const Y1 = v => { const lo = isIR ? -1 : 0; return top.y1 - (v - lo) / (1 - lo) * (top.y1 - top.y0); };
   const Y2 = v => bot.y1 - v * (bot.y1 - bot.y0);
@@ -3715,8 +3746,8 @@ function drawRel() {
   };
   vline(Math.min(X1(sampT), Rr), top.y0, top.y1, isIR ? 'TI' : 'TR');
   vline(Math.min(X2(P.TE), Rr), bot.y0, bot.y1, 'TE');
-  gap(Math.min(X1(sampT), Rr) - 8, ys1, 'ここの差', true);
-  gap(Math.min(X2(P.TE), Rr) + 8, ys2, 'この差が画像の明暗', false);
+  if (!nar) gap(Math.min(X1(sampT), Rr) - 8, ys1, 'ここの差', true);
+  gap(Math.min(X2(P.TE), Rr) + 8, ys2, nar ? '明暗の差' : 'この差が画像の明暗', false);
   cx.fillStyle = C.dim; cx.textAlign = 'right';
   cx.fillText(Math.round(tmax1) + 'ms', Rr, top.y1 + 9);
   if (brk1) {                                   // 折れ目のしるしと、そこまでの時間（②と同じ）
@@ -3724,12 +3755,12 @@ function drawRel() {
     cx.strokeStyle = C.grid; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xb, top.y0); cx.lineTo(xb, top.y1); cx.stroke();
     cx.strokeStyle = C.dim;
     [-3, 1].forEach(o => { cx.beginPath(); cx.moveTo(xb + o - 2, top.y1 + 4); cx.lineTo(xb + o + 3, top.y1 - 3); cx.stroke(); });
-    cx.fillStyle = C.dim; cx.textAlign = 'center'; cx.fillText(Math.round(Td1) + 'ms', xb, top.y1 + 9);
+    if (!nar) { cx.fillStyle = C.dim; cx.textAlign = 'center'; cx.fillText(Math.round(Td1) + 'ms', xb, top.y1 + 9); }
   }
   cx.fillText(Math.round(tmax2) + 'ms', Rr, bot.y1 + 9);
   cx.textAlign = 'left';
-  cx.fillText(isIR ? '180° パルスからの時間 →' : '90° パルスからの時間 →', L + 2, top.y1 + 9);
-  cx.fillText('90° パルスからの時間 →', L + 2, bot.y1 + 9);
+  cx.fillText(nar ? '時間 →' : isIR ? '180° パルスからの時間 →' : '90° パルスからの時間 →', L + 2, top.y1 + 9);
+  cx.fillText(nar ? '時間 →' : '90° パルスからの時間 →', L + 2, bot.y1 + 9);
   /* いまの時刻（②の赤い線と同じ時刻）。上は 90°（IR は反転の 180°）から、下は 90° からの時間 */
   const now = (x, r) => {
     cx.strokeStyle = C.alert; cx.lineWidth = 1.6; cx.setLineDash([]);
@@ -5901,6 +5932,7 @@ function loop(now) {
   const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   advance(dt);
   updateScene(dt);
+  declutter();
   renderer.render(scene, camera);
   sgDraw();
   acc += dt;
