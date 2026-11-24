@@ -3977,7 +3977,7 @@ function fWave(x0, x1, y, amp, cyc, c, w) {   // 正弦波（同じ周波数な�
   for (let i = 0; i <= 120; i++) { const t = i / 120; d += (i ? 'L' : 'M') + (x0 + (x1 - x0) * t).toFixed(1) + ' ' + (y - amp * Math.sin(2 * Math.PI * cyc * t)).toFixed(1); }
   return '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="' + (w || 1.8) + '"/>';
 }
-const pct = v => Math.round(v * 100) + '%';
+const pct = v => v < 0.005 ? 'ほぼ 0%' : v > 0.995 ? 'ほぼ 100%' : Math.round(v * 100) + '%';
 const seMz = (T1, TR, TE) => 1 - 2 * Math.exp(-(TR - TE / 2) / T1) + Math.exp(-TR / T1);   // SE で TR のときの縦の M（アプリと同じ式）
 const FIG2 = {
   /* 3つのボクセルの波（同じ周波数・高さが違う）→ 足すと1本の波 */
@@ -4006,7 +4006,7 @@ const FIG2 = {
       return s;
     };
     return one(0, 0, '傾斜なし', '全部が倒れる') + one(170, 0.55, '傾斜あり', '帯に入る1枚だけ倒れる') +
-      fT(330, 66, '電波の範囲', FC.rf, ' font-size="11" text-anchor="end"');
+      fT(316, 62, '電波の範囲', FC.rf, ' font-size="11" text-anchor="end"');
   })()),
   /* 位相エンコード：かける前は全部同じ向き。一瞬かけたあとは、行ごとに角度がずれる（同じ行の中は同じ） */
   phase: fSvg(330, 124, (() => {
@@ -4020,7 +4020,6 @@ const FIG2 = {
     };
     blk(0, () => 0, 'かける前'); blk(186, r => (r - 1) * 50, '一瞬かけたあと');
     s += fArr(140, 72, 176, 72, FC.dim, 1.5);
-    s += fT(316, 44, '行1', FC.dim, ' font-size="11"') + fT(316, 76, '行2', FC.dim, ' font-size="11"') + fT(316, 108, '行3', FC.dim, ' font-size="11"');
     return s;
   })()),
   /* スピンエコー：90° → TE/2 → 180° → TE/2 → エコー。点線は T2 の包絡線 */
@@ -4050,7 +4049,7 @@ const FIG2 = {
     v.forEach((a, k) => { const g = Math.round(40 + a * 200), x = 20 + k * 46; s += '<rect x="' + x + '" y="26" width="40" height="40" fill="rgb(' + g + ',' + g + ',' + g + ')" stroke="' + FC.dim + '"/>' + fT(x + 20, 82, a.toFixed(1), FC.ink, ' font-size="12" text-anchor="middle"'); });
     s += fArr(4, 46, 206, 46, FC.xy, 1.6) + fArr(214, 46, 248, 46, FC.dim, 1.5);
     const g = Math.round(40 + 0.9 * 200);
-    s += '<rect x="256" y="26" width="40" height="40" fill="rgb(' + g + ',' + g + ',' + g + ')" stroke="' + FC.ink + '" stroke-width="2"/>' + fT(276, 82, 'いちばん明るい 0.9', FC.ink, ' font-size="12" text-anchor="middle"');
+    s += '<rect x="256" y="26" width="40" height="40" fill="rgb(' + g + ',' + g + ',' + g + ')" stroke="' + FC.ink + '" stroke-width="2"/>' + fT(276, 82, '0.9', FC.ink, ' font-size="12" text-anchor="middle" font-weight="700"') + fT(276, 14, 'いちばん明るい', FC.ink, ' font-size="12" text-anchor="middle"');
     return s;
   })()),
 };
