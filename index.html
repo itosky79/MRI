@@ -590,6 +590,15 @@ details.fold p{margin:7px 0 0; font-size:14.5px; color:var(--dim); line-height:1
 .tzone{display:inline-flex; gap:3px; margin-left:8px; vertical-align:1px}
 .tzone i{font-style:normal; font-family:var(--gothic); font-size:10.5px; letter-spacing:0; padding:1px 8px; border-radius:9px; color:var(--dim); background:var(--fill)}
 .tzone i.on{background:var(--sel); color:var(--selT); font-weight:700}
+svg.fig{display:block; width:100%; max-width:330px; margin:8px auto 6px; overflow:visible}
+svg.fig.half{width:150px; margin:0}
+svg.fig text{font-size:13.5px; font-family:inherit}
+.figrow{display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; margin:8px 0}
+.figrow .ftab{margin:0}
+table.ftab{border-collapse:collapse; margin:8px auto; font-size:13.5px; line-height:1.5}
+table.ftab th,table.ftab td{border:1px solid var(--line); padding:3px 10px; text-align:center}
+table.ftab tr:first-child th{background:var(--fill); color:var(--dim); font-weight:600}
+table.ftab th{font-weight:600}
 canvas.fs{display:block; width:100%; max-width:330px; margin:8px auto; border-radius:8px; background:var(--fill)}
 .kpair{display:flex; gap:12px; justify-content:center; margin:9px 0 8px}
 .kpair>span{display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11.5px; color:var(--dim)}
@@ -3835,14 +3844,106 @@ function wellDraw(cv) {
    「何が・どうなる・だから何」が初学者に通じる文にすること（CLAUDE.md） */
 /* 縦の戻りと横の減りを、同じ場面で同時に見せる（2つを「逆向きの1つの動き」と思わないように）。
    白質（T1 650・T2 80 ms）で、時間をゆっくり進めて両方の％を出す */
-const TVH = { nm:'縦と横は同時に変わる', hint:'白質では T1 が約 650 ms、T2 が約 80 ms です。値は装置や文献で幅があります。縦の M と横の M を足しても、いつも元の長さになるわけではありません。', zone:[1], tg:'横の方がずっと速い', sel:'#stage',
+/* ---------- カードの中の図と表（文で長く説明する代わりに、見て分かるように） ----------
+   色は画面の約束に合わせる：M ＝ 青緑、縦の M ＝ 緑、横の M ＝ 赤、RF ＝ 橙。それ以外は灰色 */
+const FC = { m:'var(--teal)', z:'var(--grass)', xy:'var(--alert)', rf:'var(--amber)', dim:'var(--dim)', ink:'var(--text)' };
+function fArr(x1, y1, x2, y2, c, w, dash) {   // 矢印（線と三角の頭）
+  const a = Math.atan2(y2 - y1, x2 - x1), h = 5 + w * 1.6;
+  const p = [[x2, y2], [x2 - h * Math.cos(a - 0.45), y2 - h * Math.sin(a - 0.45)], [x2 - h * Math.cos(a + 0.45), y2 - h * Math.sin(a + 0.45)]];
+  const ex = x2 - h * 0.8 * Math.cos(a), ey = y2 - h * 0.8 * Math.sin(a);
+  return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1) + '" stroke="' + c + '" stroke-width="' + w + '"' + (dash ? ' stroke-dasharray="4 3"' : '') + '/>' +
+    '<polygon points="' + p.map(q => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ') + '" fill="' + c + '"/>';
+}
+const fT = (x, y, t, c, o) => '<text x="' + x + '" y="' + y + '" fill="' + (c || FC.ink) + '"' + (o || '') + '>' + t + '</text>';
+const fSvg = (w, h, body, cls) => '<svg class="fig' + (cls ? ' ' + cls : '') + '" viewBox="0 0 ' + w + ' ' + h + '" role="img">' + body + '</svg>';
+function fTab(head, rows) {
+  return '<table class="ftab"><tr>' + head.map(h => '<th>' + h + '</th>').join('') + '</tr>' +
+    rows.map(r => '<tr>' + r.map((c, i) => (i ? '<td>' : '<th>') + c + (i ? '</td>' : '</th>')).join('') + '</tr>').join('') + '</table>';
+}
+function fCurve(rise, T, c, op) {   // 時間に沿った曲線（rise：戻る曲線／減る曲線）
+  let d = '';
+  for (let t = 0; t <= 260; t += 4) { const v = rise ? 1 - Math.exp(-t / T) : Math.exp(-t / T); d += (t ? 'L' : 'M') + (40 + t) + ' ' + (100 - 78 * v).toFixed(1); }
+  return '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="3"' + (op ? ' opacity="' + op + '"' : '') + '/>';
+}
+function fRelax(rise) {   // T1・T2 のグラフ。目じるしの線（63%・37%）と、長い組織の曲線（薄く）
+  const T = 62, mark = rise ? 0.632 : 0.368, y = 100 - 78 * mark, c = rise ? FC.z : FC.xy, nm = rise ? 'T1' : 'T2';
+  return fSvg(330, 124,
+    '<line x1="40" y1="100" x2="312" y2="100" stroke="' + FC.dim + '"/><line x1="40" y1="100" x2="40" y2="16" stroke="' + FC.dim + '"/>' +
+    fCurve(rise, T * 2.2, c, 0.35) + fCurve(rise, T, c) +
+    '<line x1="40" y1="' + y + '" x2="' + (40 + T) + '" y2="' + y + '" stroke="' + FC.dim + '" stroke-dasharray="4 3"/>' +
+    '<line x1="' + (40 + T) + '" y1="100" x2="' + (40 + T) + '" y2="' + y + '" stroke="' + FC.dim + '" stroke-dasharray="4 3"/>' +
+    fT(4, 26, '100%', FC.dim) + fT(4, y + 4, (rise ? 63 : 37) + '%', FC.dim) + fT(40 + T - 8, 117, nm, FC.ink, ' font-weight="700"') + fT(250, 117, '時間 →', FC.dim) +
+    fT(rise ? 214 : 200, rise ? 18 : 88, rise ? nm + ' が短い組織' : nm + ' が短い組織', c, ' font-size="12"') +
+    fT(rise ? 150 : 170, rise ? 50 : 60, nm + ' が長い組織', c, ' font-size="12" opacity=".7"'));
+}
+const FIG = {
+  /* 水 → 水素の原子核 ＝ 小さな磁石 */
+  proton: fSvg(330, 112,
+    '<circle cx="62" cy="48" r="24" fill="var(--fill)" stroke="' + FC.dim + '"/>' + fT(55, 54, 'O', FC.dim) +
+    '<circle cx="30" cy="80" r="13" fill="var(--fill)" stroke="' + FC.dim + '"/>' + fT(25, 85, 'H', FC.ink, ' font-weight="700"') +
+    '<circle cx="94" cy="80" r="13" fill="var(--fill)" stroke="' + FC.dim + '"/>' + fT(89, 85, 'H', FC.ink, ' font-weight="700"') +
+    fT(48, 108, '水', FC.dim) + fArr(128, 60, 168, 60, FC.dim, 1.5) +
+    '<circle cx="222" cy="56" r="24" fill="none" stroke="' + FC.m + '" stroke-width="1.5"/>' + fArr(222, 86, 222, 24, FC.m, 4) +
+    fT(252, 44, 'N', FC.m, ' font-weight="700"') + fT(252, 80, 'S', FC.m, ' font-weight="700"') + fT(160, 108, '水素の原子核 ＝ 小さな磁石', FC.ink)),
+  /* 上向きが少しだけ多い → 多い分が M */
+  updown: fSvg(330, 98,
+    fT(4, 27, '上向き', FC.ink) + '<rect x="62" y="14" width="200" height="18" rx="3" fill="var(--fill)" stroke="' + FC.dim + '"/>' +
+    '<rect x="262" y="14" width="22" height="18" rx="3" fill="' + FC.m + '"/>' + fT(290, 28, 'M', FC.m, ' font-weight="700"') +
+    fT(4, 61, '下向き', FC.ink) + '<rect x="62" y="48" width="200" height="18" rx="3" fill="var(--fill)" stroke="' + FC.dim + '"/>' +
+    fT(62, 90, '打ち消し合わずに残る、多い分だけが M', FC.dim, ' font-size="12.5"')),
+  /* 同じ速さ → 倒れる、ずれる → 少し揺れるだけ */
+  res: fSvg(330, 118,
+    '<line x1="80" y1="96" x2="80" y2="22" stroke="' + FC.dim + '" stroke-dasharray="3 3"/>' + fArr(80, 96, 142, 96, FC.m, 4) +
+    fT(22, 14, '速さが同じ', FC.ink, ' font-weight="700"') + fT(30, 114, '→ 倒れる', FC.ink) +
+    '<line x1="250" y1="96" x2="250" y2="22" stroke="' + FC.dim + '" stroke-dasharray="3 3"/>' + fArr(250, 96, 266, 34, FC.m, 4) +
+    fT(184, 14, '速さがずれる', FC.ink, ' font-weight="700"') + fT(184, 114, '→ 少し揺れるだけ', FC.ink)),
+  /* 外から見る：らせん／一緒に回って見る：まっすぐ */
+  frame: fSvg(330, 124, (() => {
+    let d = '';
+    for (let i = 0; i <= 200; i++) { const t = i / 200, a = t * 2 * Math.PI * 4, th = t * Math.PI / 2;
+      d += (i ? 'L' : 'M') + (80 + 52 * Math.sin(th) * Math.cos(a)).toFixed(1) + ' ' + (82 - 56 * Math.cos(th) + 14 * Math.sin(th) * Math.sin(a)).toFixed(1); }
+    return '<path d="' + d + '" fill="none" stroke="' + FC.m + '" stroke-width="1.6"/>' +
+      fT(30, 118, '外から見る：らせん', FC.ink) +
+      '<path d="M240 26 A56 56 0 0 1 296 82" fill="none" stroke="' + FC.m + '" stroke-width="3"/>' + fArr(292, 70, 296, 82, FC.m, 3) +
+      '<line x1="240" y1="82" x2="240" y2="22" stroke="' + FC.dim + '" stroke-dasharray="3 3"/>' +
+      fT(180, 118, '一緒に回って見る：まっすぐ', FC.ink);
+  })()),
+  /* 45° 倒した M を、縦の分と横の分に分ける */
+  comp: fSvg(150, 128,
+    '<line x1="28" y1="108" x2="28" y2="14" stroke="' + FC.dim + '"/><line x1="28" y1="108" x2="140" y2="108" stroke="' + FC.dim + '"/>' +
+    '<line x1="91" y1="45" x2="28" y2="45" stroke="' + FC.dim + '" stroke-dasharray="3 3"/><line x1="91" y1="45" x2="91" y2="108" stroke="' + FC.dim + '" stroke-dasharray="3 3"/>' +
+    fArr(28, 108, 28, 45, FC.z, 4) + fArr(28, 108, 91, 108, FC.xy, 4) + fArr(28, 108, 91, 45, FC.m, 4) +
+    fT(96, 40, 'M', FC.m, ' font-weight="700"') + fT(2, 30, '縦', FC.z, ' font-weight="700"') + fT(96, 124, '横', FC.xy, ' font-weight="700"'), 'half'),
+  /* ムラなし：そろう／ムラあり：ばらける */
+  fan: fSvg(330, 126, (() => {
+    let s = '';
+    const one = (cx, spread, ttl) => {
+      let sx = 0, sy = 0;
+      for (let k = -3; k <= 3; k++) { const a = k / 3 * spread; sx += Math.cos(a); sy += Math.sin(a); s += fArr(cx, 70, cx + 48 * Math.cos(a), 70 - 48 * Math.sin(a), FC.dim, 1.3); }
+      s += fArr(cx, 70, cx + sx / 7 * 64, 70 - sy / 7 * 64, FC.xy, 4.5) + fT(cx - 10, 16, ttl, FC.ink, ' font-weight="700"');
+    };
+    one(40, 0, 'ムラなし：そろう'); one(210, 1.25, 'ムラあり：ばらける');
+    return s + fT(36, 118, '横の M（赤）は長い', FC.ink) + fT(206, 118, '横の M（赤）は短い', FC.ink);
+  })()),
+};
+const TAB = {
+  larmor: fTab(['磁場の強さ', '1秒に回る回数'], [['1.5 T', '約 6400万回（64 MHz）'], ['3.0 T', '約 1億2800万回（128 MHz）']]),
+  comp: fTab(['倒す角度', '縦の M', '横の M'], [['0°', '100%', '0%'], ['45°', '71%', '71%'], ['90°', '0%', '100%']]),
+  t1t2: fTab(['', 'T1', 'T2'], [['何の時間', '縦の M が戻る', '横の M が減る'], ['目じるし', '63% まで戻る', '37% まで減る'], ['白質の例', '約 650 ms', '約 80 ms']]),
+  em: fTab(['電流', '磁場'], [['流す', 'できる'], ['逆向きに流す', '逆向きになる'], ['止める', 'なくなる']]),
+  b0: fTab(['', '磁場の強さ'], [['地球の磁場', '約 0.00005 T'], ['MRI', '1.5 T・3.0 T']]),
+  ind: fTab(['磁石', '輪を通る磁場', '電流'], [['動かす', '変わる', '流れる'], ['止める', '変わらない', '流れない']]),
+  coil: fTab(['M', '輪を通る分', '電流'], [['上を向いて止まる', '変わらない', '流れない'], ['倒れて回る', '変わり続ける', '<b>流れる ＝ 信号</b>']]),
+};
+
+const TVH = { nm:'縦と横は同時に変わる', hint:'表の値は装置や文献で幅があります。縦の M と横の M を足しても、いつも元の長さになるわけではありません。', zone:[1], tg:'横の方がずっと速い', sel:'#stage',
   tag:{ pct:true, pctz:true, tslow:0.3, scope:'縦の M・横の M ＝ M の縦向きの分と横向きの分' },
   ask:{ q:'横の M がほぼ 0% になったとき、縦の M はどこまで戻っていますか？', opts:['ほぼ 100%', '半分くらい'], ans:1,
     why:'T1 は T2 よりずっと長い時間です。だから縦の M の戻りは、横の M の減りよりずっと遅くなります。' },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, showComp:true, onlyM:true, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
   on:() => { calm(); },
   act:{ label:'90° 倒して、そのまま待つ', fn:() => { calm(); manualPulse(90, 'x', 1.0); }, dur:10000 }, loopGap:3500,   // 終わりの「横は消えたが縦は戻りきっていない」をしばらく見せる
-  text:'倒したあと、[[mz:縦の M]] が戻るのと、[[mxy:横の M]] が減るのは、<b>同時に</b>進みます。<br>ただし、<b>横の M の方がずっと速く</b>減ります。T2 は T1 よりずっと短い時間だからです。' };
+  text:'倒したあと、[[mz:縦の M]] が戻るのと [[mxy:横の M]] が減るのは<b>同時に</b>進みますが、<b>横の M の方がずっと速く</b>減ります。' + TAB.t1t2 };
 const PRIN = [
 /* 全体の地図：① 機械が電流で磁場を作る → ② 水素の M が倒れて回る → ③ 受信コイルに電流（信号）が流れる。
    電磁気のきまりが出てくるのは ①（電流 → 磁場）と ③（磁場の変化 → 電流）だけで、② は水素の話。
@@ -3865,7 +3966,8 @@ L({ nm:'静磁場 B₀ の向き', hint:'すぐ前の手で見た電磁石と同
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, bore:true, showComp:false, tissue:'wm' },
   on:() => { calm(); roomHold(); }, autoAt:2200,   // 検査室の全体を少し見てから近づく
   act:{ label:'検査室から近づく', fn:() => roomPlay(), dur:7000 },
-  text:'MRI の筒には[[wire:電線]]が巻いてあり、電流を流すと、筒の中に<b>体の長い方向</b>の強い磁場ができます。いつも同じ強さなので静磁場 [[b0:B₀]] といいます。<br>人は寝ているので B₀ は本当は水平ですが、画面では<b>上向き</b>に描きます。' }),
+  text:'MRI の筒には[[wire:電線]]が巻いてあり、電流を流すと、<b>体の長い方向</b>に強い磁場ができます。いつも同じ強さなので静磁場 [[b0:B₀]] といいます。' + TAB.b0 +
+       '人は寝ているので B₀ は本当は水平ですが、画面では<b>上向き</b>に描きます。' }),
 
 L({ nm:'静磁場の中のプロトン', hint:'上と下の本当の差は、100万個に約5個です。とても小さいので、画面では差を大きく描いています。矢印の足し算は、矢印の先に次の矢印の根元をつないでいくやり方です。最後の矢印の先までが合計です。', zone:[1], tg:'足し合わせると M', sel:'#stage',
   tag:{ hlab:'プロトン', scope:'小さい矢印 ＝ 水素1個ずつ／太い矢印 M ＝ 全部の合計' },
@@ -3873,7 +3975,8 @@ L({ nm:'静磁場の中のプロトン', hint:'上と下の本当の差は、100
     why:'上と下は打ち消し合い、多かった上向きの分だけが残ります。' },
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
-  text:'強い磁場に入れても、[[h:プロトン]]は熱で揺さぶられ、<b>上向きか下向き</b>のどちらかになります。上向きの方が、ほんの少しだけ多くなります。<br>全部を足すと、上と下は打ち消し合い、<b>多かった上向きの分</b>だけが残ります。この1本の矢印を磁化 [[m:M]] といい、これからは M を見ていきます。' }),
+  text:'強い磁場に入れても、[[h:プロトン]]は熱で揺さぶられ、上向きか下向きのどちらかになります。上向きの方が、ほんの少しだけ多くなります。' + FIG.updown +
+       'この多い分を足した1本の矢印を磁化 [[m:M]] といい、これからは M を見ていきます。' }),
 
 L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの合計 M', sel:'#stage',
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
@@ -3902,7 +4005,8 @@ L({ nm:'共鳴：リズムが合うと倒れる', hint:'電波は、電気と磁
     { label:'同じ速さの電波を当てる', fn:() => { calm(); labPhase = ctrl.th + Math.PI / 2 - 0.85 * P.spd * (P.B0 / 1.5) * 2.0; manualPulse(90, 'x', 4.0); }, dur:6000 },
     { label:'速さのずれた電波を当てる', fn:() => { calm(); manualPulse(90, 'x', 4.0, Math.sqrt(360 * 360 - 90 * 90)); } },
   ],
-  text:'M を倒すには、<b>M と同じ速さで回る磁場</b>を横から当てます。ブランコを、揺れに合わせて押すと大きく揺れるのと同じです。<br>この回る磁場は電波で作り、短く当てるので [[rf:RFパルス]] といいます。速さが合って M が倒れることを<b>共鳴</b>、倒すことを励起といいます。' +
+  text:'M を倒すには、<b>M と同じ速さで回る磁場</b>を横から当てます。ブランコを、揺れに合わせて押すと大きく揺れるのと同じです。' + FIG.res +
+       'この回る磁場は電波で作り、短く当てるので [[rf:RFパルス]] といいます。速さが合って倒れることを<b>共鳴</b>、倒すことを励起といいます。' +
        '<span class="eq">M が回る速さを共鳴周波数、またはラーモア周波数といい、磁場の強さに比例します。水素は 1.5 T で約 64 MHz で、ラジオに近い周波数の電波です。</span>' }),
 
 L({ nm:'RFパルスで倒す', hint:'M と一緒に回って見る見方を、回転座標系といいます。実際の M は、そのあいだも1秒に約6400万回の速さで回っています。', zone:[0, 1], tg:'倒れる角度 ＝ 強さ × 時間', sel:'#stage',
@@ -3912,7 +4016,8 @@ L({ nm:'RFパルスで倒す', hint:'M と一緒に回って見る見方を、�
     { label:'外から見る：らせんを描いて倒れる', fn:() => { calm(); applySet({ frame:'lab' }); manualPulse(90, 'x', 4.0); }, dur:6000 },
     { label:'M と一緒に回って見る：まっすぐ倒れる', fn:() => { calm(); applySet({ frame:'rot' }); manualPulse(90, 'x', 3.2); }, dur:5000 },
   ],
-  text:'外から見ると、M は回りながら<b>らせんを描いて</b>倒れていきます。これでは見づらいので、<br>メリーゴーランドに乗った人のように、<b>M と一緒に回って</b>見ます。すると M は<b>まっすぐ倒れて</b>見えます。このあとは、ほとんどこの見方で描きます。' +
+  text:'外から見ると、M は回りながら倒れるので<b>らせん</b>になります。メリーゴーランドに乗った人のように<b>M と一緒に回って</b>見ると、<b>まっすぐ</b>倒れて見えます。' + FIG.frame +
+       'このあとは、ほとんど右の見方で描きます。' +
        '<span class="eq">倒れる角度をフリップ角といい、RF を強く、長く当てるほど大きくなります。RF の磁場は、M をそろえている強い磁場よりずっと弱いものです。</span>' }),
 
 L({ nm:'電流が磁場を作る（電磁石）', hint:'右ねじの法則：電流の向きに右ねじを回すと、ねじの進む向きが磁場の向きです。MRI の強い磁場 B₀ も、RF パルスも、傾斜磁場も、電線に流す電流で作ります。', tg:'電流 → 磁場', sel:'#stage',
@@ -3924,12 +4029,13 @@ L({ nm:'電流が磁場を作る（電磁石）', hint:'右ねじの法則：電
     { label:'電流を逆向きに流す', fn:() => { EM.IT = -1; } },
     { label:'電流を止める', fn:() => { EM.IT = 0; } },
   ],
-  text:'輪の電線に[[cur:電流]]を流すと、輪を通る向きに[[flux:磁場]]ができます。<br>電流の向きを逆にすると、<b>磁場の向きも逆</b>になります。これが電磁石です。' }),
+  text:'輪の電線に[[cur:電流]]を流すと、輪を通る向きに[[flux:磁場]]ができます。これが電磁石です。' + TAB.em }),
 
 L({ nm:'プロトン：水素の原子核は小さな磁石', hint:'小さな矢印の1本1本がプロトンです。いまは磁場がないので、ばらばらの向きを向いています。', tg:'体は水素だらけ', sel:'#stage',
   tag:{ hlab:'プロトン ＝ 水素の磁石', noM0:true, noKey:true, scope:'小さい矢印1本 ＝ 水素1個' },
   set:{ showComp:false, quantum:true, manual:true, frame:'lab', view:0, showBody:false, seq:'SE', TR:2000, TE:20, T2p:40, tissue:'wm' },
-  text:'体のほとんどは水で、水には水素がたくさん含まれます。MRI は、体にいちばん多いこの<b>水素</b>の信号で画像を作ります。<br>水素の原子核 ¹H は[[h:プロトン]]と呼ばれ、<b>方位磁石の針のような小さな磁石</b>です。磁石の力がはたらく場所、つまり磁場の中では、その向きにそろおうとします。' +
+  text:'体のほとんどは水です。MRI は、体にいちばん多い<b>水素</b>の信号で画像を作ります。' + FIG.proton +
+       '水素の原子核 ¹H を[[h:プロトン]]といい、<b>方位磁石の針のような小さな磁石</b>です。磁石の力がはたらく場所、磁場の中では、その向きにそろおうとします。' +
        '<span class="eq">原子核が磁石になるかどうかは、中の陽子と中性子の数で決まります。どちらも偶数個の原子核は磁石にならず、MRI には写りません。</span>' }),
 
 L({ nm:'歳差運動：首を振って回る', hint:'傾けたコマが倒れずに首を振るのと同じ動きです。T はテスラで、磁場の強さの単位です。実際の水素は 1.5 T で1秒に約6400万回まわりますが、画面ではとても遅くしています。', tg:'磁場が強いほど速く回る', sel:'#stage',
@@ -3939,7 +4045,8 @@ L({ nm:'歳差運動：首を振って回る', hint:'傾けたコマが倒れず
   on:() => { calm(); pulse(35, 'x'); },
   act:{ label:'磁場を 1.5 → 3.0 T に強くする', fn:() => { P.B0 = 3; precB0 = true; }, dur:8000 },
   autoAt:8000,   // はじめに 1.5 T で1周するのを見てから強くする
-  text:'磁場の中で少し傾いた[[m:プロトン]]は、倒れずに<b>コマのように首を振って回ります</b>。これを歳差運動といい、M も同じように回ります。<br>回る速さは磁場の強さで決まります。1.5 T から 3.0 T に強くすると、<b>2倍の速さ</b>で回ります。' }),
+  text:'磁場の中で少し傾いた[[m:プロトン]]は、倒れずに<b>コマのように首を振って回ります</b>。これを歳差運動といい、M も同じように回ります。' + TAB.larmor +
+       '磁場を<b>2倍</b>に強くすると、回る速さも<b>2倍</b>になります。' }),
 
 L({ nm:'電磁誘導：変化が電気を生む', hint:'自転車のライトの発電機と同じです。磁石が動いている間だけライトがつき、止まると消えます。', zone:[2], tg:'磁場が変わると電流', sel:'#stage',
   tag:{ scope:'太い矢印 ＝ 磁石／紫の矢印 ＝ 輪を通る磁場' },
@@ -3950,7 +4057,7 @@ L({ nm:'電磁誘導：変化が電気を生む', hint:'自転車のライトの
     { label:'磁石を近づける', fn:() => { IND.yT = -5; } },
     { label:'磁石を遠ざける', fn:() => { IND.yT = -12; } },
   ],
-  text:'[[mag:磁石]]を動かすと、[[flux:輪を通る磁場]]が変わります。<br><b>変わっている間だけ</b>電流が流れます。これが電磁誘導です。' }),
+  text:'[[mag:磁石]]を動かすと[[flux:輪を通る磁場]]が変わり、<b>変わっている間だけ</b>電流が流れます。これが電磁誘導です。' + TAB.ind }),
 
 L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石からは電気は起きません。M を横に倒して回すと、M は回る磁石、つまり発電機になります。', zone:[2], tg:'これが MRI の信号', sel:'#stage',
   tag:{ scope:'太い矢印 M ＝ たくさんの水素の合計' },
@@ -3958,7 +4065,8 @@ L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石か
   set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity },
   on:() => { calm(); },
   act:{ label:'M を倒す', fn:() => { calm(); later(() => manualPulse(90, 'x', 1.2), 300); } },
-  text:'輪は、信号を受け取る受信コイルです。[[m:M]] が上を向いて止まっている間は、輪を通る磁場が変わらないので、電流は流れません。<br>M を<b>倒して回す</b>と、[[flux:輪を通る分]]が変わり続けるので、電流が流れます。この電流が MRI の<b>信号</b>です。' }),
+  text:'輪は、信号を受け取る受信コイルです。電磁誘導と同じで、[[flux:輪を通る分]]が変わるときだけ電流が流れます。' + TAB.coil +
+       '倒れて回る [[m:M]] は、回る磁石と同じです。この電流が MRI の<b>信号</b>です。' }),
 
 /* 第3章の終わり：スピンの話（倒す・回る・T2*）と、第4章の画像化（周波数で場所を見分ける）をつなぐ */
 L({ nm:'信号の波：高さと周波数', hint:'倒したあとに出るこの信号を FID、自由誘導減衰といいます。実際の周波数は 1.5 T で約 64 MHz、1秒に約6400万回ゆれる波ですが、画面ではとても遅くしています。', zone:[2], tg:'高さ ＝ 横の M、周波数 ＝ 回る速さ', sel:'#stage',
@@ -3978,7 +4086,8 @@ L({ nm:'信号の波：高さと周波数', hint:'倒したあとに出るこの
 L({ nm:'T2：横磁化が短くなる', hint:'水素どうしが、互いの小さな磁場で回る速さを少しずつ乱し合うので、横の M が減ります。このため、スピン-スピン緩和とも呼ばれます。', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
   tag:{ pct:true, scope:'M ＝ たくさんの水素の合計／横の M ＝ その横向きの分' },
   set:{ quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:Infinity, tissue:'wm' },
-  text:'倒したあと、[[mxy:横の M]] はだんだん短くなります。はじめは速く、だんだんゆっくり減ります。<br>37% まで減るのにかかる<b>時間</b>が T2 です。T2 が長い組織ほど、横の M は長く残ります。' +
+  text:'倒したあと、[[mxy:横の M]] はだんだん短くなります。はじめは速く、だんだんゆっくり減ります。' + fRelax(false) +
+       '37% まで減るのにかかる<b>時間</b>が T2 です。T2 が長い組織ほど、横の M は長く残ります。' +
        '<span class="eq">T2 は横緩和時間ともいいます。</span>' }),
 
 L(TVH),
@@ -3987,7 +4096,8 @@ L({ nm:'T2*：磁場のムラで もっと速く', hint:'走る速さが少し�
   tag:{ fan:true, scope:'細い矢印 ＝ 水素1個ずつ／太い矢印 M ＝ その合計' },
   link:'T1・T2 は組織ごとの性質です。この差を画像の白黒に出す撮り方が T1強調・T2強調で、第5章で見ます。',
   set:{ onlyM:false, quantum:false, manual:false, frame:'rot', view:0, showBody:false, seq:'SE', TR:2000, TE:120, T2p:40, tissue:'wm' },
-  text:'実際の磁場には、場所によるわずかな強さの[[fan:ムラ]]があります。すると水素1個ずつの細い矢印の回る速さがばらつき、向きがそろわなくなります。<br>向きがばらけるほど、足した[[mxy:横の M]] は短くなります。そのため T2 より速く減り、この減り方の時間を T2* といいます。' +
+  text:'実際の磁場には、場所によるわずかな強さの[[fan:ムラ]]があります。すると水素1個ずつの回る速さがばらつき、向きがそろわなくなります。' + FIG.fan +
+       'そのため横の M は T2 より速く減ります。この減り方の時間を T2* といいます。' +
        '<span class="eq">磁場のムラで速くなるのは横の M の減りだけで、縦の M が戻る時間 T1 は変わりません。</span>' }),
 
 L({ nm:'スピンエコー：180°で呼びもどす', hint:'全員が途中で向きを変えて同じ速さで戻ると、速い人も遅い人もスタートラインに同時に戻ってきます。これがエコーです。', zone:[1], tg:'エコーの高さは T2 だけ', sel:'#stage',
@@ -4008,12 +4118,15 @@ L({ nm:'縦の M と横の M', hint:'T1・T2 は、この縦の M と横の M �
     { label:'M を 45° 倒す', fn:() => { calm(); manualPulse(45, 'y', 2.0); }, dur:6000 },
     { label:'M を 90° 倒す', fn:() => { calm(); manualPulse(90, 'y', 2.5); }, dur:6000 },
   ],
-  text:'倒れかけた [[m:M]] を、<b>縦向きの分</b>の[[mz:縦の M]]と、<b>横向きの分</b>の[[mxy:横の M]]に分けて見ます。<br>90° 倒すと、縦の M はほぼ 0%、横の M はほぼ 100% になります。あとで見るとおり、信号を出すのは回っている<b>横の M</b> です。' +
+  text:'倒れかけた [[m:M]] を、<b>縦向きの分</b>の[[mz:縦の M]]と、<b>横向きの分</b>の[[mxy:横の M]]に分けて見ます。' +
+       '<span class="figrow">' + FIG.comp + TAB.comp + '</span>' +
+       'あとで見るとおり、信号を出すのは回っている<b>横の M</b> です。' +
        '<span class="eq">縦の M を縦磁化、横の M を横磁化ともいいます。</span>' }),
 
 L({ nm:'T1：縦磁化がもどる', hint:'③の上のグラフで、線の上がり方が組織ごとに違うのは、T1 が違うからです。熱として周りに渡しながら戻るので、スピン-格子緩和とも呼ばれます。値は装置や文献で幅があります。', zone:[1], tg:'スピン-格子緩和', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40, tissue:'wm' },
-  text:'倒したあと、縦の M は元の長さへ<b>戻っていきます</b>。光っている図の、上のグラフで線が上がっていくようすです。<br>元の 63% まで戻るのにかかる<b>時間</b>が T1 です。T1 が長い組織ほど、戻るのが遅くなります。' +
+  text:'倒したあと、縦の M は元の長さへ<b>戻っていきます</b>。' + fRelax(true) +
+       '元の 63% まで戻るのにかかる<b>時間</b>が T1 です。T1 が長い組織ほど、戻るのが遅くなります。' +
        '<span class="eq">T1 は縦緩和時間ともいいます。磁場が強いほど長くなり、温度によっても変わります。</span>' }),
 
 L({ nm:'ここまでをまとめると', tg:'S = ρ × T1 × T2', sel:'#panRel',
