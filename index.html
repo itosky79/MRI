@@ -3384,14 +3384,18 @@ function drawSeq() {
   const cv = document.getElementById('seqCv');
   const { cx, w, h } = fitCv(cv);
   const L = 64, Rr = w - 16;
+  /* 傾斜磁場は向きの違う3つ（スライス選択・位相エンコード・読み出し）を別の段に描く。
+     以前は1本にまとめていたので、GRE で読み出しの向きを反転してエコーを作るところが描けていなかった */
   const rows = [
-    { y:h * 0.15, nm:'RF' },
-    { y:h * 0.42, nm:'傾斜磁場' },
-    { y:h * 0.72, nm:'信号' }
+    { y:h * 0.16, nm:'RF' },
+    { y:h * 0.39, nm:'スライス' },
+    { y:h * 0.50, nm:'位相' },
+    { y:h * 0.61, nm:'読み出し' },
+    { y:h * 0.80, nm:'信号' }
   ];
   /* TR をそのまま等間隔にすると、パルスとエコーが左端に固まって読めない。
      前半（パルスとエコーのあたり）だけ拡大し、残りは折れ目を入れて縮める */
-  const Td = Math.min(P.TR, (P.seq === 'IR' ? P.TI + P.TE * 1.8 : P.TE * 2.4) + 30);
+  const Td = Math.min(P.TR, (P.seq === 'IR' ? P.TI + P.TE * 1.8 : P.TE * 1.9) + 20);
   const brk = Td < P.TR * 0.90;
   const wDet = brk ? (Rr - L) * 0.66 : (Rr - L);
   const X = t => {
@@ -3415,28 +3419,33 @@ function drawSeq() {
   if (brk) ticks.push(P.TR);
   ticks.forEach(t => {
     const x = X(t);
-    cx.strokeStyle = C.grid; cx.beginPath(); cx.moveTo(x, h * 0.10); cx.lineTo(x, h * 0.86); cx.stroke();
-    cx.fillStyle = C.dim; cx.fillText(Math.round(t), x, h * 0.93);
+    cx.strokeStyle = C.grid; cx.beginPath(); cx.moveTo(x, h * 0.10); cx.lineTo(x, h * 0.91); cx.stroke();
+    cx.fillStyle = C.dim; cx.textAlign = t === P.TR ? 'right' : 'center';
+    cx.fillText((t === P.TR ? 'TR ' : '') + Math.round(t), t === P.TR ? x + 4 : x, h * 0.96);
   });
-  cx.textAlign = 'right'; cx.fillText('ms', L - 6, h * 0.93); cx.textAlign = 'center';
+  cx.textAlign = 'right'; cx.fillText('ms', L - 6, h * 0.96); cx.textAlign = 'center';
   if (brk) {                                   // 折れ目のしるし
     const xb = L + wDet;
     cx.strokeStyle = C.dim; cx.lineWidth = 1;
     [-3, 1].forEach(o => {
-      cx.beginPath(); cx.moveTo(xb + o - 2, h * 0.90); cx.lineTo(xb + o + 3, h * 0.84); cx.stroke();
+      cx.beginPath(); cx.moveTo(xb + o - 2, h * 0.94); cx.lineTo(xb + o + 3, h * 0.88); cx.stroke();
     });
     cx.textAlign = 'center';
   }
 
   const evs = R.evs;
-  /* RF */
+  /* RF。幅（片側 hw 画素）は、倒すパルスと次のパルス（またはエコー）の間の広さに合わせる */
+  const rfAll = evs.filter(e => e.k === 'rf'), ecAll = evs.find(e => e.k === 'echo');
+  const exP = P.seq === 'IR' ? rfAll.find(e => Math.abs(e.t - P.TI) < 1e-6) : rfAll.find(e => e.t === 0);
+  const nxP = P.seq === 'GRE' ? ecAll : rfAll.find(e => e.a === 180 && e.t > (exP ? exP.t : 0));
+  const hw = exP && nxP ? Math.max(4, Math.min(10, (X(nxP.t) - X(exP.t)) * (P.seq === 'GRE' ? 0.12 : 0.18))) : 10;
   evs.forEach(e => {
     if (e.k !== 'rf') return;
-    const x = X(e.t), hh = (e.a / 180) * (h * 0.11) + h * 0.028;
+    const x = X(e.t), hh = (e.a / 180) * (h * 0.09) + h * 0.025;
     cx.strokeStyle = C.rf; cx.lineWidth = 1.4; cx.beginPath();
     for (let k = -14; k <= 14; k++) {
       const u = k / 14 * 2.6, s = u === 0 ? 1 : Math.sin(Math.PI * u) / (Math.PI * u);
-      const px = x + k * 0.62, py = rows[0].y - s * hh;
+      const px = x + k * hw / 14, py = rows[0].y - s * hh;
       k === -14 ? cx.moveTo(px, py) : cx.lineTo(px, py);
     }
     cx.stroke();
@@ -3446,24 +3455,48 @@ function drawSeq() {
     if (ty < 9) { cx.textAlign = 'left'; cx.fillText(Math.round(e.a) + '°', x + 7, 9); }
     else cx.fillText(Math.round(e.a) + '°', x, ty);
   });
-  /* 傾斜磁場（スライス選択・位相・読み出し）を模式的に */
-  const gy = rows[1].y;
-  cx.strokeStyle = C.grad; cx.lineWidth = 1.2;
-  const box = (x0, x1, hh) => { cx.beginPath(); cx.moveTo(x0 - 3, gy); cx.lineTo(x0, gy - hh); cx.lineTo(x1, gy - hh); cx.lineTo(x1 + 3, gy); cx.stroke(); };
-  evs.forEach(e => { if (e.k === 'rf') box(X(e.t) - 9, X(e.t) + 9, h * 0.05); });
-  const te = evs.find(e => e.k === 'echo');
-  if (te) {
-    box(X(te.t) - 18, X(te.t) + 18, h * 0.075);
-    for (let k = 0; k < 4; k++) { const x = X(te.t) - 34 + k * 1.5; box(x, x + 1, h * 0.018 + k * h * 0.006); }
+  /* 傾斜磁場（3段）。形は教科書のパルスシーケンス図と同じ約束で描く（時間の幅は見やすさのため一定の画素数）。
+     ・スライス：RF を当てる間だけ台形。90°（GRE は α）のあとには、向きを逆にした半分の面積の台形（位相を戻すため）
+     ・位相：倒してから読むまでの間に1回。毎回強さを変えるので、はしご（何段もの高さ）で描く
+     ・読み出し：エコーを中心に台形。その前に、面積が半分の「前もってずらす」台形を置く。
+       SE では 180° の前に同じ向き（180° で向きが裏返るので、エコーでちょうど戻る）、GRE は直前に逆向き（これでエコーができる） */
+  const ga = h * 0.05;
+  const trap = (y, x0, x1, a) => { const r = Math.min(3, (x1 - x0) / 3); cx.beginPath(); cx.moveTo(x0, y); cx.lineTo(x0 + r, y - a); cx.lineTo(x1 - r, y - a); cx.lineTo(x1, y); cx.stroke(); };
+  cx.strokeStyle = C.grad; cx.lineWidth = 1.3;
+  const rfs = evs.filter(e => e.k === 'rf'), te = evs.find(e => e.k === 'echo');
+  /* 倒すパルス：SE は 0 ms の 90°、IR は TI の 90°、GRE は α */
+  const ex90 = P.seq === 'IR' ? rfs.find(e => Math.abs(e.t - P.TI) < 1e-6) : (P.seq === 'SE' ? rfs.find(e => e.t === 0) : rfs[0]);
+  const r180 = P.seq === 'GRE' ? null : rfs.find(e => e.a === 180 && e.t > 0);        // 呼びもどす 180°（IR の最初の反転パルスではない）
+  rfs.forEach(e => {
+    const x = X(e.t);
+    trap(rows[1].y, x - hw, x + hw, ga);
+    if (e === ex90) trap(rows[1].y, x + hw + 1, x + 2 * hw + 1, -ga);                 // 位相を戻す逆向きの台形（面積は半分）
+  });
+  if (te && ex90) {
+    const xe = X(te.t), xa = X(ex90.t) + hw + 1;
+    const x180 = r180 ? X(r180.t) : null;
+    /* 読み出しの半分の幅 hr：エコーの前の空きに入る大きさ。準備の台形は同じ高さで幅 hr（面積が半分） */
+    const hr = Math.max(5, Math.min(18, P.seq === 'GRE' ? (xe - xa) * 0.3 : (xe - x180 - hw) * 0.8));
+    trap(rows[3].y, xe - hr, xe + hr, ga);                                            // 読み出し
+    const pre = (x0, x1, sgn) => { const wdt = Math.max(3, Math.min(hr, x1 - x0)); trap(rows[3].y, x1 - wdt, x1, sgn * ga * hr / wdt); };
+    if (P.seq === 'GRE') pre(xa, xe - hr - 1, -1);
+    else pre(xa, x180 - hw - 1, +1);
+    /* 位相エンコード（はしご）：SE・IR は倒すパルスと 180° の間、GRE は倒してから読み出しの準備の前 */
+    const gp0 = xa, gp1 = P.seq === 'GRE' ? xe - 2 * hr - 2 : x180 - hw - 1;
+    const wp = Math.max(4, Math.min(14, gp1 - gp0)), xp = gp0;
+    const gy = rows[2].y;
+    const b = ga * 0.9, r = Math.min(3, wp / 4);
+    trap(gy, xp, xp + wp, b); trap(gy, xp, xp + wp, -b);
+    cx.beginPath();
+    for (let k = -2; k <= 2; k++) { if (!k) continue; const yk = gy - k / 3 * b; cx.moveTo(xp + r, yk); cx.lineTo(xp + wp - r, yk); }   // 毎回ちがう強さ
+    cx.stroke();
     if (P.tag && P.tag.pe) {
-      cx.fillStyle = C.grad;
-      const lt = '位相エンコード（毎回強さを変える）→';
-      if (cx.measureText(lt).width < X(te.t) - 38 - L - 6) { cx.textAlign = 'right'; cx.fillText(lt, X(te.t) - 38, gy - h * 0.02); }
-      else { cx.textAlign = 'left'; cx.fillText('← 位相エンコード', X(te.t) + 24, gy - h * 0.03); }   // 狭い画面では、空いている右側に短く
+      cx.fillStyle = C.grad; cx.textAlign = 'left';
+      cx.fillText('← 毎回強さを変える', xp + wp + 6, gy);
     }
   }
   /* 信号：実際に計算している |Mxy| の記録 */
-  const sy = rows[2].y, sh = h * 0.18;
+  const sy = rows[4].y, sh = h * 0.11;
   if (R.trace.length > 1) {
     cx.strokeStyle = C.sig; cx.lineWidth = 1.5; cx.beginPath();
     let first = true;
@@ -3472,12 +3505,6 @@ function drawSeq() {
       first ? (cx.moveTo(x, y), first = false) : cx.lineTo(x, y);
     }
     cx.stroke();
-    cx.globalAlpha = .5; cx.beginPath(); first = true;
-    for (const p of R.trace) {
-      const x = X(p[0]), y = sy + p[1] * sh;
-      first ? (cx.moveTo(x, y), first = false) : cx.lineTo(x, y);
-    }
-    cx.stroke(); cx.globalAlpha = 1;
   }
   /* T2 の包絡線（エコーの頂点はこの線の上にのる） */
   if (P.seq !== 'GRE') {
@@ -3493,18 +3520,18 @@ function drawSeq() {
     cx.fillText('T2 の包絡線', L + wDet - 4, sy - a0 * Math.exp(-(Td - t0) / T2) * sh - 8);
   } else {
     cx.fillStyle = C.env; cx.textAlign = 'left';
-    cx.fillText('T2* で速く減る', L + 34, sy - sh * 0.55);
+    cx.fillText('T2* で速く減る', L + 6, sy - sh * 1.25);
   }
   /* エコーの位置に「ここで読む」と書く。
      以前は「↓ ここで信号を読む」を1つの文字列としてエコーの位置に中央ぞろえで書いていたので、
      ↓ がエコーより左（文字列の左端）に来て、違う時刻を指していた。↓ はエコーの真上に置き、言葉はその横へ */
   if (te) {
-    const xe = X(te.t), ye = sy - sh - 7, word = 'ここで信号を読む';
-    cx.fillStyle = C.sig; cx.textAlign = 'center';
-    cx.fillText('↓', xe, ye);
+    /* 読み出しの段と信号の段の間は狭いので、言葉はエコーの右（入らなければ左）に、信号の高さで置く */
+    const xe = X(te.t), ye = sy + sh * 0.6, word = '← ここで信号を読む';
+    cx.fillStyle = C.sig;
     const ww = cx.measureText(word).width;
-    if (xe + 9 + ww <= Rr) { cx.textAlign = 'left'; cx.fillText(word, xe + 9, ye); }
-    else { cx.textAlign = 'right'; cx.fillText(word, xe - 9, ye); }
+    if (xe + 22 + ww <= Rr) { cx.textAlign = 'left'; cx.fillText(word, xe + 22, ye); }
+    else { cx.textAlign = 'right'; cx.fillText('ここで信号を読む →', xe - 22, ye); }
   }
   /* TE・TI・TR の寸法線 */
   const dim = (t0, t1, y, nm) => {
@@ -3514,15 +3541,14 @@ function drawSeq() {
     cx.moveTo(x0, y - 3); cx.lineTo(x0, y + 3); cx.moveTo(x1, y - 3); cx.lineTo(x1, y + 3); cx.stroke();
     cx.fillStyle = C.mut; cx.textAlign = 'center'; cx.fillText(nm, (x0 + x1) / 2, y - 8);
   };
-  const yd = h * 0.30;
+  const yd = h * 0.29;
   if (te) dim(P.seq === 'IR' ? P.TI : 0, te.t, yd, 'TE ' + Math.round(P.TE));
-  if (P.seq === 'IR') dim(0, P.TI, h * 0.56, 'TI ' + Math.round(P.TI));
-  dim(0, P.TR, h * 0.045, 'TR ' + Math.round(P.TR));
+  if (P.seq === 'IR') dim(0, P.TI, yd, 'TI ' + Math.round(P.TI));
   cx.textAlign = 'right';
   if (P.manual) { cx.fillStyle = C.rf; cx.fillText('手動：パルスは自分で撃ちます', Rr, h * 0.115); }
   /* いまの時刻 */
   const xc = X(R.t);
-  cx.strokeStyle = C.alert; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xc, h * 0.08); cx.lineTo(xc, h * 0.88); cx.stroke();
+  cx.strokeStyle = C.alert; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xc, h * 0.08); cx.lineTo(xc, h * 0.92); cx.stroke();
 }
 
 /* ---- 緩和曲線 ---- */
