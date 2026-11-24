@@ -180,7 +180,7 @@ body.detached .railbar{display:flex; cursor:move; touch-action:none}
   background:linear-gradient(0deg,var(--filmScrim),var(--filmScrim0)); pointer-events:none;
 }
 #imgbox .xh{position:absolute; width:13px; height:13px; margin:-7px 0 0 -7px; pointer-events:none}
-#imgbox .xh::before,#imgbox .xh::after{content:""; position:absolute; background:var(--amber)}
+#imgbox .xh::before,#imgbox .xh::after{content:""; position:absolute; background:#E5ECF1}
 #imgbox .xh::before{left:6px; top:0; width:1px; height:13px}
 #imgbox .xh::after{top:6px; left:0; height:1px; width:13px}
 
@@ -279,8 +279,8 @@ ol.seq button[aria-current="step"] .tg2{color:var(--stepRuby)}
   border-radius:0 2px 2px 0; font-size:15px; color:var(--muted); line-height:1.85;
 }
 .note b{color:var(--selT); font-weight:500}
-.note .eq{display:block; margin:6px 0 2px; font-family:var(--mono); font-size:12px; color:var(--amber); letter-spacing:.02em; line-height:1.7}
-.note .hl{color:var(--amber)}
+.note .eq{display:block; margin:6px 0 2px; padding-left:9px; border-left:2px solid var(--line2); font-size:12.5px; color:var(--muted); line-height:1.7}
+.note .hl{color:var(--text); font-weight:600}
 
 /* ---------- ボタン類 ---------- */
 button.opt{
@@ -422,7 +422,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset
 }
 .brow:hover{color:var(--text); border-color:var(--line2)}
 .brow[aria-pressed="true"]{background:var(--sel); border-color:var(--teal); color:var(--selT)}
-.brow.lit{border-color:var(--amber); background:var(--rfBg2); color:var(--rfText)}
+.brow.lit{border-color:var(--line2); background:var(--sel); color:var(--text)}
 .bbar{display:block; height:7px; border-radius:2px; background:var(--ink2); overflow:hidden}
 .bbar i{display:block; height:100%; width:0; background:var(--alert); border-radius:2px}
 .bv{font-family:var(--mono); font-size:13px; color:var(--teal); text-align:right}
@@ -435,8 +435,8 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--teal); outline-offset
 .tiny{margin:7px 0 0; font-size:14px; line-height:1.75; color:var(--dim)}
 .tiny b{color:var(--muted); font-weight:500}
 .lede{
-  margin:0 0 9px; padding:6px 10px; background:var(--well); border-left:2px solid var(--amber);
-  border-radius:0 2px 2px 0; font-size:15px; line-height:1.7; color:var(--rfText);
+  margin:0 0 9px; padding:6px 10px; background:var(--well); border-left:2px solid var(--line2);
+  border-radius:0 2px 2px 0; font-size:15px; line-height:1.7; color:var(--text);
 }
 /* ---------- 組織テーブル（いまは未使用） ---------- */
 table.tis{width:100%; border-collapse:collapse; font-size:14.5px}
@@ -572,7 +572,7 @@ details.fold p{margin:7px 0 0; font-size:14.5px; color:var(--dim); line-height:1
 }
 #tutHole.ring{outline:2px solid var(--teal); outline-offset:1px}
 #tutHole.tap{animation:tutTap 1.3s ease-in-out infinite}
-@keyframes tutTap{0%,100%{outline-color:var(--teal)} 50%{outline-color:var(--amber)}}
+@keyframes tutTap{0%,100%{outline-color:var(--teal)} 50%{outline-color:var(--line2)}}
 #tutCard{
   position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
   width:min(340px,calc(100vw - 28px)); pointer-events:auto;
@@ -587,7 +587,7 @@ details.fold p{margin:7px 0 0; font-size:14.5px; color:var(--dim); line-height:1
 .tstep{margin:0 0 5px; font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--dim)}
 .ttext{margin:0 0 12px; font-size:13px; line-height:1.8; color:var(--text)}
 .ttext b{color:var(--selT); font-weight:700; background:linear-gradient(transparent 58%, var(--hl) 58%); padding:0 1px}   /* 大事なところだけを蛍光ペンのように */
-.ttext .eq{display:block; margin:7px 0 3px; font-family:var(--mono); font-size:12px; color:var(--rfText); line-height:1.7}
+.ttext .eq{display:block; margin:8px 0 3px; padding-left:9px; border-left:2px solid var(--line2); font-size:12.5px; color:var(--muted); line-height:1.7}   /* 補足の1行。橙は RF パルスにだけ使うので灰色 */
 .ttext .eq2{display:block; margin:7px 0 0; font-size:12px; color:var(--dim); line-height:1.65}
 .tzone{display:inline-flex; gap:3px; margin-left:8px; vertical-align:1px}
 .tzone i{font-style:normal; font-family:var(--gothic); font-size:10.5px; letter-spacing:0; padding:1px 8px; border-radius:9px; color:var(--dim); background:var(--fill)}
@@ -746,8 +746,8 @@ button.opt[aria-pressed="true"] .ruby{color:var(--tgOnT); opacity:.8}
 button.act{border:none; border-radius:10px; background:var(--tgBg); color:var(--teal); font-weight:600}
 button.act:hover{background:var(--sel); color:var(--teal)}
 button.act.rf{background:var(--rfBg); color:var(--rfText)}
-.expose{border:none; border-radius:999px; background:var(--amber); color:var(--onAmber); font-weight:700}
-.expose:hover{filter:brightness(1.06); background:var(--amber); color:var(--onAmber)}
+.expose{border:none; border-radius:999px; background:var(--text); color:#fff; font-weight:700}
+.expose:hover{filter:brightness(1.15); background:var(--text); color:#fff}
 .playbar button,.rbbtn{border:none; border-radius:999px; background:var(--scrim); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); font-family:var(--gothic)}
 .playbar button{white-space:nowrap}
 .echotg span{border:none; border-radius:999px; white-space:nowrap}
@@ -772,7 +772,7 @@ label.tg{padding:4px 0; gap:10px}
 .chip[aria-pressed="true"]{background:var(--sel); color:var(--selT); font-weight:700}
 .brow{border:none; border-radius:9px}
 .brow[aria-pressed="true"]{background:var(--sel); color:var(--selT)}
-.brow.lit{background:var(--rfBg); color:var(--rfText)}
+.brow.lit{background:var(--sel); color:var(--text)}
 ol.seq button{border:none; border-radius:9px; background:transparent}
 ol.seq button[aria-current="step"]{background:var(--sel)}
 .choices button{border:none; border-radius:10px}
@@ -802,8 +802,8 @@ html[data-theme="light"] .lab{text-shadow:none}
 #tutHole{border-radius:14px}
 #tutNext{border:none; border-radius:10px; background:var(--teal); color:var(--tgOnT); font-weight:700}
 #tutNext:hover{filter:brightness(1.07); background:var(--teal)}
-#tutNext.doit{background:var(--amber); color:var(--onAmber)}
-#tutNext.doit:hover{background:var(--amber)}
+#tutNext.doit{background:var(--text); color:#fff}
+#tutNext.doit:hover{background:var(--text)}
 #tutSkip,#tutBack{border:none; border-radius:10px; background:var(--fill); color:var(--teal); font-weight:600}
 #lightbox button{border:none; border-radius:999px; background:var(--fill); color:var(--teal)}
 @media (max-width:560px){
@@ -1226,7 +1226,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
           <button type="button" data-q="GRE">GRE</button>
           <button type="button" data-q="IR">IR</button>
         </div>
-        <p class="tiny">SE＝スピンエコー（180°で位相をもどす）／GRE＝グラジエントエコー（180°なし＝T2*で減る）／IR＝反転回復（先に180°で反転させる）</p>
+        <p class="tiny">SE は 180° でずれを戻す撮り方、GRE は 180° を使わない撮り方、IR は先に 180° で縦の M を下向きにする撮り方です。</p>
 
         <p class="grp-h" style="margin-top:13px">静磁場 B₀</p>
         <div class="seg" id="b0Seg" style="display:grid; grid-template-columns:repeat(3,1fr); background:var(--ink2)">
@@ -1234,7 +1234,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
           <button type="button" data-b="1.5" aria-pressed="true">1.5 T<small>64 MHz</small></button>
           <button type="button" data-b="3">3.0 T<small>128 MHz</small></button>
         </div>
-        <p class="tiny">強いほど T1 が長くなります。ボタンの下の数字は水素の共鳴周波数（ラーモア周波数、静磁場に比例）。</p>
+        <p class="tiny">ボタンの下の数字は、水素が回る速さ（共鳴周波数）です。</p>
 
         <p class="grp-h" style="margin-top:13px">画像の部位</p>
         <div class="seg" id="regSeg" style="display:grid; grid-template-columns:repeat(2,1fr); background:var(--ink2)">
@@ -1243,7 +1243,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
         </div>
         <div id="abdOpt" hidden>
           <button type="button" class="act" id="bStone" aria-pressed="false" style="margin-top:8px; width:100%">＋ 総胆管に結石（模型）を入れる</button>
-          <p class="tiny">腹部は、楕円体と管を数式で組み立てた模式図です（実在の人ではありません）。肝臓・脾臓・膵臓・腎臓と、胆管・膵管・胆嚢・胃や腸の水が入っています。</p>
+          <p class="tiny">腹部は、数式で組み立てた模式図です。実在の人ではありません。</p>
         </div>
         <div id="headOpt">
         <p class="grp-h" style="margin-top:13px">頭部の画像</p>
@@ -1252,7 +1252,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
           <button type="button" data-ph="simple">簡易図形</button>
         </div>
         <button type="button" class="act" id="bLes" aria-pressed="false" style="margin-top:8px; width:100%">＋ 病変（浮腫）を追加</button>
-        <p class="tiny">はじめは 6 組織（脂肪・白質・灰白質・脳脊髄液・筋肉・皮質骨）。病変は Colin 27 にはないので、ボタンで白質の中に描き足します。Colin 27＝公開のデジタル脳ファントム（BrainWeb と同じ人の脳）／簡易図形＝数式で組み立てた以前の画像。どちらも明暗は同じ式で計算します。</p>
+        <p class="tiny">Colin 27 は、公開されている脳の模型のデータです。病変はボタンで描き足します。</p>
         </div>
 
         <div id="sliceBox">
@@ -1266,7 +1266,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
             <div class="sld-h"><span>断面の位置</span><b id="vPos">頭側 20 mm</b></div>
             <input type="range" id="sPos" min="-60" max="80" step="1.5" value="20">
           </div>
-          <p class="tiny">3D の上で<b>右ドラッグ</b>（スマホは<b>2本指で上下</b>）でも動かせます。問題の画像と同じ向き・高さにしてから、撮像法や TR・TE を変えて見え方を比べます。</p>
+          <p class="tiny">3D の上で右ドラッグ（スマホは2本指で上下）しても動かせます。</p>
           <div class="sld" style="margin-top:8px">
             <div class="sld-h"><span>MIP の厚さ</span><b id="vMip">なし（断面1枚）</b></div>
             <input type="range" id="sMip" min="0" max="120" step="2" value="0">
@@ -1275,14 +1275,14 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
             <div class="sld-h"><span>MIP を回す</span><b id="vRot">0°</b></div>
             <input type="range" id="sRot" min="-90" max="90" step="5" value="0">
           </div>
-          <p class="tiny">MIP＝厚い板を手前から見て、視線の上で<b>いちばん明るい所だけ</b>を集めて1枚にする方法。回すと見る向きが変わります。</p>
+          <p class="tiny">MIP は、見る向きに重なった中から、いちばん明るい所だけを集めて1枚にする方法です。</p>
         </div>
 
         <div class="sld" style="margin-top:13px">
           <div class="sld-h"><span>静磁場のムラ（T2′）</span><b id="vT2p">40 ms</b></div>
           <input type="range" id="sT2p" min="0" max="11" value="5">
         </div>
-        <p class="tiny">小さいほど磁場がムラだらけ＝扇が速く開きます。SE では 180° で取り戻せますが、GRE では取り戻せません。</p>
+        <p class="tiny">小さいほど磁場のムラが大きく、細い矢印が速くばらけます。</p>
 
         <p class="grp-h" style="margin-top:13px">手でパルスをかける</p>
         <label class="tg"><input type="checkbox" id="tManual">シーケンスを止めて手動にする</label>
@@ -1294,7 +1294,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
           <button class="act" id="bSpoil" type="button">スポイラ</button>
           <button class="act wide" id="bReset" type="button">熱平衡に戻す</button>
         </div>
-        <p class="tiny">手動にすると自由歳差だけが進みます。<b>90° → 少し待つ → 180°</b> と押すと、自分の手でスピンエコーを作れます。</p>
+        <p class="tiny">90° → 少し待つ → 180° と押すと、自分でスピンエコーを作れます。</p>
       </div>
 
       <!-- ===== 問題 ===== -->
@@ -2229,7 +2229,7 @@ const GLT = {
     plane:0xA2C8D6, planeOp:0.42, m:0x11788F, mz:0x1C8A5C, mxy:0xBE3B30, comp:0x8CA2B0,
     rf:0xA3700F, conePar:0x11788F, coneAnti:0x11788F,   // プロトンは上向きも下向きも同じ色（向きは矢印で分かる。カードの「プロトン」の札と同じ色）
     skull:0x9A8A7E, skullOp:0.10, brain:0xA98E96, brainOp:0.18, vent:0x2C7AAC, ventOp:0.55,
-    skin:0x6E8598, skinOp:0.13, edge:0x2E7A8C, vox:0xB5781A, voxOp:0.14,
+    skin:0x6E8598, skinOp:0.13, edge:0x2E7A8C, vox:0x5E7386, voxOp:0.14,
     amb:0.92, dir:0.42, dir2:0.18, emis:0.04, spinL:0.40, spinE:0.00,
     mE:[0.0, 0.0, 0.0], trail:[0.05, 0.32, 0.42, 0.20, 0.26, 0.26]
   }
@@ -2953,12 +2953,12 @@ function mkLab(key, cls) {
 }
 ['z', 'x', 'y'].forEach(k => mkLab(k, 'axis'));
 mkLab('b0', 'axis cb0'); mkLab('m', 'm'); mkLab('b1', 'rf');
-mkLab('mz', 'm cz'); mkLab('mxy', 'm cxy'); mkLab('vox', 'rf'); mkLab('slice', 'rf');
+mkLab('mz', 'm cz'); mkLab('mxy', 'm cxy'); mkLab('vox', 'axis'); mkLab('slice', 'rf');
 mkLab('coil', 'axis'); mkLab('cur', 'axis'); mkLab('flux', 'm cfl'); mkLab('m0', 'm');
 mkLab('hcone', 'm'); mkLab('rmMri', 'axis'); mkLab('rmBed', 'axis');
 mkLab('cmp0', 'm'); mkLab('cmp1', 'm'); mkLab('cmp2', 'm');
 mkLab('ang', 'm'); mkLab('fan', 'axis'); mkLab('echo', 'm'); mkLab('fBrain', 'axis'); mkLab('fVox', 'm'); mkLab('slThick', 'rf');
-mkLab('gL', 'axis'); mkLab('gR', 'axis'); mkLab('gT', 'axis'); mkLab('gB', 'axis'); mkLab('gOn', 'rf'); mkLab('mag', 'm'); mkLab('boreB0', 'axis cb0'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
+mkLab('gL', 'axis'); mkLab('gR', 'axis'); mkLab('gT', 'axis'); mkLab('gB', 'axis'); mkLab('gOn', 'axis'); mkLab('mag', 'm'); mkLab('boreB0', 'axis cb0'); mkLab('boreW', 'axis'); mkLab('slHead', 'axis'); mkLab('slFoot', 'axis'); mkLab('slFreq', 'axis'); mkLab('slBand', 'rf');
 ['fat', 'wm', 'gm', 'csf', 'les'].forEach(id => mkLab('ta_' + id, 'm ta'));
 const _p = new THREE.Vector3();
 let labW = 0, labH = 0;   // 3D の大きさ（1コマに1回だけ測る）
@@ -3636,7 +3636,7 @@ function drawRel() {
   const short = id => TIS[TIX[id]].nm.replace(/（.*）/, '');   // 右端の名前は（ ）を外して短く
   const nameW = Math.max(40, ...CURVE.map(id => cx.measureText(short(id)).width));
   const L = 40, Rr = w - nameW - 16;   // 右に、いちばん長い名前が入るだけあける
-  const top = { y0:h * 0.145, y1:h * 0.44 }, bot = { y0:h * 0.635, y1:h * 0.92 };
+  const top = { y0:h * 0.17, y1:h * 0.44 }, bot = { y0:h * 0.66, y1:h * 0.92 };
   const isIR = P.seq === 'IR';
   const nar = w < 460;   // スマホ：見出しと軸の言葉を短くして、線や名前と重ねない
   const sampT = isIR ? P.TI : P.TR;
@@ -3652,7 +3652,7 @@ function drawRel() {
       cx.beginPath(); cx.moveTo(L, y); cx.lineTo(Rr, y); cx.stroke(); cx.setLineDash([]);
       cx.fillStyle = C.dim; cx.textAlign = 'right'; cx.fillText('0', L - 3, y);
     }
-    cx.fillStyle = C.dim; cx.textAlign = 'left'; cx.fillText(ttl, L - 26, r.y0 - 9);
+    cx.fillStyle = C.dim; cx.textAlign = 'left'; cx.fillText(ttl, L - 26, r.y0 - 17);
   };
   frame(top, isIR ? -1 : 0, 1, nar ? '① 縦の M（' + (isIR ? 'TI' : 'TR') + ' まで）'
     : isIR ? '① 反転させた縦の M が TI までにどこまで戻るか' : '① T1：TR のあいだに縦の M がどこまで戻るか');
@@ -4812,7 +4812,7 @@ function updateTis() {
   const t = TIS[TIX[P.tissue]];
   const T2s = 1 / (1 / T2of(t) + (isFinite(P.T2p) ? 1 / P.T2p : 0));
   $('cusBox').style.display = P.tissue === 'cus' ? '' : 'none';
-  $('tisSub').textContent = 'T1 ' + Math.round(T1of(t, P.B0)) + ' / T2 ' + Math.round(T2of(t)) + ' / T2* ' + Math.round(T2s) + ' ms・プロトン密度 ' + t.PD.toFixed(2);
+  $('tisSub').textContent = 'T1 ' + Math.round(T1of(t, P.B0)) + ' ms　T2 ' + Math.round(T2of(t)) + ' ms';   // 数字を並べすぎない（T2*・水素の量は④や③で見る）
 }
 /* ---- ④ 矢印 → 明るさ → 画像 ----
    棒の長さ＝エコーのときの 横磁化 × プロトン密度。3D の矢印にエコーの瞬間に出ている数字と同じ値で、
