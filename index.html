@@ -1286,7 +1286,7 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
 
         <p class="grp-h" style="margin-top:13px">手でパルスをかける</p>
         <label class="tg"><input type="checkbox" id="tManual">シーケンスを止めて手動にする</label>
-        <label class="tg"><input type="checkbox" id="tSpoil" checked>GRE でスポイラを入れる（外すと前の TR の横磁化が残る）</label>
+        <label class="tg"><input type="checkbox" id="tSpoil" checked>GRE で前の横の M を消す（スポイラ）</label>
         <div class="acts" style="margin-top:7px">
           <button class="act rf" id="bP90" type="button">90°パルス</button>
           <button class="act rf" id="bP180" type="button">180°パルス</button>
@@ -5215,7 +5215,7 @@ function syncSliceUI() {
   segSet($('oriSeg'), SLICE.ori, 'o');
   const r = SL_RANGE[SLICE.ori], sp = $('sPos');
   sp.min = r[0]; sp.max = r[1]; sp.value = SLICE.pos[SLICE.ori];
-  $('vPos').textContent = posText() + (ab ? '' : '（Talairach）');
+  $('vPos').textContent = posText();
   $('sMip').value = P.mip; $('vMip').textContent = P.mip > 0 ? P.mip + ' mm' : 'なし（断面1枚）';
   $('sRot').value = P.mipRot; $('vRot').textContent = P.mipRot + '°';
   $('headOpt').hidden = ab; $('abdOpt').hidden = !ab;
