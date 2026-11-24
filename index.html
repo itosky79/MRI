@@ -3113,6 +3113,7 @@ function updateScene(dt) {
     projGeo.attributes.position.needsUpdate = true;
     projLine.computeLineDistances();
     const v = coilRx ? Math.abs(_m.x) : 0;              // 一定の速さで回るなら dΦ/dt ∝ Mx
+    if (!P.paused) sgPush(coilRx ? _m.x : 0, dt);        // 「信号の波」の手で、時間に沿って描く
     coilMat.emissive.setRGB(0.12 + 0.50 * v, 0.07 + 0.18 * v, 0.20 + 0.62 * v);   // 「貫く分」と同じ紫で光らせる（色数を増やさない）
   }
 
@@ -3879,11 +3880,13 @@ L({ nm:'足し合わせると1本の矢印', zone:[1], tg:'上向きの余りの
   act:{ label:'全部を足し合わせる', fn:() => { qMerge = 0; } },
   text:'上と下は打ち消し合い、<b>余った上向きの分</b>だけが [[m:M]] として残ります。<br>実際の差は、100万個に約5個です。' }),
 
-L({ nm:'脳のどこにも M がある', hint:'矢印1本は、画像の1マス、ボクセルにある水素の合計です。水素が多い所ほど長くなります。信号はどのボクセルからもまとめて受信コイルに届くので、どこからの信号かを見分ける方法を、この章で見ていきます。', zone:[1], tg:'ボクセルごとに1本', sel:'#stage',
+L({ nm:'脳のどこにも M がある', hint:'矢印1本は、ボクセル1つにある水素の合計です。水素が多い所ほど長くなります。', zone:[1], tg:'ボクセルごとに1本', sel:'#stage',
   tag:{ scope:'矢印1本 ＝ ボクセル1つの水素の合計' },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
   on:() => { calm(); },
-  text:'画像の1マスをボクセルといいます。脳の<b>どのボクセルにも</b> [[m:M]] が1本ずつあります。<br>信号はまとめて届くので、どこからか見分ける仕組みが要ります。' }),
+  text:'画像の1マスをボクセルといいます。脳の<b>どのボクセルにも</b> [[m:M]] があり、倒すとどれも信号を出します。<br>' +
+       'コイルに届くのは、<b>全部のボクセルの波を足した1本の波</b>です。このままでは、どこの M が大きいのか分かりません。' +
+       '<span class="eq">そこで、場所ごとに M の回る速さを変えて、波に場所の印を付けます。回る速さは、第1章で見たとおり磁場の強さで決まります。</span>' }),
 
 /* 共鳴：B₁ の速さが M と合えば倒れ、ずれれば少しぐらつくだけ。
    ずれの量は、パルスの終わりに M がちょうど真上へ戻る値にしている（M から見た実効磁場のまわりの回転がちょうど1周：
@@ -3956,6 +3959,21 @@ L({ nm:'回る M でコイルに電流が流れる', hint:'止まった磁石か
   on:() => { calm(); },
   act:{ label:'M を倒す', fn:() => { calm(); later(() => manualPulse(90, 'x', 1.2), 300); } },
   text:'輪は受信コイルです。縦向きの [[m:M]] は止まっていて、電流は流れません。<br><b>倒して回すと</b>[[flux:輪を通る分]]が変わり、電流が流れます。これが信号です。' }),
+
+/* 第3章の終わり：スピンの話（倒す・回る・T2*）と、第4章の画像化（周波数で場所を見分ける）をつなぐ */
+L({ nm:'信号の波：高さと周波数', hint:'倒したあとに出るこの信号を FID、自由誘導減衰といいます。実際の周波数は 1.5 T で約 64 MHz、1秒に約6400万回ゆれる波ですが、画面ではとても遅くしています。', zone:[2], tg:'高さ ＝ 横の M、周波数 ＝ 回る速さ', sel:'#stage',
+  tag:{ scope:'太い矢印 M ＝ たくさんの水素の合計', noFlux:true },
+  set:{ quantum:false, manual:true, frame:'lab', view:0, showBody:false, coil:true, tissue:'csf', T2p:Infinity, B0:1.5 },
+  on:() => { calm(); },
+  acts:[
+    { label:'M を 90° 倒す', fn:() => { calm(); manualPulse(90, 'x', 0.8); }, dur:5000 },
+    { label:'M を 30° 倒す', fn:() => { calm(); manualPulse(30, 'x', 0.6); }, dur:5000 },
+    { label:'磁場を 3.0 T にして 90° 倒す', fn:() => { calm(); P.B0 = 3; manualPulse(90, 'x', 0.8); }, dur:5000 },
+  ],
+  text:'コイルに流れる電流を、時間に沿って描いたものが<b>信号の波</b>です。' +
+       '<canvas class="fs" id="sgCv" width="440" height="170"></canvas>' +
+       '波の<b>高さ</b>は横の M の長さ、波の<b>細かさ</b>は [[m:M]] が回る速さ、つまり周波数です。<br>' +
+       '次の章では、場所ごとに回る速さを変えて、この<b>周波数でどこからの信号か</b>を見分けます。' }),
 
 L({ nm:'T2：横磁化が短くなる', hint:'水素どうしが、互いの小さな磁場で回る速さを少しずつ乱し合うので、横の M が減ります。このため、スピン-スピン緩和とも呼ばれます。', zone:[1], tg:'スピン-スピン緩和', sel:'#stage',
   tag:{ pct:true, scope:'M ＝ たくさんの水素の合計／横の M ＝ その横向きの分' },
@@ -4196,6 +4214,30 @@ function kFillRun() {
   kDraw(() => false, false, KS.full); step();
 }
 
+
+/* ---------- 信号の波：受信コイルの電流を時間に沿って描く（第3章の終わり） ----------
+   高さ ＝ 横の M の長さ、細かさ（周波数）＝ M が回る速さ。最近 SGW 秒ぶんを右から左へ流す */
+const SGW = 4, SG = { t:[], v:[], now:0 };
+function sgPush(v, dt) {
+  if (!$('sgCv')) { SG.t.length = SG.v.length = 0; return; }
+  SG.now += dt; SG.t.push(SG.now); SG.v.push(v);
+  while (SG.t.length && SG.t[0] < SG.now - SGW) { SG.t.shift(); SG.v.shift(); }
+}
+function sgDraw() {
+  const cv = $('sgCv'); if (!cv) return;
+  const x = cv.getContext('2d'), W = cv.width, H = cv.height, ink = fsCol('--text'), dim = fsCol('--dim');
+  x.clearRect(0, 0, W, H);
+  const x0 = 64, x1 = W - 10, y0 = H / 2, A = H * 0.4;
+  x.strokeStyle = dim; x.lineWidth = 1; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y0); x.stroke();
+  x.font = '600 18px sans-serif'; x.fillStyle = dim; x.textBaseline = 'middle'; x.fillText('信号', 6, y0);
+  x.textAlign = 'right'; x.fillText('時間 →', x1, H - 12); x.textAlign = 'left';
+  x.strokeStyle = ink; x.lineWidth = 2.4; x.beginPath();
+  for (let i = 0; i < SG.t.length; i++) {
+    const px = x1 - (SG.now - SG.t[i]) / SGW * (x1 - x0), py = y0 - SG.v[i] * A;
+    i ? x.lineTo(px, py) : x.moveTo(px, py);
+  }
+  x.stroke();
+}
 
 /* ---------- 5×5 で画像を作る：位相エンコードを変えて5回くり返し、k 空間の5行を埋めて、フーリエ変換で戻す ----------
    ボクセル (行 r, 列 c) の M の大きさを m[r][c] とする。p 回目のくり返しでは、位相エンコードで行 r の M を
@@ -4540,7 +4582,7 @@ const CHAPTERS = [
     steps:['共鳴：リズムが合うと倒れる', 'RFパルスで倒す', '縦の M と横の M', 'T1：縦磁化がもどる', 'T2：横磁化が短くなる', '縦と横は同時に変わる', 'T2*：磁場のムラで もっと速く',
       '国家試験：第62回（2010年）午前 問23', '国家試験：第71回（2019年）午後 問12', '国家試験：第77回（2025年）午前 問64', '国家試験：第78回（2026年）午後 問64'] },
   { no:'第3章', need:'第1・2章', nm:'装置の中の電気と磁気', goal:'電流が磁場を作り（静磁場）、回る M の磁場の変化が電流（信号）を生む。',
-    steps:['電流が磁場を作る（電磁石）', '静磁場 B₀ の向き', '電磁誘導：変化が電気を生む', '回る M でコイルに電流が流れる'] },
+    steps:['電流が磁場を作る（電磁石）', '静磁場 B₀ の向き', '電磁誘導：変化が電気を生む', '回る M でコイルに電流が流れる', '信号の波：高さと周波数'] },
   { no:'第4章', need:'第1〜3章', nm:'どこからの信号かを見分ける', goal:'傾斜磁場で場所ごとに周波数と角度を変え、1回の信号を k 空間の1行に書く。行がそろうと画像になる。',
     steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '周波数に分ける：信号から列の明るさへ', '位相エンコード：縦は角度のずれで', '5×5 の小さな画像で通してみる', 'k 空間：脳の画像で1行ずつ埋める', 'k 空間：中心と外側', 'M から画像まで', '国家試験：第72回（2020年）午前 問10', '国家試験：第74回（2022年）午後 問12'] },
   { no:'第5章', need:'第1・2章。「1枚の画像ができるまで」と GRE は第4章も', nm:'撮り方で明るさが変わる', goal:'SE と GRE、TR と TE で、組織の明るさの差（コントラスト）が決まる。ここで序章の答えが出る。',
@@ -5871,6 +5913,7 @@ function loop(now) {
   advance(dt);
   updateScene(dt);
   renderer.render(scene, camera);
+  sgDraw();
   acc += dt;
   if (acc > 0.08) {
     acc = 0;
