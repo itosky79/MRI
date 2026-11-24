@@ -590,6 +590,7 @@ details.fold p{margin:7px 0 0; font-size:14.5px; color:var(--dim); line-height:1
 .tzone{display:inline-flex; gap:3px; margin-left:8px; vertical-align:1px}
 .tzone i{font-style:normal; font-family:var(--gothic); font-size:10.5px; letter-spacing:0; padding:1px 8px; border-radius:9px; color:var(--dim); background:var(--fill)}
 .tzone i.on{background:var(--sel); color:var(--selT); font-weight:700}
+canvas.fs{display:block; width:100%; max-width:330px; margin:8px auto; border-radius:8px; background:var(--fill)}
 .kpair{display:flex; gap:12px; justify-content:center; margin:9px 0 8px}
 .kpair>span{display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11.5px; color:var(--dim)}
 .kpair canvas{display:block; height:150px; border-radius:6px; background:#000}
@@ -865,8 +866,6 @@ button.opt{padding:9px 4px 8px; gap:3px}
 .chap .cgoal{margin:4px 0 7px; line-height:1.7}
 .chap .cneed{margin:-3px 0 8px; font-size:12.5px; color:var(--dim); line-height:1.6}
 .chap .cneed b{font-weight:600; color:var(--muted); margin-right:7px}
-button.act.short{margin-top:8px; background:var(--panel); border:1.5px solid var(--line2); color:var(--text)}
-button.act.short:hover{border-color:var(--teal); color:var(--teal)}
 ol.seq{gap:4px}
 ol.seq button{padding:6px 8px; line-height:1.6}
 .gloss .gl{padding:9px 0; gap:3px 10px}
@@ -1209,8 +1208,6 @@ ol.seq button{font-size:15px} ol.seq .no{font-size:14px} ol.seq .tg2{font-size:1
       <div class="pane" id="pane1" hidden>
         <p class="tiny" id="learnGuide" style="margin:0 0 9px">序章から順に、章ごとに進みます。1つの章は数分です。分からない言葉は、いちばん下の<b>用語の手引き</b>へ。</p>
         <button class="act wide" id="bLearn" type="button" style="width:100%">序章から始める</button>
-        <button class="act wide short" id="bShort" type="button" style="width:100%">近道：水の白黒が変わる理由を体験する</button>
-        <p class="tiny" id="shortNote" style="margin:5px 0 0"></p>
         <div id="chList"></div>
         <details class="fold gloss" id="glossFold" style="margin-top:14px"><summary>用語の手引き</summary>
           <dl id="glossList"></dl>
@@ -4135,19 +4132,22 @@ function fft2(re, im, inv) {
 }
 const KS = { re:null, im:null, R0:12 };
 const kFreq = n => (n < KN / 2 ? n : n - KN);   // FFT の番号 → 中心からの距離（符号つき）
-function kInit() {
+function kPrep() {
   drawImage();
   const re = new Float64Array(KN * KN), im = new Float64Array(KN * KN), d = imgData.data;
   const ox = (KN - IW) >> 1, oy = (KN - IH) >> 1;
   for (let y = 0; y < IH; y++) for (let x = 0; x < IW; x++) re[(y + oy) * KN + x + ox] = d[(y * IW + x) * 4] / 255;
   fft2(re, im, false);
   KS.re = re; KS.im = im;
-  kShow('all');
 }
+function kInit() { kPrep(); kShow('all'); }
 function kShow(mode) {               // mode：'all' ぜんぶ／'c' 中心だけ／'o' 外側だけ
+  kDraw((u, v) => { const r = Math.hypot(kFreq(u), kFreq(v)); return mode === 'all' || (mode === 'c' ? r <= KS.R0 : r > KS.R0); }, true);
+}
+/* keep(u, v)：その点を使うか。ring：中心と外側の境目を描くか。fix：画像の明るさの基準（途中まで埋めた表でも、全部そろったときと同じ基準で暗く出す） */
+function kDraw(keep, ring, fix) {
   const kc = $('kCv'), ic = $('kImg');
   if (!kc || !ic || !KS.re) return;
-  const keep = (u, v) => { const r = Math.hypot(kFreq(u), kFreq(v)); return mode === 'all' || (mode === 'c' ? r <= KS.R0 : r > KS.R0); };
   /* 左：k 空間（明るさ＝log(1 + |F|)、中心を真ん中に。捨てた所は暗く） */
   const kx = kc.getContext('2d'), kd = kx.createImageData(KN, KN);
   let mx = 0; const lg = new Float64Array(KN * KN);
@@ -4158,10 +4158,12 @@ function kShow(mode) {               // mode：'all' ぜんぶ／'c' 中心だ�
     kd.data[o] = kd.data[o + 1] = kd.data[o + 2] = g; kd.data[o + 3] = 255;
   }
   kx.putImageData(kd, 0, 0);
-  kx.save(); kx.strokeStyle = '#7FD3E6'; kx.setLineDash([5, 4]); kx.lineWidth = 2;   // 中心と外側の境目
-  kx.beginPath(); kx.arc(KN / 2, KN / 2, KS.R0 * 1.15, 0, Math.PI * 2); kx.stroke(); kx.restore();
-  kx.font = 'bold 21px sans-serif'; kx.fillStyle = '#7FD3E6'; kx.textAlign = 'center';
-  kx.fillText('中心', KN / 2, KN / 2 - KS.R0 * 1.15 - 8); kx.fillText('外側', KN / 2, KN - 14);
+  if (ring) {
+    kx.save(); kx.strokeStyle = '#7FD3E6'; kx.setLineDash([5, 4]); kx.lineWidth = 2;   // 中心と外側の境目
+    kx.beginPath(); kx.arc(KN / 2, KN / 2, KS.R0 * 1.15, 0, Math.PI * 2); kx.stroke(); kx.restore();
+    kx.font = 'bold 21px sans-serif'; kx.fillStyle = '#7FD3E6'; kx.textAlign = 'center';
+    kx.fillText('中心', KN / 2, KN / 2 - KS.R0 * 1.15 - 8); kx.fillText('外側', KN / 2, KN - 14);
+  }
   /* 右：残した分だけで画像に戻す（逆 FFT の大きさ） */
   const re = new Float64Array(KN * KN), im = new Float64Array(KN * KN);
   for (let v = 0; v < KN; v++) for (let u = 0; u < KN; u++) if (keep(u, v)) { const k = v * KN + u; re[k] = KS.re[k]; im[k] = KS.im[k]; }
@@ -4169,8 +4171,83 @@ function kShow(mode) {               // mode：'all' ぜんぶ／'c' 中心だ�
   const ox = (KN - IW) >> 1, oy = (KN - IH) >> 1, ix = ic.getContext('2d'), id = ix.createImageData(IW, IH);
   let m2 = 0; const mag = new Float64Array(IW * IH);
   for (let y = 0; y < IH; y++) for (let x = 0; x < IW; x++) { const k = (y + oy) * KN + x + ox; mag[y * IW + x] = Math.hypot(re[k], im[k]); if (mag[y * IW + x] > m2) m2 = mag[y * IW + x]; }
-  for (let k = 0; k < IW * IH; k++) { const g = Math.min(255, mag[k] / (m2 || 1) * 255); id.data[k * 4] = id.data[k * 4 + 1] = id.data[k * 4 + 2] = g; id.data[k * 4 + 3] = 255; }
+  const ref = fix || m2 || 1;
+  for (let k = 0; k < IW * IH; k++) { const g = Math.min(255, mag[k] / ref * 255); id.data[k * 4] = id.data[k * 4 + 1] = id.data[k * 4 + 2] = g; id.data[k * 4 + 3] = 255; }
   ix.putImageData(id, 0, 0);
+  return m2;
+}
+/* k 空間を上の行から1行ずつ埋めていき、埋まった行だけで画像に戻す（1回のくり返し ＝ 1行） */
+let kFillTok = 0;
+function kFillInit() {
+  kPrep(); KS.full = kDraw(() => true, false);   // 全部そろったときの明るさを基準にする
+  kDraw(() => false, false, KS.full);
+  const st = $('kRows'); if (st) st.textContent = '0 / ' + KN + ' 行';
+}
+function kFillRun() {
+  const tok = ++kFillTok; let n = 0;
+  const rowOf = v => (v + KN / 2) % KN;          // FFT の番号 → 画面の上からの行
+  const step = () => {
+    if (tok !== kFillTok || !$('kCv')) return;
+    n = Math.min(KN, n + 8);
+    kDraw((u, v) => rowOf(v) < n, false, KS.full);
+    const st = $('kRows'); if (st) st.textContent = n + ' / ' + KN + ' 行';
+    if (n < KN) learnTm.push(setTimeout(step, 110));
+  };
+  kDraw(() => false, false, KS.full); step();
+}
+
+/* ---------- 周波数に分ける：1回の信号から、列ごとの M の大きさ（明るさ）を取り出す ----------
+   横に並んだ5列のボクセル。M の大きさを a[k] とする。
+   ・傾斜なし：どの列も同じ周波数なので、信号は1つの波（高さは合計）。どの列の分か分からない
+   ・左右に傾斜：列ごとに周波数が違う波が足し合わさって届く
+   ・周波数に分ける（フーリエ変換）：周波数ごとの強さ ＝ その列の M の大きさ ＝ 明るさ
+   色は M の青緑だけ。信号の線と画素は灰色 */
+const FS = { a:[0.35, 1.0, 0.6, 0.85, 0.2], mode:0, t0:0, raf:0 };
+function fsCol(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#11788F'; }
+function fsSet(mode) { FS.mode = mode; FS.t0 = performance.now(); cancelAnimationFrame(FS.raf); fsDraw(); }
+function fsDraw() {
+  const cv = $('fsCv'); if (!cv) return;
+  const x = cv.getContext('2d'), W = cv.width, H = cv.height, N = FS.a.length, teal = fsCol('--teal'), ink = fsCol('--text'), dim = fsCol('--dim');
+  const p = Math.min(1, (performance.now() - FS.t0) / 1800);       // 波を左から描いていく割合
+  x.clearRect(0, 0, W, H);
+  x.font = '600 19px sans-serif'; x.textBaseline = 'middle';
+  const colX = k => 70 + k * ((W - 90) / (N - 1));
+  /* 上：5列のボクセルと、それぞれの M（縦の棒） */
+  x.fillStyle = dim; x.fillText('M', 8, 58);
+  for (let k = 0; k < N; k++) {
+    const cx = colX(k), h = FS.a[k] * 74;
+    x.strokeStyle = dim; x.lineWidth = 1.5; x.strokeRect(cx - 26, 14, 52, 88);
+    x.fillStyle = teal; x.fillRect(cx - 9, 98 - h, 18, h);
+  }
+  /* 中：受信コイルに届く信号（全部の列の波の合計） */
+  const y0 = 182, amp = 52 / FS.a.reduce((s, v) => s + v, 0);
+  x.fillStyle = dim; x.fillText('信号', 8, y0);
+  x.strokeStyle = ink; x.lineWidth = 2.4; x.beginPath();
+  const x0 = 70, x1 = W - 16;
+  for (let i = 0; i <= 400 * p; i++) {
+    const t = i / 400; let v = 0;
+    for (let k = 0; k < N; k++) {
+      const f = FS.mode === 0 ? 6 : 3 + 2.2 * k;                       // 傾斜なしは全部同じ周波数
+      v += FS.a[k] * Math.cos(2 * Math.PI * f * t);
+    }
+    const px = x0 + (x1 - x0) * t, py = y0 - v * amp;
+    i ? x.lineTo(px, py) : x.moveTo(px, py);
+  }
+  x.stroke();
+  /* 下：周波数に分けたときの強さ ＝ その列の M ＝ 画素の明るさ */
+  if (FS.mode === 2) {
+    const yb = 330;
+    x.fillStyle = dim; x.fillText('強さ', 8, yb - 30);
+    for (let k = 0; k < N; k++) {
+      const cx = colX(k), h = FS.a[k] * 74 * Math.min(1, p * 1.5);
+      x.fillStyle = teal; x.fillRect(cx - 9, yb - h, 18, h);
+      const g = Math.round(FS.a[k] * 235);
+      x.fillStyle = 'rgb(' + g + ',' + g + ',' + g + ')'; x.fillRect(cx - 26, yb + 12, 52, 52);
+      x.strokeStyle = dim; x.lineWidth = 1; x.strokeRect(cx - 26, yb + 12, 52, 52);
+    }
+    x.fillStyle = dim; x.fillText('画素', 8, yb + 38);
+  }
+  if (p < 1) FS.raf = requestAnimationFrame(fsDraw);
 }
 
 /* ---------- 場所の区別：体のどこから来た信号かを見分ける ----------
@@ -4212,6 +4289,19 @@ L({ nm:'周波数エンコード：横は音の高さで', hint:'合唱で、列
   act:{ label:'左右に傾斜をかける（読んでいる間）', fn:() => { GRID.gx = 1; } },
   text:'読む間に左右の傾斜をかけると、<b>列ごとに</b> [[m:M]] の回る速さが変わります。<br>この速さで横の位置が分かります。これが周波数エンコードです。' }),
 
+L({ nm:'周波数に分ける：信号から列の明るさへ', hint:'周波数ごとの強さに分ける計算を、フーリエ変換といいます。和音を聞いて、どの高さの音がどれくらいの強さで鳴っているかを聞き分けるのと同じです。傾斜がないと、どの列も同じ高さの音になるので、混ざると見分けられません。', zone:[2], tg:'1回の信号 → 列ごとの明るさ', map:true,
+  set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
+  on:() => { calm(); gridInit(); GRID.gx = 1; later(() => fsSet(0), 60); },
+  acts:[
+    { label:'傾斜なしで受信する', fn:() => fsSet(0), dur:2600 },
+    { label:'左右に傾斜をかけて受信する', fn:() => fsSet(1), dur:2600 },
+    { label:'周波数に分ける', fn:() => fsSet(2), dur:3000 },
+  ],
+  text:'読む間に左右の傾斜をかけると、受信コイルには<b>列ごとに周波数の違う波</b>が混ざって届きます。' +
+       '<canvas class="fs" id="fsCv" width="440" height="410"></canvas>' +
+       '混ざった信号を<b>周波数ごとに分ける</b>と、それぞれの強さが、その列の [[m:M]] の大きさ、つまり<b>明るさ</b>になります。' +
+       '<span class="eq">1回の信号で分かるのは、列ごとの明るさだけです。上下の行は、次の位相エンコードで見分けます。</span>' }),
+
 L({ nm:'位相エンコード：縦は角度のずれで', hint:'時計の針を、行ごとに少しずつ進めておくイメージです。同じ速さで回っても、針のずれで行が分かります。', zone:[0, 1], tg:'読む前に一瞬だけ上下の傾斜', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
   on:() => { calm(); gridInit(); },
@@ -4221,19 +4311,39 @@ L({ nm:'位相エンコード：縦は角度のずれで', hint:'時計の針を
   ],
   text:'上下の傾斜を一瞬かけると、<b>行ごとに</b> [[m:M]] の角度がずれます。<br>この角度のずれを位相といい、位相で行の位置が分かります。これが位相エンコードです。' }),
 
-L({ nm:'k 空間：集めたデータの表', hint:'k 空間は、画像を作るための「材料表」です。中心だけ残すとぼやけ、外側だけ残すと輪郭だけになります。', zone:[2], tg:'中心＝明暗、外側＝輪郭', map:true,
+L({ nm:'k 空間：1回の信号を1行に書く', hint:'上から順に埋めていくと、真ん中の行が入ったところで急に画像らしくなります。その理由は次の手で見ます。256 行の画像なら、「倒す → 読む」を 256 回くり返します。', zone:[2], tg:'くり返すたびに1行', map:true,
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
-  link:'行がすべてそろうと、1マスずつの明るさ、つまり画像が計算できます。',
+  on:() => { calm(); later(kFillInit, 60); },
+  act:{ label:'1行ずつ埋める', fn:() => kFillRun(), dur:5200 },
+  text:'1回の信号は、表の<b>1行</b>に書き込みます。この表を <b>k 空間</b>といい、位相エンコードの強さを変えてくり返すたびに、次の行が埋まります。' +
+       '<span class="kpair"><span><canvas id="kCv" width="256" height="256" style="width:150px"></canvas><b id="kRows">0 / 256 行</b></span>' +
+       '<span><canvas id="kImg" width="176" height="208" style="width:127px"></canvas>画像</span></span>' +
+       '行がそろうと、フーリエ変換で<b>ボクセルごとの明るさ</b>、つまり画像になります。' }),
+
+L({ nm:'k 空間：中心と外側', hint:'中心だけ残すとぼやけ、外側だけ残すと輪郭だけになります。', zone:[2], tg:'中心＝明暗、外側＝輪郭', map:true,
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
   on:() => { calm(); later(kInit, 60); },
   acts:[
     { label:'中心だけ残す', fn:() => kShow('c') },
     { label:'外側だけ残す', fn:() => kShow('o') },
     { label:'ぜんぶ使う', fn:() => kShow('all') },
   ],
-  text:'集めた信号の表が <b>k 空間</b>です。フーリエ変換という計算で画像になります。' +
+  text:'k 空間の<b>中心だけ</b>、<b>外側だけ</b>を使って、画像に戻してみます。' +
        '<span class="kpair"><span><canvas id="kCv" width="256" height="256" style="width:150px"></canvas>k 空間</span>' +
        '<span><canvas id="kImg" width="176" height="208" style="width:127px"></canvas>画像</span></span>' +
-       '表の<b>中心は明暗、外側は輪郭</b>を決めています。' })
+       '表の<b>中心は明暗、外側は輪郭</b>を決めています。' }),
+
+/* 第4章のまとめ：スピン（M）から画像までを1本につなぐ */
+L({ nm:'M から画像まで', hint:'⑤の明るさは、第5章で TR と TE によって変わることを見ます。', zone:[2], tg:'スライス → 列 → 行 → k 空間 → 画像', map:true, sel:'#imgbox',
+  set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
+  text:'1枚の画像は、M を使ってこの順にできます。' +
+       '<span class="tmap">' +
+         '<span class="z"><span class="zl">①</span><span class="zt">傾斜をかけて電波を当て、<b>1枚だけ</b> M を倒す（スライス選択）</span></span>' +
+         '<span class="z"><span class="zl">②</span><span class="zt">読む間の左右の傾斜で、<b>列ごとに</b>回る速さを変える（周波数エンコード）</span></span>' +
+         '<span class="z"><span class="zl">③</span><span class="zt">読む前の上下の傾斜で、<b>行ごとに</b>角度をずらす（位相エンコード）</span></span>' +
+         '<span class="z"><span class="zl">④</span><span class="zt">くり返して k 空間を埋め、フーリエ変換する</span></span>' +
+         '<span class="z"><span class="zl">⑤</span><span class="zt">1マスの明るさ ＝ そのボクセルから届いた信号の大きさ</span></span>' +
+       '</span>' })
 ];
 
 /* ---------- 国家試験に挑戦：厚生労働省が公開している診療放射線技師国家試験の問題（出典を表示）。
@@ -4338,8 +4448,8 @@ const CHAPTERS = [
       '国家試験：第62回（2010年）午前 問23', '国家試験：第71回（2019年）午後 問12', '国家試験：第77回（2025年）午前 問64', '国家試験：第78回（2026年）午後 問64'] },
   { no:'第3章', need:'第1・2章', nm:'装置の中の電気と磁気', goal:'電流が磁場を作り（静磁場）、回る M の磁場の変化が電流（信号）を生む。',
     steps:['電流が磁場を作る（電磁石）', '静磁場 B₀ の向き', '電磁誘導：変化が電気を生む', '回る M でコイルに電流が流れる'] },
-  { no:'第4章', need:'第1〜3章', nm:'どこからの信号かを見分ける', goal:'傾斜磁場で場所ごとに周波数と角度を変え、集めた信号の表（k 空間）から画像を作る。',
-    steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '位相エンコード：縦は角度のずれで', 'k 空間：集めたデータの表', '国家試験：第72回（2020年）午前 問10', '国家試験：第74回（2022年）午後 問12'] },
+  { no:'第4章', need:'第1〜3章', nm:'どこからの信号かを見分ける', goal:'傾斜磁場で場所ごとに周波数と角度を変え、1回の信号を k 空間の1行に書く。行がそろうと画像になる。',
+    steps:['脳のどこにも M がある', '傾斜磁場：場所で磁場の強さを変える', 'スライス選択：1枚だけ倒す', 'スライスの位置と厚さ', '周波数エンコード：横は音の高さで', '周波数に分ける：信号から列の明るさへ', '位相エンコード：縦は角度のずれで', 'k 空間：1回の信号を1行に書く', 'k 空間：中心と外側', 'M から画像まで', '国家試験：第72回（2020年）午前 問10', '国家試験：第74回（2022年）午後 問12'] },
   { no:'第5章', need:'第1・2章。「1枚の画像ができるまで」と GRE は第4章も', nm:'撮り方で明るさが変わる', goal:'SE と GRE、TR と TE で、組織の明るさの差（コントラスト）が決まる。ここで序章の答えが出る。',
     steps:['1枚の画像ができるまで', 'スピンエコー：180°で呼びもどす', 'GRE：180° を使わない', '撮像時間：加算回数と高速 SE', '撮像時間：パラレルイメージング', '矢印から画像へ', 'TR：次に倒すまでの待ち時間', 'TE：倒してから読むまで', '水の白黒が逆になる理由', 'やってみよう：水を脳より暗くする',
       '国家試験：第66回（2014年）午前 問24', '国家試験：第65回（2013年）午前 問32', '国家試験：第76回（2024年）午後 問15', '国家試験：第66回（2014年）午前 問30', '国家試験：第73回（2021年）午後 問15'] },
@@ -4361,30 +4471,6 @@ const CHAPTERS = [
   });
 }
 let curCh = -1, curStep = 0;
-/* 近道：水の白黒が変わる理由を、専門用語をほとんど使わずに体験する4手。
-   撮り比べる → TR を短くすると水が黒い → TE を長くすると水が白い → 自分で水を暗くする。終わったら「仕組みを詳しく学ぶ」で序章から本編へ */
-const SHSET = { quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TE:15, T2p:40 };
-const SHORT_EXTRA = [
-L({ nm:'TR を短くすると、水が黒くなる', tg:'T1強調', sel:'#imgbox', hint:'脳は元に戻るのが速いので、TR を短くしても明るいままです。水は戻るのにとても時間がかかります。この「戻るのにかかる時間」が T1 で、詳しくは第2章で見ます。',
-  tag:{ mark:true },
-  set:Object.assign({}, SHSET, { TR:4000 }),
-  act:{ label:'TR を 4000 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
-  text:'TR は撮影をくり返す間隔です。短くすると、水は次までに<b>元に戻りきれません</b>。<br>そのため[[water:水]]が<b>黒く</b>写ります。これが T1強調です。' }),
-L({ nm:'TE を長くすると、水が白く目立つ', tg:'T2強調', sel:'#imgbox', hint:'信号が減る速さを決める時間が T2 で、水は T2 がとても長い組織です。詳しくは第2章で見ます。',
-  tag:{ mark:true },
-  set:Object.assign({}, SHSET, { TR:4000 }),
-  act:{ label:'TE を 15 → 100 ms に長くする', fn:() => applySet({ TE:100 }, true) },
-  text:'TE は、信号を読むまでの待ち時間です。待つ間にどの組織の信号も減りますが、<br>[[water:水]]は減りが遅いので<b>相対的に白く</b>目立ちます。これが T2強調です。' }),
-];
-const SHORT = ['T1強調と T2強調を撮り比べる', 'TR を短くすると、水が黒くなる', 'TE を長くすると、水が白く目立つ', 'やってみよう：水を脳より暗くする'];
-function runShort() {
-  const by = {}; CHAPTERS.forEach(ch => ch.list.forEach(st => { by[st.nm] = st; })); SHORT_EXTRA.forEach(st => { by[st.nm] = st; });
-  const n = SHORT.length;
-  const list = SHORT.map((nm, i) => Object.assign({}, by[nm], { go:null, next:null, head:'近道　' + (i + 1) + ' / ' + n }));
-  Object.assign(list[0], { text:'同じ脳でも、T1強調では[[water:水]]が<b>黒</b>、T2強調では<b>白</b>に写ります。<br>撮り方の2つのつまみ、TR と TE で、なぜ変わるのかを体験します。' });
-  Object.assign(list[n - 1], { next:'仕組みを詳しく学ぶ', go:() => { tutEnd(); runChapter(0, 0); } });
-  curCh = -1; tutRun(list, 0, markStep);
-}   // いま開いている章と手（一覧の印に使う）
 
 
 
@@ -4799,7 +4885,7 @@ $('modeTabs').addEventListener('click', e => {
 const CHKEY = 'mri-chapters-done-v8';   // 章の並びを変えたので、前の記録は使わない   // 章の並びを変えたので、前の記録（章の番号）は使わない
 let chDoneSet = new Set();
 try { chDoneSet = new Set(JSON.parse(localStorage.getItem(CHKEY) || '[]')); } catch (e) { }
-const RESKEY = 'mri-resume-v4';   // 最後に見た章と手（章の途中から続けられるように）
+const RESKEY = 'mri-resume-v5';   // 最後に見た章と手（章の途中から続けられるように）
 let resume = null;
 try { resume = JSON.parse(localStorage.getItem(RESKEY) || 'null'); } catch (e) { }
 function saveResume(c, i) {
@@ -4853,8 +4939,6 @@ function markStep() {
   document.querySelectorAll('#chList ol.seq button').forEach(b =>
     (live && +b.dataset.c === curCh && +b.dataset.i === curStep) ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current'));
 }
-$('bShort').addEventListener('click', runShort);
-$('shortNote').textContent = '全 ' + SHORT.length + ' 手、数分です。TR と TE を動かして、水が黒くなる・白くなるのを体験します。終わったら、仕組みを序章から詳しく学べます。';
 $('bLearn').addEventListener('click', () => { const rs = resumeAt(); if (rs) { runChapter(rs.c, rs.i); return; } const nx = CHAPTERS.findIndex((ch, c) => !ch.soon && !chDoneSet.has(c)); runChapter(nx < 0 ? 0 : nx, 0); });
 
 /* ---- 用語の手引き：初めて出てくる言葉を、ふつうの言葉で1行ずつ。「見る」でその言葉が出てくる手へ飛ぶ ----
