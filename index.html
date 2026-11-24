@@ -3971,6 +3971,108 @@ const TAB = {
   coil: fTab(['M', '輪を通る分', '電流'], [['上を向いて止まる', '変わらない', '流れない'], ['倒れて回る', '変わり続ける', '<b>流れる ＝ 信号</b>']]),
 };
 
+/* ---------- 第4〜6章の図と表。数値はこのアプリの組織の値（TIS）と同じ式で計算して入れる ---------- */
+function fWave(x0, x1, y, amp, cyc, c, w) {   // 正弦波（同じ周波数なら cyc が同じ）
+  let d = '';
+  for (let i = 0; i <= 120; i++) { const t = i / 120; d += (i ? 'L' : 'M') + (x0 + (x1 - x0) * t).toFixed(1) + ' ' + (y - amp * Math.sin(2 * Math.PI * cyc * t)).toFixed(1); }
+  return '<path d="' + d + '" fill="none" stroke="' + c + '" stroke-width="' + (w || 1.8) + '"/>';
+}
+const pct = v => Math.round(v * 100) + '%';
+const seMz = (T1, TR, TE) => 1 - 2 * Math.exp(-(TR - TE / 2) / T1) + Math.exp(-TR / T1);   // SE で TR のときの縦の M（アプリと同じ式）
+const FIG2 = {
+  /* 3つのボクセルの波（同じ周波数・高さが違う）→ 足すと1本の波 */
+  sum: fSvg(330, 150, (() => {
+    const a = [1, 0.5, 0.8], u = 9, cyc = 4;
+    let s = '';
+    a.forEach((v, k) => { const y = 18 + k * 27; s += fT(4, y + 5, 'ボクセル' + (k + 1), FC.dim, ' font-size="12"') + fWave(86, 316, y, v * u, cyc, FC.ink, 1.6); });
+    s += '<line x1="86" y1="94" x2="316" y2="94" stroke="' + FC.dim + '"/>' + fT(70, 99, '＋', FC.dim);
+    s += fT(4, 128, 'コイルに', FC.ink, ' font-size="12"') + fT(4, 144, '届く波', FC.ink, ' font-size="12"') + fWave(86, 316, 126, (a[0] + a[1] + a[2]) * u, cyc, FC.ink, 2.6);
+    return s;
+  })()),
+  /* スライス選択：位置と周波数の関係。電波の範囲（橙の帯）に入る位置だけが倒れる（青緑） */
+  slice: fSvg(330, 156, (() => {
+    const one = (ox, slope, ttl, note) => {
+      const X0 = ox + 18, X1 = ox + 146, Y0 = 120, Y1 = 26, fy = 73;
+      let s = fT(ox + 82, 14, ttl, FC.ink, ' font-weight="700" text-anchor="middle"');
+      s += '<line x1="' + X0 + '" y1="' + Y0 + '" x2="' + X1 + '" y2="' + Y0 + '" stroke="' + FC.dim + '"/><line x1="' + X0 + '" y1="' + Y0 + '" x2="' + X0 + '" y2="' + Y1 + '" stroke="' + FC.dim + '"/>';
+      s += '<rect x="' + X0 + '" y="' + (fy - 7) + '" width="' + (X1 - X0) + '" height="14" fill="' + FC.rf + '" opacity=".22"/>';
+      /* 帯に入る位置の範囲（直線 y = fy − slope·(x − 中央)） */
+      const xc = (X0 + X1) / 2, half = slope ? 7 / slope : (X1 - X0) / 2;
+      const xa = Math.max(X0, xc - half), xb = Math.min(X1, xc + half);
+      s += '<rect x="' + xa.toFixed(1) + '" y="' + Y1 + '" width="' + (xb - xa).toFixed(1) + '" height="' + (Y0 - Y1) + '" fill="' + FC.m + '" opacity=".18"/>';
+      s += '<line x1="' + X0 + '" y1="' + (fy + slope * (xc - X0)).toFixed(1) + '" x2="' + X1 + '" y2="' + (fy - slope * (X1 - xc)).toFixed(1) + '" stroke="' + FC.ink + '" stroke-width="2"/>';
+      s += fT(X1, Y0 + 14, '位置 →', FC.dim, ' font-size="11" text-anchor="end"') + fT(ox + 2, Y1 + 2, '周波数', FC.dim, ' font-size="11"');
+      s += fT(ox + 82, 150, note, FC.m, ' font-size="12" text-anchor="middle"');
+      return s;
+    };
+    return one(0, 0, '傾斜なし', '全部が倒れる') + one(170, 0.55, '傾斜あり', '帯に入る1枚だけ倒れる') +
+      fT(330, 66, '電波の範囲', FC.rf, ' font-size="11" text-anchor="end"');
+  })()),
+  /* 位相エンコード：かける前は全部同じ向き。一瞬かけたあとは、行ごとに角度がずれる（同じ行の中は同じ） */
+  phase: fSvg(330, 124, (() => {
+    let s = '';
+    const blk = (ox, angOf, ttl) => {
+      s += fT(ox + 62, 12, ttl, FC.ink, ' font-weight="700" text-anchor="middle"');
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) {
+        const cx = ox + 14 + c * 32, cy = 40 + r * 32, a = angOf(r) * Math.PI / 180;
+        s += fArr(cx, cy, cx + 13 * Math.sin(a), cy - 13 * Math.cos(a), FC.m, 2.4);
+      }
+    };
+    blk(0, () => 0, 'かける前'); blk(186, r => (r - 1) * 50, '一瞬かけたあと');
+    s += fArr(140, 72, 176, 72, FC.dim, 1.5);
+    s += fT(316, 44, '行1', FC.dim, ' font-size="11"') + fT(316, 76, '行2', FC.dim, ' font-size="11"') + fT(316, 108, '行3', FC.dim, ' font-size="11"');
+    return s;
+  })()),
+  /* スピンエコー：90° → TE/2 → 180° → TE/2 → エコー。点線は T2 の包絡線 */
+  se: fSvg(330, 150, (() => {
+    const x90 = 42, x180 = 132, xe = 222, yb = 128, A = 60, Tst = 20, T2 = 260;
+    const pulse = (x, hh, nm) => { let d = ''; for (let k = -12; k <= 12; k++) { const u = k / 12 * 2.4, v = u ? Math.sin(Math.PI * u) / (Math.PI * u) : 1; d += (k > -12 ? 'L' : 'M') + (x + k * 0.8).toFixed(1) + ' ' + (34 - v * hh).toFixed(1); }
+      return '<path d="' + d + '" fill="none" stroke="' + FC.rf + '" stroke-width="1.8"/>' + fT(x, 8, nm, FC.rf, ' font-size="12" text-anchor="middle"'); };
+    let s = '<line x1="30" y1="34" x2="320" y2="34" stroke="' + FC.dim + '" stroke-width=".8"/>' + pulse(x90, 12, '90°') + pulse(x180, 20, '180°');
+    s += '<line x1="30" y1="' + yb + '" x2="320" y2="' + yb + '" stroke="' + FC.dim + '"/>';
+    let d = '';   // 信号：90° のあと T2* で速く消え、180° のあとエコーとしてもう一度立ち上がる（頂点は T2 の包絡線の上）
+    for (let x = x90; x <= 320; x += 2) {
+      const fid = x <= x180 ? Math.exp(-(x - x90) / Tst) : 0, echo = Math.exp(-(xe - x90) / T2) * Math.exp(-Math.abs(x - xe) / Tst) * (x > x180 ? 1 : 0);
+      d += (x === x90 ? 'M' : 'L') + x + ' ' + (yb - A * Math.max(fid, echo)).toFixed(1);
+    }
+    s += '<path d="' + d + '" fill="none" stroke="' + FC.ink + '" stroke-width="2.2"/>';
+    let e = ''; for (let x = x90; x <= 320; x += 4) e += (x === x90 ? 'M' : 'L') + x + ' ' + (yb - A * Math.exp(-(x - x90) / T2)).toFixed(1);
+    s += '<path d="' + e + '" fill="none" stroke="' + FC.xy + '" stroke-width="1.2" stroke-dasharray="4 3"/>' + fT(318, yb - A * Math.exp(-(318 - x90) / T2) - 6, 'T2 の包絡線', FC.xy, ' font-size="11" text-anchor="end"');
+    const dimL = (a, b, y, t) => '<line x1="' + a + '" y1="' + y + '" x2="' + b + '" y2="' + y + '" stroke="' + FC.dim + '"/><line x1="' + a + '" y1="' + (y - 3) + '" x2="' + a + '" y2="' + (y + 3) + '" stroke="' + FC.dim + '"/><line x1="' + b + '" y1="' + (y - 3) + '" x2="' + b + '" y2="' + (y + 3) + '" stroke="' + FC.dim + '"/>' + fT((a + b) / 2, y - 5, t, FC.dim, ' font-size="11" text-anchor="middle"');
+    s += dimL(x90, x180, 52, 'TE/2') + dimL(x180, xe, 52, 'TE/2');
+    s += fT(xe, yb + 15, 'エコー', FC.ink, ' font-size="12" text-anchor="middle"') + fT(x90 + 4, yb + 15, 'T2* で消える', FC.dim, ' font-size="11"');
+    return s;
+  })()),
+  /* MIP：視線の上のボクセルの明るさから、いちばん明るいものを選ぶ */
+  mip: fSvg(330, 96, (() => {
+    const v = [0.2, 0.9, 0.3, 0.1];
+    let s = fT(4, 14, '視線の上の明るさ', FC.dim, ' font-size="12"');
+    v.forEach((a, k) => { const g = Math.round(40 + a * 200), x = 20 + k * 46; s += '<rect x="' + x + '" y="26" width="40" height="40" fill="rgb(' + g + ',' + g + ',' + g + ')" stroke="' + FC.dim + '"/>' + fT(x + 20, 82, a.toFixed(1), FC.ink, ' font-size="12" text-anchor="middle"'); });
+    s += fArr(4, 46, 206, 46, FC.xy, 1.6) + fArr(214, 46, 248, 46, FC.dim, 1.5);
+    const g = Math.round(40 + 0.9 * 200);
+    s += '<rect x="256" y="26" width="40" height="40" fill="rgb(' + g + ',' + g + ',' + g + ')" stroke="' + FC.ink + '" stroke-width="2"/>' + fT(276, 82, 'いちばん明るい 0.9', FC.ink, ' font-size="12" text-anchor="middle"');
+    return s;
+  })()),
+};
+const TAB2 = {
+  grad: fTab(['位置', '磁場の強さ', '水素の周波数'], [-10, 0, 10].map(cm => { const B = 1.5 + 0.010 * cm / 100; return [(cm > 0 ? '+' : '') + cm + ' cm', B.toFixed(3) + ' T', (GAMMA * B).toFixed(2) + ' MHz']; })),
+  slab: fTab(['変えるもの', 'スライス'], [['電波の中心の周波数', '位置が動く'], ['電波の範囲を広げる', '厚くなる'], ['傾斜を急にする', '薄くなる']]),
+  fe: fTab(['列', '磁場', '回る速さ'], [['左', '少し弱い', '遅い'], ['真ん中', 'そのまま', 'そのまま'], ['右', '少し強い', '速い']]),
+  time: fTab(['TR', '位相エンコード数', '撮像時間'], [['500 ms', '256', '128 秒（約 2 分）'], ['3000 ms', '256', '768 秒（約 13 分）']]),
+  fse: fTab(['撮り方（TR 3000 ms・256 行）', '撮像時間'], [['ふつうの SE・加算 1 回', '768 秒（約 13 分）'], ['ふつうの SE・加算 2 回', '1536 秒（約 26 分）'], ['高速 SE（エコートレイン数 16）', '48 秒']]),
+  sense: fTab(['撮り方', '撮像時間'], [['高速 SE（エコートレイン数 16）', '48 秒'], ['＋ SENSE（倍率 2）', '24 秒']]),
+  own: fTab(['組織が持つ値', '撮り方や装置で決まる値'], [['水素の量（プロトン密度）', 'TR・フリップ角'], ['T1・T2', '磁場の強さ・ムラ']]),
+  tr: (() => { const f = TIS[TIX.fat].T1, c = TIS[TIX.csf].T1, r = TR => [TR + ' ms', pct(seMz(f, TR, 15)), pct(seMz(c, TR, 15))];
+    return fTab(['TR', '脂肪の縦の M', '脳脊髄液の縦の M'], [r(500), r(4000)]); })(),
+  te: (() => { const w = TIS[TIX.wm].T2, c = TIS[TIX.csf].T2, r = TE => [TE + ' ms', pct(Math.exp(-TE / w)), pct(Math.exp(-TE / c))];
+    return fTab(['TE', '白質の横の M', '脳脊髄液の横の M'], [r(15), r(100)]); })(),
+  bw: fTab(['撮り方', 'TR', 'TE', '脳脊髄液（水）'], [['T1強調', '短い', '短い', '暗い'], ['T2強調', '長い', '長い', '明るい']]),
+  ir: fTab(['組織', 'T1', '0 を通る時間（TR が十分長いとき）'], ['fat', 'wm', 'csf'].map(id => { const t = TIS[TIX[id]]; return [t.nm, t.T1 + ' ms', '約 ' + Math.round(t.T1 * Math.LN2 / 10) * 10 + ' ms']; })),
+  flair: fTab(['撮り方', '消す組織', 'TI（このアプリ）'], [['STIR', '脂肪', '約 180 ms'], ['FLAIR', '脳脊髄液（自由水）', '約 2400 ms']]),
+  heavy: (() => { const l = TIS[TIX.liv].T2, b = TIS[TIX.wat].T2, r = TE => [TE + ' ms', pct(Math.exp(-TE / l)), pct(Math.exp(-TE / b))];
+    return fTab(['TE', '肝臓の横の M', '胆汁・水の横の M'], [r(100), r(800)]); })(),
+};
+
 const TVH = { nm:'縦と横は同時に変わる', hint:'表の値は、装置や測り方、文献によって幅があります。画面のシミュレーションでは、白質を T1 650 ms・T2 80 ms としています。縦の M と横の M を足しても、いつも元の長さになるわけではありません。', zone:[1], tg:'横の方がずっと速い', sel:'#stage',
   tag:{ pct:true, pctz:true, tslow:0.3, scope:'縦の M・横の M ＝ M の縦向きの分と横向きの分' },
   ask:{ q:'横の M がほぼ 0% になったとき、縦の M はどこまで戻っていますか？', opts:['ほぼ 100%', '半分くらい'], ans:1,
@@ -4022,8 +4124,8 @@ L({ nm:'脳のどこにも M がある', hint:'矢印1本は、ボクセル1つ�
   tag:{ scope:'矢印1本 ＝ ボクセル1つの水素の合計' },
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:true, nameOnly:true, showComp:false, tissue:'wm' },
   on:() => { calm(); },
-  text:'画像の1マスをボクセルといいます。脳の<b>どのボクセルにも</b> [[m:M]] があり、倒すとどれも信号を出します。<br>' +
-       'コイルに届くのは、<b>全部のボクセルの波を足した1本の波</b>です。このままでは、どこの M が大きいのか分かりません。' +
+  text:'画像の1マスをボクセルといいます。脳の<b>どのボクセルにも</b> [[m:M]] があり、倒すとどれも信号の波を出します。' + FIG2.sum +
+       'コイルに届くのは、全部の波を<b>足した1本の波</b>です。このままでは、どこの M が大きいのか分かりません。' +
        '<span class="eq">そこで、場所ごとに M の回る速さを変えて、波に場所の印を付けます。回る速さは、第1章で見たとおり磁場の強さで決まります。</span>' }),
 
 /* 共鳴：B₁ の速さが M と合えば倒れ、ずれれば少しぐらつくだけ。
@@ -4142,7 +4244,8 @@ L({ nm:'スピンエコー：180°で呼びもどす', hint:'全員が途中で�
     calm(); manualPulse(90, 'x');
     later(() => manualPulse(180, 'y', 1.2), 2000);   // 180° はゆっくり当てて、オレンジの RF パルスが見えるようにする
   } },
-  text:'ばらけた細い矢印を[[rf:180° の RFパルス]]で折り返すと、<b>またそろいます</b>。<br>これが[[echo:エコー]]で、この撮り方がスピンエコー、SE です。' }),
+  text:'ばらけた細い矢印を[[rf:180° の RFパルス]]で折り返すと、<b>またそろいます</b>。これが[[echo:エコー]]で、この撮り方がスピンエコー、SE です。' + FIG2.se +
+       '90° から 180° までと、180° からエコーまでは同じ時間です。エコーの高さは、ムラではなく T2 だけで減ります。' }),
 
 /* 縦の M・横の M という言葉を、T1・T2 より先に、画面の矢印で決めておく（言葉の説明がないまま T2 に入ると混乱する） */
 L({ nm:'縦の M と横の M', hint:'T1・T2 は、この縦の M と横の M がそれぞれ変わる速さを表す時間です。縦の M、横の M は矢印の長さで、時間ではありません。', zone:[1], tg:'M を縦と横に分ける', sel:'#stage',
@@ -4186,8 +4289,7 @@ L({ nm:'井戸とバケツで考える TR と TE', tg:'汲む間隔と、測る�
 L({ nm:'矢印から画像へ', hint:'「組織ごとに塗ってみる」を押すと、右の表の明るさで、脳の画像が組織ごとに塗られていきます。', tg:'横の長さ × ρ ＝ 明るさ', sel:'#panBridge', blk:'nearest',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:2500, TE:15, T2p:40 },
   act:{ label:'組織ごとに塗ってみる', fn:() => paintDemo(), dur:6500 },
-  text:'ボクセルごとの<b>横の M の長さ × 水素の量</b>が、その場所の<b>明るさ</b>です。' +
-       '<span class="eq">水素の量、つまりプロトン密度と T1・T2 は、組織が持つ値です。TR やフリップ角、磁場の強さやムラは、撮り方や装置で決まる値です。</span>' }),
+  text:'ボクセルごとの<b>横の M の長さ × 水素の量</b>が、その場所の<b>明るさ</b>です。明るさを決める値は、2つに分けられます。' + TAB2.own }),
 
 L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで、赤い TR の線が左へ動きます。そのとき、脳脊髄液の線はまだ低いところにあります。同じ行を何回か撮って平均することもあり、その回数を加算回数といいます。撮像時間はその分かかります。', tg:'T1 の差をつける', sel:'#panRel',
   tag:{ mark:true },
@@ -4195,13 +4297,15 @@ L({ nm:'TR：次に倒すまでの待ち時間', hint:'③の上のグラフで�
   act:{ label:'TR を 2500 → 500 ms に短くする', fn:() => applySet({ TR:500 }, true) },
   ask:{ q:'暗くなった理由はどちらでしょう？', opts:['縦の M が戻りきらない', '横の M が速く消える'], ans:0,
     why:'戻りきらないうちに倒すので、倒したときの横の M も小さくなります。' },
-  text:'「倒す → 読む」をくり返す間隔を TR、繰り返し時間といいます。TR を短くすると、縦の M の戻りが遅い[[water:脳脊髄液]]が<b>暗く</b>なります。これが T1強調です。' }),
+  text:'「倒す → 読む」をくり返す間隔を TR、繰り返し時間といいます。表は、次に倒すときまでに戻っている縦の M です。' + TAB2.tr +
+       'TR を短くすると、戻りの遅い[[water:脳脊髄液]]が<b>暗く</b>なります。これが T1強調です。' }),
 
 L({ nm:'TE：倒してから読むまで', hint:'③の下のグラフで、TE の線が右へ動きます。どの線も下がっていきますが、脳脊髄液の線は下がり方がゆるやかで、高いところに残ります。', tg:'T2 の差をつける', sel:'#panRel',
   tag:{ mark:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:4000, TE:15, T2p:40, tissue:'wm' },
   act:{ label:'TE を 15 → 100 ms に長くする', fn:() => applySet({ TE:100 }, true) },
-  text:'倒してから信号を読むまでの時間を TE、エコー時間といいます。TE を長くすると、どの組織の信号も減ります。<br>T2 の短い組織が<b>先に</b>減るので、減りの遅い[[water:脳脊髄液]]が<b>相対的に白く</b>目立ちます。これが[[relw:T2強調]]です。' }),
+  text:'倒してから信号を読むまでの時間を TE、エコー時間といいます。表は、TE のときに残っている横の M です。' + TAB2.te +
+       'TE を長くすると、T2 の短い白質が<b>先に</b>減り、減りの遅い[[water:脳脊髄液]]が<b>相対的に白く</b>目立ちます。これが[[relw:T2強調]]です。' }),
 
 L({ nm:'3枚ならべて見る', tg:'T1強調 / PD / T2強調', sel:'#strip',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
@@ -4224,12 +4328,12 @@ L({ nm:'やってみよう：水を脳より暗くする', hint:'脳脊髄液は
 L({ nm:'GRE：180° を使わない', hint:'GRE はグラジエントエコーの略で、グラジエントは傾斜磁場のことです。ばらけた細い矢印を 180° で戻さないので、信号は速く小さくなります。', tg:'T2 ではなく T2*', sel:'#panSeq',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:25, T2p:40 },
   act:{ label:'T2*強調 GRE に切り替える', fn:() => applySet(pre('t2s'), true) },
-  text:'180° の代わりに傾斜磁場でエコーを作る撮り方が GRE です。<br>②の図から <b>180° が消え</b>、信号は T2* で速く小さくなります。' }),
+  text:'GRE は 180° を使わず、②の図の<b>読み出しの段</b>で傾斜を<b>逆向きにかけてから戻して</b>エコーを作ります。<br>磁場のムラによるずれは戻らないので、信号は T2* で速く小さくなります。' }),
 
 L({ nm:'IR：狙った組織の信号を消す', hint:'IR は反転回復のことです。③の上のグラフで、線がいったんマイナスから始まります。TI を約 180 ms にして脂肪を黒くする撮り方を STIR といいます。', tg:'TI ≒ 0.69 × T1', sel:'#panRel',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:600, T2p:40 },
   act:{ label:'TI を 180 ms にする（STIR）', fn:() => applySet(pre('stir'), true) },
-  text:'まず 180° で縦の M を下向きにします。縦の M は戻る途中で 0 を通るので、<b>その瞬間に</b> 90° で倒します。<br>その組織は<b>信号が出ず黒く</b>写ります。この撮り方が IR で、180° から倒すまでの待ち時間を TI といいます。' +
+  text:'まず 180° で縦の M を下向きにします。縦の M は戻る途中で 0 を通るので、<b>その瞬間に</b> 90° で倒すと、その組織は<b>信号が出ず黒く</b>写ります。この撮り方が IR で、180° から倒すまでの待ち時間を TI といいます。' + TAB2.ir +
        '<span class="eq">IR は組織ごとの T1 の違いを使います。脂肪を消す IR を STIR といい、T1 が脂肪に近い組織も一緒に消えます。</span>' }),
 
 L({ nm:'やってみよう：TI で脂肪の信号を消す', hint:'脂肪の縦の M が 0 を通る時刻に倒すと、脂肪の信号が出ません。TI を小さい方から少しずつ動かしてみてください。', tg:'TI を自分で合わせる', sel:'#imgbox',
@@ -4245,13 +4349,14 @@ L({ nm:'FLAIR：水の信号を消す', hint:'画像の「水」の印のとこ�
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'IR', TR:4000, TE:60, TI:180, T2p:40 },
   on:() => { if (!lesOn) $('bLes').click(); },   // 文で「病変が浮かぶ」と言うので、病変を入れておく
   act:{ label:'FLAIR（TI 2400 ms）に切り替える', fn:() => applySet(pre('flair'), true) },
-  text:'TI を約 2400 ms にすると、[[water:脳脊髄液]]のように自由に動ける水、自由水の<b>信号が消えて黒く</b>なり、<br>そばの病変が白く浮かびます。この撮り方が FLAIR です。' }),
+  text:'TI を約 2400 ms にすると、[[water:脳脊髄液]]のように自由に動ける水、自由水の<b>信号が消えて黒く</b>なり、そばの病変が白く浮かびます。この撮り方が FLAIR です。' + TAB2.flair +
+       'TR が 9000 ms と有限なので、脳脊髄液の縦の M は戻りきらず、0 を通る時間は表の 2770 ms より短くなります。' }),
 
 L({ nm:'強いT2強調：水の信号だけを残す', hint:'右の画像は、体を前から見た腹部の模式図です。TE の間に、肝臓の横の M だけが消えます。', tg:'TE をうんと長く', sel:'#imgbox',
   tag:{ gb:true, scope:'左の矢印 ＝ 肝臓の M／右の矢印 ＝ 胆汁の M' },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:false, region:'abd', sl:{ ori:'cor', pos:2 }, seq:'SE', TR:6000, TE:100, T2p:40, tissue:'wat', cmp:['liv', 'wat'], cmpLay:'side' },
   act:{ label:'TE を 100 → 800 ms にする', fn:() => applySet({ TE:800 }, true) },
-  text:'画像を腹部に変えます。TE をうんと長くすると、T2 の短い肝臓は<b>黒く</b>なり、<br>T2 の長い[[bile:胆汁などの水]]だけが<b>白く残ります</b>。これが強い T2強調です。' }),
+  text:'画像を腹部に変えます。TE をうんと長くすると、T2 の短い肝臓は<b>黒く</b>なり、T2 の長い[[bile:胆汁などの水]]だけが<b>白く残ります</b>。これが強い T2強調です。' + TAB2.heavy }),
 
 L({ nm:'MIP：重ねて1枚にする', hint:'胆管と膵管をこうして写す検査が MRCP です。厚くするほど管が長くつながって見えます。そのかわり、胃や腸の水も重なって写ります。細かいところは、もとの断面1枚ずつでも確かめます。「詳細」で結石の模型を入れて比べられます。', tg:'いちばん明るい所を集める', sel:'#imgbox',
   tag:{ duct:true, big:true },
@@ -4260,7 +4365,8 @@ L({ nm:'MIP：重ねて1枚にする', hint:'胆管と膵管をこうして写�
     { label:'板を 0 → 60 mm に厚くする', fn:() => animGeom('mip', [0, 60], 2400), dur:4200 },
     { label:'縦の軸のまわりに回す', fn:() => { P.mip = 60; animGeom('mipRot', [0, 60, -60, 0], 6000); }, dur:6800 },
   ],
-  text:'視線の上で<b>いちばん明るい所だけ</b>を1枚に集めます。これが MIP です。<br>途切れていた[[duct:胆管と膵管]]が、つながって見えます。' })
+  text:'視線の上で<b>いちばん明るい所だけ</b>を1枚に集めます。これが MIP です。' + FIG2.mip +
+       '途切れていた[[duct:胆管と膵管]]が、つながって見えます。' })
 ];
 
 /* ---------- k 空間：今の模擬画像を 256 × 256 にして2次元 FFT し、中心だけ・外側だけで画像に戻す ---------- */
@@ -4532,7 +4638,8 @@ L({ nm:'傾斜磁場：場所で磁場の強さを変える', hint:'傾斜磁場
   set:SLSET,
   on:() => { calm(); slabInit({ g:0, fc:0, hw:0.5 }); },
   act:{ label:'傾斜磁場をかける', fn:() => { slabSet({ g:1 }); } },
-  text:'傾斜磁場は、場所によって<b>強さが少しずつ違う</b>磁場です。<br>強い所ほど速く回るので、右の棒の<b>層ごとの周波数</b>、回る速さがずれます。' +
+  text:'傾斜磁場は、場所によって<b>強さが少しずつ違う</b>磁場です。強い所ほど水素は速く回るので、場所ごとに周波数がずれます。' + TAB2.grad +
+       '表は、1.5 T に 1 m あたり 0.010 T の傾斜をかけたときの例です。' +
        '<span class="eq">傾斜磁場を作るコイルは、電流を入れるたびに揺れて音を出します。撮影中に鳴る規則的な大きな音はこれです。</span>' }),
 
 L({ nm:'スライス選択：1枚だけ倒す', hint:'ラジオで1つの局だけを聞くのと同じです。電波の周波数が合った層だけが反応します。', zone:[0, 1], tg:'傾斜磁場 ＋ 共鳴', sel:'#stage',
@@ -4542,7 +4649,8 @@ L({ nm:'スライス選択：1枚だけ倒す', hint:'ラジオで1つの局だ�
     { label:'傾斜なしで電波を当てる', fn:() => { slabInit({ g:0, fc:0, hw:0.5 }); slabRF(); } },
     { label:'傾斜をかけて電波を当てる', fn:() => { slabSet({ g:1 }); later(slabRF, 1300); }, dur:4500 },
   ],
-  text:'[[band:電波の範囲]]に周波数が入った<b>1枚だけ</b>、[[m:M]] が倒れます。<br>この1枚がスライスです。' }),
+  text:'傾斜をかけると、位置ごとに周波数が変わります。そこへ[[band:ある範囲の周波数の電波]]を当てると、' + FIG2.slice +
+       '範囲に入った<b>1枚だけ</b> [[m:M]] が倒れます。この1枚がスライスです。' }),
 
 L({ nm:'スライスの位置と厚さ', hint:'オレンジの帯が動くと選ばれる層が動き、帯が太くなると選ばれる層が増えます。', zone:[0, 1], tg:'厚さ ＝ 帯域幅 ÷ 傾斜', sel:'#stage',
   set:SLSET,
@@ -4552,14 +4660,15 @@ L({ nm:'スライスの位置と厚さ', hint:'オレンジの帯が動くと選
     { label:'周波数の範囲を広げる', fn:() => { slabSet({ hw:1.5 }); later(slabRF, 1300); } },
     { label:'傾斜を急にする', fn:() => { slabSet({ g:2 }); later(slabRF, 1300); } },
   ],
-  text:'電波の<b>中心の周波数</b>で位置が、<b>範囲の広さ</b>と傾斜で[[thick:厚さ]]が決まります。' +
+  text:'電波の<b>中心の周波数</b>で位置が、<b>範囲の広さ</b>と傾斜で[[thick:厚さ]]が決まります。' + TAB2.slab +
        '<span class="eq">電波の周波数の範囲を帯域幅といいます。傾斜を急にすると、同じ帯域幅でもスライスは薄くなります。</span>' }),
 
 L({ nm:'周波数エンコード：横は音の高さで', hint:'合唱で、列ごとに声の高さを変えて歌ってもらうと、声の高さでどの列か分かります。', zone:[0, 2], tg:'読んでいる間に左右の傾斜', sel:'#stage',
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
   on:() => { calm(); gridInit(); },
   act:{ label:'左右に傾斜をかける（読んでいる間）', fn:() => { GRID.gx = 1; } },
-  text:'読む間に左右の傾斜をかけると、<b>列ごとに</b> [[m:M]] の回る速さが変わります。<br>この速さで横の位置が分かります。これが周波数エンコードです。' }),
+  text:'読む間に左右の傾斜をかけると、<b>列ごとに</b> [[m:M]] の回る速さが変わります。' + TAB2.fe +
+       'この速さ、つまり周波数で横の位置が分かります。これが周波数エンコードです。' }),
 
 L({ nm:'周波数に分ける：信号から列の明るさへ', hint:'周波数ごとの強さに分ける計算を、フーリエ変換といいます。和音を聞いて、どの高さの音がどれくらいの強さで鳴っているかを聞き分けるのと同じです。傾斜がないと、どの列も同じ高さの音になるので、混ざると見分けられません。', zone:[2], tg:'1回の信号 → 列ごとの明るさ', map:true,
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
@@ -4581,7 +4690,8 @@ L({ nm:'位相エンコード：縦は角度のずれで', hint:'時計の針を
     { label:'上下に一瞬だけ傾斜をかける', fn:() => { gridInit(); gridPhase(1); } },
     { label:'強さを変えて、もう一度', fn:() => { gridInit(); gridPhase(2); } },
   ],
-  text:'上下の傾斜を一瞬かけると、<b>行ごとに</b> [[m:M]] の角度がずれます。<br>この角度のずれを位相といい、位相で行の位置が分かります。これが位相エンコードです。' }),
+  text:'読む前に上下の傾斜を<b>一瞬だけ</b>かけると、<b>行ごとに</b> [[m:M]] の角度がずれます。' + FIG2.phase +
+       'この角度のずれを位相といい、位相で行の位置が分かります。これが位相エンコードです。' }),
 
 L({ nm:'5×5 の小さな画像で通してみる', hint:'ここの矢印は、90° 倒したあとの横の M を真上から見たものです。1回目は角度のずれなし、2回目からは行ごとのずれを少しずつ大きくしていきます。同じ列にいる5つの M は同じ周波数ですが、角度のずれ方がくり返すたびに違うので、5回分を合わせると、どの行の M かが計算で分かります。', zone:[2], tg:'5回くり返す → 5行 → 画像', map:true,
   set:{ quantum:false, manual:true, frame:'rot', view:0, showBody:false, grid:true, showComp:false },
@@ -4682,12 +4792,12 @@ const EXTRA = [
 L({ nm:'撮像時間：加算回数と高速 SE', tg:'時間を延ばす・縮める', sel:'#panSeq',
   hint:'高速 SE は、1回のくり返しの中で 180° を何回も当て、エコーを何回も作って、そのたびに別の行を集めます。加算回数を増やすと、平均するぶん画像のざらつきは減ります。',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
-  text:'同じ行を撮って平均する回数が加算回数で、そのぶん時間がかかります。<br>1回のくり返しで何行も集めるのが高速 SE、その行数がエコートレイン数です。' +
+  text:'同じ行を撮って平均する回数が加算回数で、そのぶん時間がかかります。1回のくり返しで何行も集めるのが高速 SE、その行数がエコートレイン数です。' + TAB2.fse +
        '<span class="eq">撮像時間 ＝ TR × 位相エンコード数 × 加算回数 ÷ エコートレイン数</span>' }),
 L({ nm:'撮像時間：パラレルイメージング', tg:'行を間引く', sel:'#panSeq',
   hint:'間引いた行は、並べた受信コイルそれぞれの感度の違いを使って、計算で補います。',
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
-  text:'受信コイルを並べて、集める行を間引くのがパラレルイメージングで、SENSE はその方法の1つです。<br>行を半分に間引けば、時間も半分になります。この間引く倍率を SENSE factor といいます。' +
+  text:'受信コイルを並べて、集める行を間引くのがパラレルイメージングで、SENSE はその方法の1つです。間引く倍率を SENSE factor といいます。' + TAB2.sense +
        '<span class="eq">撮像時間 ＝ TR × 位相エンコード数 × 加算回数 ÷ エコートレイン数 ÷ 倍率。周波数エンコード数は時間を変えません。</span>' }),
 
 L({ nm:'T1強調と T2強調を撮り比べる', hint:'左が T1強調、右が T2強調です。「水」の印のところを比べてください。黒と白が入れ替わっています。', tg:'水の白黒が逆になる', sel:'#strip',
@@ -4708,12 +4818,12 @@ L({ nm:'水の白黒が逆になる理由', hint:'T1強調では上のグラフ�
     { label:'T1強調にする', fn:() => applySet(pre('t1'), true) },
     { label:'T2強調にする', fn:() => applySet(pre('t2'), true) },
   ],
-  text:'T1強調では、①で縦の M の戻りが<b>遅い脳脊髄液は暗く</b>、戻りの<b>速い脂肪がいちばん明るく</b>写ります。<br>T2強調では、②で横の M の<b>減りが遅い脳脊髄液がいちばん明るく</b>写ります。' }),
-L({ nm:'1枚の画像ができるまで', hint:'②の図の「位相エンコード」の段は、くり返すたびに強さを変えます。256 回くり返すと、k 空間が 256 行そろいます。', tg:'倒す → 読む を何百回も', sel:'#panSeq',
+  text:'T1強調では、①で縦の M の戻りが<b>遅い脳脊髄液は暗く</b>、戻りの<b>速い脂肪がいちばん明るく</b>写ります。T2強調では、②で横の M の<b>減りが遅い脳脊髄液がいちばん明るく</b>写ります。' + TAB2.bw }),
+L({ nm:'1枚の画像ができるまで', hint:'②の図の「位相」の段は、くり返すたびに強さを変えます。256 回くり返すと、k 空間が 256 行そろいます。', tg:'倒す → 読む を何百回も', sel:'#panSeq',
   tag:{ pe:true },
   set:{ quantum:false, manual:false, frame:'rot', view:1, showBody:true, seq:'SE', TR:500, TE:15, T2p:40 },
   act:{ label:'1回分を最初から再生する', fn:() => { P.paused = false; $('bStep').click(); } },
-  text:'「倒す → 読む」を位相を変えて<b>行の数だけくり返す</b>と、1枚になります。<br>この手順を②の図に描いたものが、パルスシーケンスです。' +
+  text:'「倒す → 読む」を位相を変えて<b>行の数だけくり返す</b>と、1枚になります。この手順を②の図に描いたものが、パルスシーケンスです。' + TAB2.time +
        '<span class="eq">くり返しの間隔を TR、行の数を位相エンコード数といいます。撮像時間 ＝ TR × 位相エンコード数</span>' }),
 ];
 
